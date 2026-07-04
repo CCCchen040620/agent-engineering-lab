@@ -1,17 +1,6 @@
-from week03.answer_with_citation import build_answer
+from week03.qa_service import answer_question
 from week03.evaluate_refusal import evaluate_refusal_questions
 from week03.evaluate_retrieval import evaluate_retrieval_questions
-from week03.keyword_extractor import extract_keyword
-from week03.load_text_documents import load_text_documents
-from week03.snippet_search import search_snippets
-
-
-def answer_question(question):
-    documents = load_text_documents("data/company_docs")
-    keyword = extract_keyword(question)
-    snippets = search_snippets(documents, keyword)
-
-    return build_answer(question, snippets, keyword)
 
 
 def run_refusal_evaluation():
