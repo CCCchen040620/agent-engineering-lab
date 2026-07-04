@@ -2,7 +2,7 @@ def search_documents(documents, keyword):
     results = []
 
     for document in documents:
-        if keyword in document["title"]:
+        if keyword in document["title"] and document["is_indexed"]:
             results.append(document)
 
     return results
