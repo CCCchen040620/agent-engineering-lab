@@ -11,8 +11,8 @@
 把答案写在下面：
 
 1..py
-2.python
-3.小明
+2.python week01/exercise_01.py
+3.name
 4.""
 5.输出
 
