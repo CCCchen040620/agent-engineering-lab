@@ -16,5 +16,11 @@
     "file_type": "md",
     "chunk_count": 5,
     "is_indexed": true
+  },
+  {
+    "title": "培训资料",
+    "file_type": "pdf",
+    "chunk_count": 3,
+    "is_indexed": false
   }
 ]
