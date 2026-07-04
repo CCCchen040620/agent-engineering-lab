@@ -6,18 +6,18 @@ from week03.snippet_search import search_snippets
 from week03.keyword_extractor import extract_keyword
 
 
-def build_answer(question, snippets):
+def build_answer(question, snippets, keyword):
     if len(snippets) == 0:
-        return "知识库中没有找到相关资料，暂时无法回答。"
+        return "检索关键词：" + keyword + "\n知识库中没有找到相关资料，暂时无法回答。"
 
     selected_snippets = snippets[:3]
 
-    answer_lines = ["根据知识库资料："]
+    answer_lines = ["检索关键词：" + keyword, "根据知识库资料："]
 
-    for index,snippet in enumerate(selected_snippets,start=1):
+    for index, snippet in enumerate(selected_snippets, start=1):
         answer_lines.append("[" + str(index) + "] " + snippet["text"])
         answer_lines.append("    来源：" + snippet["title"])
-    
+
     return "\n".join(answer_lines)
 
 
@@ -28,7 +28,7 @@ def main():
 
     keyword = extract_keyword(question)
     snippets = search_snippets(documents, keyword)
-    answer = build_answer(question, snippets)
+    answer = build_answer(question, snippets,keyword)
 
     print(answer)
 
