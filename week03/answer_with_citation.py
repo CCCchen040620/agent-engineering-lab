@@ -6,14 +6,16 @@ def build_answer(question, snippets):
     if len(snippets) == 0:
         return "知识库中没有找到相关资料，暂时无法回答。"
 
-    first_snippet = snippets[0]
+    selected_snippets = snippets[:3]
 
-    return (
-        "根据知识库资料："
-        + first_snippet["text"]
-        + "\n来源："
-        + first_snippet["title"]
-    )
+    answer_lines = ["根据知识库资料："]
+
+    for snippet in selected_snippets:
+        answer_lines.append("- " + snippet["text"])
+        answer_lines.append("  来源：" + snippet["title"])
+    
+    return "\n".join(answer_lines)
+
 
 
 def main():

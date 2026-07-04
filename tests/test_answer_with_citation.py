@@ -20,3 +20,19 @@ def test_build_answer_refuses_when_no_snippet_found():
     answer = build_answer("股票期权", [])
 
     assert answer == "知识库中没有找到相关资料，暂时无法回答。"
+
+
+def test_build_answer_uses_at_most_three_snippets():
+    snippets = [
+        {"title": "doc1", "path": "a.txt", "text": "片段1"},
+        {"title": "doc2", "path": "b.txt", "text": "片段2"},
+        {"title": "doc3", "path": "c.txt", "text": "片段3"},
+        {"title": "doc4", "path": "d.txt", "text": "片段4"},
+    ]
+
+    answer = build_answer("测试", snippets)
+
+    assert "片段1" in answer
+    assert "片段2" in answer
+    assert "片段3" in answer
+    assert "片段4" not in answer
