@@ -1,9 +1,9 @@
 """第 1 课独立练习：修改变量，让程序介绍你自己。"""
 
 # TODO 1：把引号里的内容改成你的真实信息。
-learner_name = "陈晨"
-weekly_hours = 6
-wants_to_build_agent = True
+learner_name = "Chen Chen"
+weekly_hours = 8
+wants_to_build_agent = False
 
 # TODO 2：先运行程序，再尝试修改 weekly_hours，观察输出变化。
 print("大家好，我叫", learner_name)
@@ -15,3 +15,8 @@ print("我想开发 Agent：", wants_to_build_agent)
 # 然后用 print() 把它显示出来。
 first_project = "企业知识库Agent"
 print("第一个练习项目:",first_project)
+
+# TODO 4:让程序自动计算 20 周总学习时间。
+total_weeks = 20
+total_hours = weekly_hours * total_weeks
+print("按照这个计划，20 周一共学习", total_hours, "小时")
