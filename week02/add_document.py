@@ -9,12 +9,28 @@ def save_documents(file_path, documents):
 
 
 def build_document(title, file_type, chunk_count, is_indexed):
+    if title == "":
+        raise ValueError("文档标题不能为空。")
+
+    if chunk_count < 0:
+        raise ValueError("切分块数量不能小于0。")
+
     return {
         "title": title,
         "file_type": file_type,
         "chunk_count": chunk_count,
         "is_indexed": is_indexed,
     }
+
+
+def parse_is_indexed(text):
+    if text == "yes":
+        return True
+
+    if text == "no":
+        return False
+
+    raise ValueError("是否已索引只能输入 yes 或 no。")
 
 
 def main():
@@ -27,7 +43,7 @@ def main():
 
     try:
         chunk_count_number = int(chunk_count)
-        is_indexed = is_indexed_text == "yes"
+        is_indexed = parse_is_indexed(is_indexed_text)
 
         documents = load_documents(file_path)
         new_document = build_document(title, file_type, chunk_count_number, is_indexed)
@@ -35,8 +51,8 @@ def main():
         save_documents(file_path, documents)
 
         print("文档已保存：", title)
-    except ValueError:
-        print("切分块数量必须是数字。")
+    except ValueError as error:
+        print(error)
 
 
 if __name__ == "__main__":
