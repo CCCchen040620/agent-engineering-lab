@@ -7,6 +7,16 @@ def search_documents(documents, keyword):
 
     return results
 
+def format_document(document):
+    return (
+        "- "
+        + document["title"]
+        + " | 类型: "
+        + document["file_type"]
+        + " | 切分块: "
+        + str(document["chunk_count"])
+    )
+
 
 def main():
     documents = [
@@ -40,7 +50,7 @@ def main():
         print("没有找到相关文档")
     else:
         for document in results:
-            print("-", document["title"])
+            print(format_document(document))
 
 
 if __name__ == "__main__":
