@@ -3,6 +3,7 @@ from typing import Any
 
 from week03.load_text_documents import load_text_documents
 from week03.snippet_search import search_snippets
+from week03.keyword_extractor import extract_keyword
 
 
 def build_answer(question, snippets):
@@ -25,7 +26,8 @@ def main():
     documents = load_text_documents("data/company_docs")
     question = input("请输入你的问题：")
 
-    snippets = search_snippets(documents, question)
+    keyword = extract_keyword(question)
+    snippets = search_snippets(documents, keyword)
     answer = build_answer(question, snippets)
 
     print(answer)
