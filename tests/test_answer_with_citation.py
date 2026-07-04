@@ -36,3 +36,15 @@ def test_build_answer_uses_at_most_three_snippets():
     assert "片段2" in answer
     assert "片段3" in answer
     assert "片段4" not in answer
+
+
+def test_build_answer_adds_citation_numbers():
+    snippets = [
+        {"title": "doc1", "path": "a.txt", "text": "片段1"},
+        {"title": "doc2", "path": "b.txt", "text": "片段2"},
+    ]
+
+    answer = build_answer("测试", snippets)
+
+    assert "[1] 片段1" in answer
+    assert "[2] 片段2" in answer
