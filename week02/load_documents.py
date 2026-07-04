@@ -1,7 +1,7 @@
 from week04.safe_json_loader import safe_load_json_list
 
 
-def load_documents(file_path):
+def load_documents(file_path: str) -> list:
     return safe_load_json_list(file_path)
 
 

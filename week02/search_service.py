@@ -1,4 +1,4 @@
-def search_documents(documents, keyword):
+def search_documents(documents: list, keyword: str) -> list:
     results = []
 
     for document in documents:
@@ -7,7 +7,7 @@ def search_documents(documents, keyword):
 
     return results
 
-def format_document(document):
+def format_document(document: dict) -> str:
     return (
         "- "
         + document["title"]

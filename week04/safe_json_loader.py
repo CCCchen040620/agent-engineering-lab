@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 
-def safe_load_json_list(file_path):
+def safe_load_json_list(file_path: str) -> list:
     path = Path(file_path)
 
     if not path.exists():
