@@ -8,6 +8,7 @@ from week03.answer_with_citation import build_answer
 from week03.keyword_extractor import extract_keyword
 from week04.settings import SQLITE_DATABASE_PATH
 from week05.models import ChatResponse, Citation
+from backend.services.ranking_service import rank_chunks
 
 
 def build_sqlite_chat_response(question: str, database_path: str = SQLITE_DATABASE_PATH) -> ChatResponse:
@@ -19,6 +20,7 @@ def build_sqlite_chat_response(question: str, database_path: str = SQLITE_DATABA
     create_chunks_table(connection)
 
     chunk_results = search_chunks_with_document_by_text(connection, keyword)
+    chunk_results = rank_chunks(chunk_results, keyword)
 
     connection.close()
 

@@ -52,3 +52,39 @@ def test_build_sqlite_chat_response_refuses_unknown_question(tmp_path):
 
     assert "暂时无法回答" in response.answer
     assert response.citations == []
+
+
+def test_build_sqlite_chat_response_ranks_chunks(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="报销制度",
+        file_type="md",
+        chunk_count=2,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="报销制度",
+    )
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="差旅报销需要提交报销材料。",
+    )
+
+    connection.close()
+
+    response = build_sqlite_chat_response(
+        "报销",
+        database_path=str(database_path),
+    )
+
+    assert response.citations[0].text == "差旅报销需要提交报销材料。"
