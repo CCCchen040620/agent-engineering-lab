@@ -37,3 +37,60 @@ http://127.0.0.1:8000/docs
 - `GET /api/v1/documents/by-id/{document_id}`：按 id 查看文档
 - `POST /api/v1/documents`：新增文档
 - `DELETE /api/v1/documents/by-id/{document_id}`：按 id 删除文档
+
+## SQLite 文档接口
+
+SQLite 版接口使用本地数据库 `data/app.db` 保存文档数据。
+
+### GET /api/v1/db/documents
+
+查看 SQLite 文档列表。
+
+支持查询参数：
+
+- `indexed_only=true`：只查看已索引文档
+- `file_type=md`：按文件类型筛选
+
+### GET /api/v1/db/documents/{document_id}
+
+按 id 查看 SQLite 文档。
+
+### POST /api/v1/db/documents
+
+新增 SQLite 文档。
+
+请求示例：
+
+```json
+{
+  "title": "请假制度",
+  "file_type": "md",
+  "chunk_count": 5,
+  "is_indexed": true
+}
+```
+
+成功返回状态码：
+
+```text
+201 Created
+```
+
+标题重复时返回：
+
+```text
+409 Conflict
+```
+
+### DELETE /api/v1/db/documents/{document_id}
+
+按 id 删除 SQLite 文档。
+
+成功返回示例：
+
+```json
+{
+  "message": "文档已删除。",
+  "id": 2
+}
+```
