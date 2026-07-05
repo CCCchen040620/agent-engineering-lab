@@ -30,3 +30,27 @@ def test_list_documents_endpoint_with_indexed_only():
     assert len(data) == 2
     assert data[0]["title"] == "员工手册"
     assert data[1]["title"] == "请假制度"
+
+
+def test_list_documents_endpoint_with_file_type():
+    response = client.get("/api/v1/documents?file_type=pdf")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data) == 2
+    assert data[0]["title"] == "报销制度"
+    assert data[1]["title"] == "培训资料"
+
+
+def test_list_documents_endpoint_with_indexed_only_and_file_type():
+    response = client.get("/api/v1/documents?indexed_only=true&file_type=md")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data) == 2
+    assert data[0]["title"] == "员工手册"
+    assert data[1]["title"] == "请假制度"

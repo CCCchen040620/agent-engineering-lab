@@ -11,15 +11,17 @@ router = APIRouter(prefix="/api/v1")
 
 
 @router.get("/documents", response_model=list[Document])
-def list_documents(indexed_only: bool = False):
+def list_documents(indexed_only: bool = False, file_type: str | None = None):
     documents = load_documents(DOCUMENTS_JSON_PATH)
+    results = []
 
-    if indexed_only:
-        results = []
+    for document in documents:
+        if indexed_only and not document["is_indexed"]:
+            continue
 
-        for document in documents:
-            if document["is_indexed"]:
-                results.append(document)
-        return results
+        if file_type is not None and document["file_type"] != file_type:
+            continue
 
-    return documents
+        results.append(document)
+
+    return results
