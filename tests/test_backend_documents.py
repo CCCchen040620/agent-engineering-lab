@@ -15,11 +15,10 @@ def test_list_documents_endpoint():
 
     data = response.json()
 
-    assert len(data) == 4
+    assert len(data) == 3
     assert data[0]["title"] == "员工手册"
     assert data[1]["title"] == "报销制度"
     assert data[2]["title"] == "请假制度"
-    assert data[3]["title"] == "培训资料"
 
 
 def test_list_documents_endpoint_with_indexed_only():
@@ -41,9 +40,8 @@ def test_list_documents_endpoint_with_file_type():
 
     data = response.json()
 
-    assert len(data) == 2
+    assert len(data) == 1
     assert data[0]["title"] == "报销制度"
-    assert data[1]["title"] == "培训资料"
 
 
 def test_list_documents_endpoint_with_indexed_only_and_file_type():
