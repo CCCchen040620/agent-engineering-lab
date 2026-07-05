@@ -42,3 +42,40 @@ def test_create_chat_response_model():
     assert response.keyword == "差旅报销"
     assert len(response.citations) == 1
     assert response.citations[0].title == "reimbursement_policy"
+
+
+def test_chat_response_model_validate_from_dict():
+    data = {
+        "question": "差旅报销多久内提交？",
+        "keyword": "差旅报销",
+        "answer": "差旅报销需要在出差结束后 7 天内提交。",
+        "citations": [
+            {
+                "title": "reimbursement_policy",
+                "text": "差旅报销需要在出差结束后 7 天内提交。",
+                "path": "data/company_docs/reimbursement_policy.txt",
+            }
+        ],
+    }
+
+    response = ChatResponse.model_validate(data)
+
+    assert response.question == "差旅报销多久内提交？"
+    assert response.citations[0].title == "reimbursement_policy"
+
+
+def test_chat_response_model_validate_requires_citation_path():
+    data = {
+        "question": "差旅报销多久内提交？",
+        "keyword": "差旅报销",
+        "answer": "差旅报销需要在出差结束后 7 天内提交。",
+        "citations": [
+            {
+                "title": "reimbursement_policy",
+                "text": "差旅报销需要在出差结束后 7 天内提交。",
+            }
+        ],
+    }
+
+    with pytest.raises(ValidationError):
+        ChatResponse.model_validate(data)
