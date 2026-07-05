@@ -252,3 +252,31 @@ def list_chunks_by_document_id(connection, document_id: int) -> list[dict]:
         )
 
     return chunks
+
+
+def search_chunks_by_text(connection, keyword: str) -> list[dict]:
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT id, document_id, text
+        FROM chunks
+        WHERE text LIKE ?
+        """,
+        ("%" + keyword + "%",),
+    )
+
+    rows = cursor.fetchall()
+
+    chunks = []
+
+    for row in rows:
+        chunks.append(
+            {
+                "id": row[0],
+                "document_id": row[1],
+                "text": row[2],
+            }
+        )
+
+    return chunks
