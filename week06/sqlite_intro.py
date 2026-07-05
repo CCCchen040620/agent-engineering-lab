@@ -25,6 +25,11 @@ def create_documents_table(connection):
 
 
 def insert_document(connection, title, file_type, chunk_count, is_indexed):
+    existing_document = find_document_by_title(connection, title)
+
+    if existing_document is not None:
+        return None
+
     cursor = connection.cursor()
 
     cursor.execute(
@@ -36,6 +41,8 @@ def insert_document(connection, title, file_type, chunk_count, is_indexed):
     )
 
     connection.commit()
+
+    return find_document_by_title(connection, title)
 
 
 def list_documents(connection):
@@ -63,6 +70,32 @@ def list_documents(connection):
         documents.append(document)
 
     return documents
+
+
+def find_document_by_title(connection, title):
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT id, title, file_type, chunk_count, is_indexed
+        FROM documents
+        WHERE title = ?
+        """,
+        (title,),
+    )
+
+    row = cursor.fetchone()
+
+    if row is None:
+        return None
+
+    return {
+        "id": row[0],
+        "title": row[1],
+        "file_type": row[2],
+        "chunk_count": row[3],
+        "is_indexed": bool(row[4]),
+    }
 
 
 def main():
