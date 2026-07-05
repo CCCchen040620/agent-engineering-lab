@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 
+from backend.services.sqlite_qa_service import build_sqlite_chat_response
 from backend.services.sqlite_document_repository import (
     create_connection,
     create_documents_table,
@@ -9,7 +10,7 @@ from backend.services.sqlite_document_repository import (
     delete_document_from_db_by_id,
 )
 from week04.settings import SQLITE_DATABASE_PATH
-from week05.models import Document, DocumentCreateRequest
+from week05.models import ChatRequest, ChatResponse, Document, DocumentCreateRequest
 
 
 router = APIRouter(prefix="/api/v1/db")
@@ -98,3 +99,14 @@ def delete_db_document_by_id(
         raise HTTPException(status_code=404, detail="文档不存在。")
 
     return {"message": "文档已删除。", "id": document_id}
+
+
+@router.post("/chat", response_model=ChatResponse)
+def sqlite_chat(
+    request: ChatRequest,
+    database_path: str = Depends(get_database_path),
+):
+    return build_sqlite_chat_response(
+        request.question,
+        database_path=database_path,
+    )
