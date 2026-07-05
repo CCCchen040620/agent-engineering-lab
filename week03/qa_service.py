@@ -5,7 +5,7 @@ from week03.snippet_search import search_snippets
 from week04.settings import COMPANY_DOCS_FOLDER
 
 
-def answer_question(question):
+def answer_question(question: str) -> str:
     documents = load_text_documents(COMPANY_DOCS_FOLDER)
     keyword = extract_keyword(question)
     snippets = search_snippets(documents, keyword)

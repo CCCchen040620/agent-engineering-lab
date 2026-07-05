@@ -1,11 +1,11 @@
 from week03.qa_service import answer_question
 
 
-def is_refusal(answer):
+def is_refusal(answer: str) -> bool:
     return "暂时无法回答" in answer
 
 
-def evaluate_refusal_questions(questions):
+def evaluate_refusal_questions(questions: list[str]) -> dict:
     passed_count = 0
 
     for question in questions:
