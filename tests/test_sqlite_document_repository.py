@@ -7,6 +7,7 @@ from backend.services.sqlite_document_repository import (
     list_documents_from_db,
     insert_document_to_db,
     try_insert_document_to_db,
+    list_documents_from_db_filtered,
 )
 
 
@@ -99,3 +100,37 @@ def test_try_insert_document_to_db_returns_none_for_duplicate_title(tmp_path):
 
     assert first_document is not None
     assert second_document is None
+
+
+def test_list_documents_from_db_filtered_by_indexed_only(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+
+    insert_document_to_db(connection, "员工手册", "md", 12, True)
+    insert_document_to_db(connection, "报销制度", "pdf", 8, False)
+
+    documents = list_documents_from_db_filtered(connection, indexed_only=True)
+
+    connection.close()
+
+    assert len(documents) == 1
+    assert documents[0]["title"] == "员工手册"
+
+
+def test_list_documents_from_db_filtered_by_file_type(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+
+    insert_document_to_db(connection, "员工手册", "md", 12, True)
+    insert_document_to_db(connection, "报销制度", "pdf", 8, False)
+
+    documents = list_documents_from_db_filtered(connection, file_type="pdf")
+
+    connection.close()
+
+    assert len(documents) == 1
+    assert documents[0]["title"] == "报销制度"

@@ -105,3 +105,36 @@ def try_insert_document_to_db(
         )
     except sqlite3.IntegrityError:
         return None
+
+
+def list_documents_from_db_filtered(
+    connection,
+    indexed_only: bool = False,
+    file_type: str | None = None,
+) -> list[dict]:
+    query = """
+        SELECT id, title, file_type, chunk_count, is_indexed
+        FROM documents
+        WHERE 1 = 1
+    """
+    params = []
+
+    if indexed_only:
+        query = query + " AND is_indexed = ?"
+        params.append(1)
+
+    if file_type is not None:
+        query = query + " AND file_type = ?"
+        params.append(file_type)
+
+    cursor = connection.cursor()
+    cursor.execute(query, params)
+
+    rows = cursor.fetchall()
+
+    documents = []
+
+    for row in rows:
+        documents.append(row_to_document(row))
+
+    return documents
