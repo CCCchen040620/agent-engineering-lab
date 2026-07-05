@@ -118,3 +118,36 @@ def test_build_sqlite_chat_response_respects_top_k(tmp_path):
     )
 
     assert len(response.citations) == 2
+
+
+def test_build_sqlite_chat_response_vector_mode(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="报销制度",
+        file_type="md",
+        chunk_count=1,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="员工报销需要提交发票。",
+    )
+
+    connection.close()
+
+    response = build_sqlite_chat_response(
+        "报销发票怎么提交？",
+        database_path=str(database_path),
+        mode="vector",
+    )
+
+    assert len(response.citations) == 1
+    assert response.citations[0].title == "报销制度"
