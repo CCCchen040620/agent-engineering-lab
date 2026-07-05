@@ -10,10 +10,13 @@ from backend.services.document_service import filter_documents, find_document_by
 
 router = APIRouter(prefix="/api/v1")
 
+def get_documents_file_path() -> str:
+    return DOCUMENTS_JSON_PATH
+
 
 @router.get("/documents", response_model=list[Document])
 def list_documents(indexed_only: bool = False, file_type: str | None = None):
-    documents = load_documents(DOCUMENTS_JSON_PATH)
+    documents = load_documents(get_documents_file_path())
 
     return filter_documents(
         documents,
@@ -24,7 +27,7 @@ def list_documents(indexed_only: bool = False, file_type: str | None = None):
 
 @router.get("/documents/{title}", response_model=Document)
 def get_document(title: str):
-    documents = load_documents(DOCUMENTS_JSON_PATH)
+    documents = load_documents(get_documents_file_path())
     document = find_document_by_title(documents, title)
 
     if document is None:
