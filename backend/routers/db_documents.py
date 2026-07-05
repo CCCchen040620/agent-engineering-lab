@@ -1,12 +1,13 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
 
 from backend.services.sqlite_document_repository import (
     create_connection,
     create_documents_table,
     list_documents_from_db_filtered,
+    try_insert_document_to_db,
 )
 from week04.settings import SQLITE_DATABASE_PATH
-from week05.models import Document
+from week05.models import Document, DocumentCreateRequest
 
 
 router = APIRouter(prefix="/api/v1/db")
@@ -17,8 +18,12 @@ def get_database_path() -> str:
 
 
 @router.get("/documents", response_model=list[Document])
-def list_db_documents(indexed_only: bool = False, file_type: str | None = None):
-    connection = create_connection(get_database_path())
+def list_db_documents(
+    indexed_only: bool = False,
+    file_type: str | None = None,
+    database_path: str = Depends(get_database_path),
+):
+    connection = create_connection(database_path)
 
     create_documents_table(connection)
     documents = list_documents_from_db_filtered(
@@ -30,3 +35,28 @@ def list_db_documents(indexed_only: bool = False, file_type: str | None = None):
     connection.close()
 
     return documents
+
+
+@router.post("/documents", response_model=Document, status_code=201)
+def create_db_document(
+    request: DocumentCreateRequest,
+    database_path: str = Depends(get_database_path),
+):
+    connection = create_connection(database_path)
+
+    create_documents_table(connection)
+
+    document = try_insert_document_to_db(
+        connection,
+        title=request.title,
+        file_type=request.file_type,
+        chunk_count=request.chunk_count,
+        is_indexed=request.is_indexed,
+    )
+
+    connection.close()
+
+    if document is None:
+        raise HTTPException(status_code=409, detail="文档已存在。")
+
+    return document
