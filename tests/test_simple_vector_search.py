@@ -7,6 +7,7 @@ from week07.simple_vector_search import (
     dot_product,
     vector_length,
     cosine_similarity,
+    search_chunks_by_similarity,
 )
 
 
@@ -70,3 +71,28 @@ def test_cosine_similarity_no_shared_terms():
     score = cosine_similarity(first, second)
 
     assert score == 0
+
+
+def test_search_chunks_by_similarity_returns_most_similar_chunk():
+    chunks = [
+        {"text": "员工报销需要提交发票。"},
+        {"text": "新员工需要完成安全培训。"},
+        {"text": "年假需要提前申请。"},
+    ]
+
+    results = search_chunks_by_similarity("报销 发票", chunks, top_k=1)
+
+    assert len(results) == 1
+    assert results[0]["text"] == "员工报销需要提交发票。"
+
+
+def test_search_chunks_by_similarity_respects_top_k():
+    chunks = [
+        {"text": "报销 发票"},
+        {"text": "报销 审批"},
+        {"text": "安全 培训"},
+    ]
+
+    results = search_chunks_by_similarity("报销", chunks, top_k=2)
+
+    assert len(results) == 2

@@ -57,13 +57,39 @@ def cosine_similarity(first_vector: dict[str, int], second_vector: dict[str, int
     return dot_product(first_vector, second_vector) / (first_length * second_length)
 
 
+def search_chunks_by_similarity(
+    query: str,
+    chunks: list[dict],
+    top_k: int = 3,
+) -> list[dict]:
+    query_vector = build_term_frequency(query)
+    results = []
+
+    for chunk in chunks:
+        chunk_vector = build_term_frequency(chunk["text"])
+        score = cosine_similarity(query_vector, chunk_vector)
+
+        result = chunk.copy()
+        result["score"] = score
+
+        results.append(result)
+
+    results.sort(key=lambda chunk: chunk["score"], reverse=True)
+
+    return results[:top_k]
+
+
 def main():
-    first = build_term_frequency("报销 发票")
-    second = build_term_frequency("报销 发票 审批")
+    chunks = [
+        {"text": "员工报销需要提交发票。"},
+        {"text": "新员工需要完成安全培训。"},
+        {"text": "年假需要提前申请。"},
+    ]
 
-    score = cosine_similarity(first, second)
+    results = search_chunks_by_similarity("报销 发票", chunks, top_k=2)
 
-    print("余弦相似度：", score)
+    for result in results:
+        print(result)
 
 
 if __name__ == "__main__":
