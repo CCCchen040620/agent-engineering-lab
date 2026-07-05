@@ -297,3 +297,41 @@ def test_sqlite_chat_endpoint_rejects_too_large_top_k():
     )
 
     assert response.status_code == 422
+
+
+def test_sqlite_chat_endpoint_vector_mode(tmp_path):
+    database_path = use_temp_database(tmp_path)
+
+    connection = create_connection(str(database_path))
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="报销制度",
+        file_type="md",
+        chunk_count=1,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="员工报销需要提交发票。",
+    )
+
+    connection.close()
+
+    response = client.post(
+        "/api/v1/db/chat?mode=vector",
+        json={"question": "报销发票怎么提交？"},
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data["citations"]) == 1
+    assert data["citations"][0]["title"] == "报销制度"

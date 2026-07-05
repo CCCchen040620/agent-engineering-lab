@@ -106,10 +106,12 @@ def delete_db_document_by_id(
 def sqlite_chat(
     request: ChatRequest,
     top_k: int = Query(default=3, ge=1, le=5),
+    mode: str = "keyword",
     database_path: str = Depends(get_database_path),
 ):
     return build_sqlite_chat_response(
         request.question,
         database_path=database_path,
         top_k=top_k,
+        mode=mode,
     )
