@@ -2,6 +2,7 @@ from week07.simple_vector_search import (
     build_term_frequency,
     count_shared_terms,
     tokenize,
+    dot_product,
 )
 
 
@@ -27,3 +28,12 @@ def test_count_shared_terms():
     score = count_shared_terms(first, second)
 
     assert score == 2
+
+
+def test_dot_product():
+    first = build_term_frequency("报销 发票")
+    second = build_term_frequency("报销 报销 发票")
+
+    score = dot_product(first, second)
+
+    assert score == 3
