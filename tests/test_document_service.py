@@ -7,6 +7,7 @@ from backend.services.document_service import (
     filter_documents,
     find_document_by_title,
     save_documents,
+    find_document_by_id,
 )
 
 
@@ -166,3 +167,24 @@ def test_add_document_returns_none_when_title_exists():
 
     assert document is None
     assert results == documents
+
+
+def test_find_document_by_id():
+    documents = [
+        {"id": 1, "title": "员工手册"},
+        {"id": 2, "title": "报销制度"},
+    ]
+
+    result = find_document_by_id(documents, 1)
+
+    assert result["title"] == "员工手册"
+
+
+def test_find_document_by_id_returns_none_when_not_found():
+    documents = [
+        {"id": 1, "title": "员工手册"},
+    ]
+
+    result = find_document_by_id(documents, 999)
+
+    assert result is None

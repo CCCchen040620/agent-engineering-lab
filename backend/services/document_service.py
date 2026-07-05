@@ -82,3 +82,11 @@ def add_document(
     results = documents + [document.model_dump()]
 
     return results, document
+
+
+def find_document_by_id(documents: list[dict], document_id: int) -> dict | None:
+    for document in documents:
+        if document["id"] == document_id:
+            return document
+
+    return None
