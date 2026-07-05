@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Citation(BaseModel):
@@ -11,4 +12,4 @@ class ChatResponse(BaseModel):
     question: str
     keyword: str
     answer: str
-    citations: list[Citation]
+    citations: list[Citation] = Field(default_factory=list)

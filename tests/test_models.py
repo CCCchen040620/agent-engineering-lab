@@ -79,3 +79,13 @@ def test_chat_response_model_validate_requires_citation_path():
 
     with pytest.raises(ValidationError):
         ChatResponse.model_validate(data)
+
+
+def test_chat_response_default_empty_citations():
+    response = ChatResponse(
+        question="公司有没有股票期权？",
+        keyword="公司有没有股票期权？",
+        answer="知识库中没有找到相关资料，暂时无法回答。",
+    )
+
+    assert response.citations == []
