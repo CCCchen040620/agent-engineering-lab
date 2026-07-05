@@ -1,8 +1,15 @@
 from week03.qa_service import answer_question
 from week03.keyword_extractor import extract_keyword
+from typing import TypedDict
 
 
-def build_structured_answer(question: str) -> dict:
+class StructuredAnswer(TypedDict):
+    question: str
+    keyword: str
+    answer: str
+
+
+def build_structured_answer(question: str) -> StructuredAnswer:
     keyword = extract_keyword(question)
     answer = answer_question(question)
 
