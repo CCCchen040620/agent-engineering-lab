@@ -18,5 +18,10 @@ def get_info():
             "get_document_by_id",
             "create_document",
             "delete_document_by_id",
+            "sqlite_list_documents",
+            "sqlite_filter_documents",
+            "sqlite_create_document",
+            "sqlite_get_document_by_id",
+            "sqlite_delete_document_by_id",
         ],
     }

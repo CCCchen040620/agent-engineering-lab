@@ -20,3 +20,6 @@ def test_info_endpoint():
     assert "list_documents" in data["features"]
     assert "create_document" in data["features"]
     assert "delete_document_by_id" in data["features"]
+    assert "sqlite_list_documents" in data["features"]
+    assert "sqlite_create_document" in data["features"]
+    assert "sqlite_delete_document_by_id" in data["features"]
