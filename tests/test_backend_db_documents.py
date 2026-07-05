@@ -244,3 +244,38 @@ def test_sqlite_chat_endpoint_refuses_unknown_question(tmp_path):
 
     assert "暂时无法回答" in data["answer"]
     assert data["citations"] == []
+
+
+def test_sqlite_chat_endpoint_respects_top_k(tmp_path):
+    database_path = use_temp_database(tmp_path)
+
+    connection = create_connection(str(database_path))
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="报销制度",
+        file_type="md",
+        chunk_count=3,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(connection, document["id"], "报销片段1")
+    insert_chunk_to_db(connection, document["id"], "报销片段2")
+    insert_chunk_to_db(connection, document["id"], "报销片段3")
+
+    connection.close()
+
+    response = client.post(
+        "/api/v1/db/chat?top_k=2",
+        json={"question": "报销"},
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data["citations"]) == 2

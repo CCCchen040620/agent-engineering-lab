@@ -104,9 +104,11 @@ def delete_db_document_by_id(
 @router.post("/chat", response_model=ChatResponse)
 def sqlite_chat(
     request: ChatRequest,
+    top_k: int = 3,
     database_path: str = Depends(get_database_path),
 ):
     return build_sqlite_chat_response(
         request.question,
         database_path=database_path,
+        top_k=top_k,
     )
