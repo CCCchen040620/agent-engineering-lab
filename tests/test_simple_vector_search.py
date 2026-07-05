@@ -1,4 +1,8 @@
-from week07.simple_vector_search import build_term_frequency, tokenize
+from week07.simple_vector_search import (
+    build_term_frequency,
+    count_shared_terms,
+    tokenize,
+)
 
 
 def test_tokenize_splits_by_space():
@@ -14,3 +18,12 @@ def test_build_term_frequency():
         "报销": 2,
         "发票": 1,
     }
+
+
+def test_count_shared_terms():
+    first = build_term_frequency("报销 发票 审批")
+    second = build_term_frequency("报销 流程 发票")
+
+    score = count_shared_terms(first, second)
+
+    assert score == 2
