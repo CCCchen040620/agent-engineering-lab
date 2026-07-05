@@ -224,3 +224,31 @@ def insert_chunk_to_db(connection, document_id: int, text: str) -> dict:
         "document_id": row[1],
         "text": row[2],
     }
+
+
+def list_chunks_by_document_id(connection, document_id: int) -> list[dict]:
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT id, document_id, text
+        FROM chunks
+        WHERE document_id = ?
+        """,
+        (document_id,),
+    )
+
+    rows = cursor.fetchall()
+
+    chunks = []
+
+    for row in rows:
+        chunks.append(
+            {
+                "id": row[0],
+                "document_id": row[1],
+                "text": row[2],
+            }
+        )
+
+    return chunks
