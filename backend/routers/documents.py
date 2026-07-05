@@ -11,6 +11,7 @@ from backend.services.document_service import (
     filter_documents,
     find_document_by_title,
     save_documents,
+    find_document_by_id,
 )
 
 
@@ -33,6 +34,20 @@ def list_documents(
         indexed_only=indexed_only,
         file_type=file_type,
     )
+
+
+@router.get("/documents/by-id/{document_id}", response_model=Document)
+def get_document_by_id(
+    document_id: int,
+    file_path: str = Depends(get_documents_file_path),
+):
+    documents = load_documents(file_path)
+    document = find_document_by_id(documents, document_id)
+
+    if document is None:
+        raise HTTPException(status_code=404, detail="文档不存在。")
+
+    return document
 
 
 @router.get("/documents/{title}", response_model=Document)

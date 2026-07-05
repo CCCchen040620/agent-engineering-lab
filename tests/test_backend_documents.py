@@ -318,3 +318,38 @@ def test_create_document_endpoint_rejects_empty_title():
     )
 
     assert response.status_code == 422
+
+
+def test_get_document_by_id(tmp_path):
+    documents = [
+        {
+            "id": 1,
+            "title": "员工手册",
+            "file_type": "md",
+            "chunk_count": 12,
+            "is_indexed": True,
+        }
+    ]
+    use_temp_documents_file(tmp_path, documents)
+
+    response = client.get("/api/v1/documents/by-id/1")
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["id"] == 1
+    assert data["title"] == "员工手册"
+
+
+def test_get_document_by_id_returns_404_when_not_found(tmp_path):
+    use_temp_documents_file(tmp_path, [])
+
+    response = client.get("/api/v1/documents/by-id/999")
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "文档不存在。"
