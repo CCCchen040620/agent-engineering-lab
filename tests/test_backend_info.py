@@ -17,3 +17,6 @@ def test_info_endpoint():
     assert data["version"] == "0.1.0"
     assert "chat_with_citations" in data["features"]
     assert "refusal_for_unknown_questions" in data["features"]
+    assert "list_documents" in data["features"]
+    assert "create_document" in data["features"]
+    assert "delete_document_by_id" in data["features"]

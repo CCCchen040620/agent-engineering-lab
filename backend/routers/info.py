@@ -13,5 +13,10 @@ def get_info():
             "health_check",
             "chat_with_citations",
             "refusal_for_unknown_questions",
+            "list_documents",
+            "filter_documents",
+            "get_document_by_id",
+            "create_document",
+            "delete_document_by_id",
         ],
     }
