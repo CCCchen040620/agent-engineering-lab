@@ -1,5 +1,7 @@
 import json
 
+from week05.models import Document, DocumentCreateRequest
+
 
 def save_documents(file_path: str, documents: list[dict]) -> None:
     with open(file_path, "w", encoding="utf-8") as file:
@@ -45,3 +47,24 @@ def delete_document_by_title(documents: list[dict], title: str) -> tuple[list[di
         results.append(document)
 
     return results, deleted
+
+
+def add_document(
+    documents: list[dict],
+    request: DocumentCreateRequest,
+) -> tuple[list[dict], Document | None]:
+    existing_document = find_document_by_title(documents, request.title)
+
+    if existing_document is not None:
+        return documents, None
+
+    document = Document(
+        title=request.title,
+        file_type=request.file_type,
+        chunk_count=request.chunk_count,
+        is_indexed=request.is_indexed,
+    )
+
+    results = documents + [document.model_dump()]
+
+    return results, document

@@ -1,5 +1,7 @@
 from week02.load_documents import load_documents
+from week05.models import DocumentCreateRequest
 from backend.services.document_service import (
+    add_document,
     delete_document_by_title,
     filter_documents,
     find_document_by_title,
@@ -106,3 +108,41 @@ def test_save_documents(tmp_path):
     loaded_documents = load_documents(str(file_path))
 
     assert loaded_documents == documents
+
+
+def test_add_document():
+    documents = []
+    request = DocumentCreateRequest(
+        title="培训资料",
+        file_type="pdf",
+        chunk_count=3,
+    )
+
+    results, document = add_document(documents, request)
+
+    assert document is not None
+    assert document.title == "培训资料"
+    assert len(results) == 1
+    assert results[0]["title"] == "培训资料"
+    assert results[0]["is_indexed"] == False
+
+
+def test_add_document_returns_none_when_title_exists():
+    documents = [
+        {
+            "title": "培训资料",
+            "file_type": "pdf",
+            "chunk_count": 3,
+            "is_indexed": False,
+        }
+    ]
+    request = DocumentCreateRequest(
+        title="培训资料",
+        file_type="pdf",
+        chunk_count=3,
+    )
+
+    results, document = add_document(documents, request)
+
+    assert document is None
+    assert results == documents
