@@ -49,6 +49,19 @@ def delete_document_by_title(documents: list[dict], title: str) -> tuple[list[di
     return results, deleted
 
 
+def get_next_document_id(documents: list[dict]) -> int:
+    if len(documents) == 0:
+        return 1
+
+    max_id = 0
+
+    for document in documents:
+        if document["id"] > max_id:
+            max_id = document["id"]
+
+    return max_id + 1
+
+
 def add_document(
     documents: list[dict],
     request: DocumentCreateRequest,
@@ -59,6 +72,7 @@ def add_document(
         return documents, None
 
     document = Document(
+        id=get_next_document_id(documents),
         title=request.title,
         file_type=request.file_type,
         chunk_count=request.chunk_count,

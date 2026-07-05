@@ -20,6 +20,7 @@ class ChatResponse(BaseModel):
 
 
 class Document(BaseModel):
+    id: int
     title: str = Field(min_length=1)
     file_type: str = Field(min_length=1)
     chunk_count: int

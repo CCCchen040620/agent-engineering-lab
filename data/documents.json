@@ -1,23 +1,27 @@
 [
   {
+    "id": 1,
     "title": "员工手册",
     "file_type": "md",
     "chunk_count": 12,
     "is_indexed": true
   },
   {
+    "id": 2,
     "title": "报销制度",
     "file_type": "pdf",
     "chunk_count": 8,
     "is_indexed": false
   },
   {
+    "id": 3,
     "title": "请假制度",
     "file_type": "md",
     "chunk_count": 5,
     "is_indexed": true
   },
   {
+    "id": 4,
     "title": "培训资料",
     "file_type": "pdf",
     "chunk_count": 3,

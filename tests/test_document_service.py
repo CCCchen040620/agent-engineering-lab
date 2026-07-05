@@ -1,6 +1,7 @@
 from week02.load_documents import load_documents
 from week05.models import DocumentCreateRequest
 from backend.services.document_service import (
+    get_next_document_id,
     add_document,
     delete_document_by_title,
     filter_documents,
@@ -11,8 +12,8 @@ from backend.services.document_service import (
 
 def test_filter_documents_by_indexed_only():
     documents = [
-        {"title": "员工手册", "file_type": "md", "is_indexed": True},
-        {"title": "报销制度", "file_type": "pdf", "is_indexed": False},
+        {"id": 1, "title": "员工手册", "file_type": "md", "is_indexed": True},
+        {"id": 2, "title": "报销制度", "file_type": "pdf", "is_indexed": False},
     ]
 
     results = filter_documents(documents, indexed_only=True)
@@ -23,8 +24,8 @@ def test_filter_documents_by_indexed_only():
 
 def test_filter_documents_by_file_type():
     documents = [
-        {"title": "员工手册", "file_type": "md", "is_indexed": True},
-        {"title": "报销制度", "file_type": "pdf", "is_indexed": False},
+        {"id": 1, "title": "员工手册", "file_type": "md", "is_indexed": True},
+        {"id": 2, "title": "报销制度", "file_type": "pdf", "is_indexed": False},
     ]
 
     results = filter_documents(documents, file_type="pdf")
@@ -35,9 +36,9 @@ def test_filter_documents_by_file_type():
 
 def test_filter_documents_by_indexed_and_file_type():
     documents = [
-        {"title": "员工手册", "file_type": "md", "is_indexed": True},
-        {"title": "报销制度", "file_type": "pdf", "is_indexed": False},
-        {"title": "请假制度", "file_type": "md", "is_indexed": True},
+        {"id": 1, "title": "员工手册", "file_type": "md", "is_indexed": True},
+        {"id": 2, "title": "报销制度", "file_type": "pdf", "is_indexed": False},
+        {"id": 3, "title": "请假制度", "file_type": "md", "is_indexed": True},
     ]
 
     results = filter_documents(documents, indexed_only=True, file_type="md")
@@ -49,8 +50,8 @@ def test_filter_documents_by_indexed_and_file_type():
 
 def test_find_document_by_title():
     documents = [
-        {"title": "员工手册", "file_type": "md", "is_indexed": True},
-        {"title": "报销制度", "file_type": "pdf", "is_indexed": False},
+        {"id": 1, "title": "员工手册", "file_type": "md", "is_indexed": True},
+        {"id": 2, "title": "报销制度", "file_type": "pdf", "is_indexed": False},
     ]
 
     result = find_document_by_title(documents, "员工手册")
@@ -60,7 +61,7 @@ def test_find_document_by_title():
 
 def test_find_document_by_title_returns_none_when_not_found():
     documents = [
-        {"title": "员工手册", "file_type": "md", "is_indexed": True},
+        {"id": 1, "title": "员工手册", "file_type": "md", "is_indexed": True},
     ]
 
     result = find_document_by_title(documents, "不存在的文档")
@@ -70,8 +71,8 @@ def test_find_document_by_title_returns_none_when_not_found():
 
 def test_delete_document_by_title():
     documents = [
-        {"title": "员工手册", "file_type": "md", "is_indexed": True},
-        {"title": "报销制度", "file_type": "pdf", "is_indexed": False},
+        {"id": 1, "title": "员工手册", "file_type": "md", "is_indexed": True},
+        {"id": 2, "title": "报销制度", "file_type": "pdf", "is_indexed": False},
     ]
 
     results, deleted = delete_document_by_title(documents, "报销制度")
@@ -83,7 +84,7 @@ def test_delete_document_by_title():
 
 def test_delete_document_by_title_returns_false_when_not_found():
     documents = [
-        {"title": "员工手册", "file_type": "md", "is_indexed": True},
+        {"id": 1, "title": "员工手册", "file_type": "md", "is_indexed": True},
     ]
 
     results, deleted = delete_document_by_title(documents, "不存在的文档")
@@ -96,6 +97,7 @@ def test_save_documents(tmp_path):
     file_path = tmp_path / "documents.json"
     documents = [
         {
+            "id": 1,
             "title": "测试文档",
             "file_type": "md",
             "chunk_count": 1,
@@ -110,9 +112,23 @@ def test_save_documents(tmp_path):
     assert loaded_documents == documents
 
 
+def test_get_next_document_id_returns_1_for_empty_list():
+    assert get_next_document_id([]) == 1
+
+
+def test_get_next_document_id_returns_max_id_plus_1():
+    documents = [
+        {"id": 1, "title": "员工手册"},
+        {"id": 3, "title": "请假制度"},
+    ]
+
+    assert get_next_document_id(documents) == 4
+
+
 def test_add_document():
     documents = []
     request = DocumentCreateRequest(
+        id=4,
         title="培训资料",
         file_type="pdf",
         chunk_count=3,
@@ -120,6 +136,8 @@ def test_add_document():
 
     results, document = add_document(documents, request)
 
+    assert document.id == 1
+    assert results[0]["id"] == 1
     assert document is not None
     assert document.title == "培训资料"
     assert len(results) == 1
@@ -130,6 +148,7 @@ def test_add_document():
 def test_add_document_returns_none_when_title_exists():
     documents = [
         {
+            "id": 4,
             "title": "培训资料",
             "file_type": "pdf",
             "chunk_count": 3,
@@ -137,6 +156,7 @@ def test_add_document_returns_none_when_title_exists():
         }
     ]
     request = DocumentCreateRequest(
+        id=1,
         title="培训资料",
         file_type="pdf",
         chunk_count=3,

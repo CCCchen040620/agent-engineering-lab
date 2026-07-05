@@ -164,12 +164,14 @@ def test_chat_request_rejects_empty_question():
 
 def test_create_document_model():
     document = Document(
+        id=1,
         title="员工手册",
         file_type="md",
         chunk_count=12,
         is_indexed=True,
     )
 
+    assert document.id == 1
     assert document.title == "员工手册"
     assert document.file_type == "md"
     assert document.chunk_count == 12

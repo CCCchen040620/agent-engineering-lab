@@ -24,18 +24,21 @@ def clear_dependency_overrides():
 def test_list_documents_endpoint(tmp_path):
     documents = [
         {
+            "id": 1,
             "title": "员工手册",
             "file_type": "md",
             "chunk_count": 12,
             "is_indexed": True,
         },
         {
+            "id": 2,
             "title": "报销制度",
             "file_type": "pdf",
             "chunk_count": 8,
             "is_indexed": False,
         },
         {
+            "id": 3,
             "title": "请假制度",
             "file_type": "md",
             "chunk_count": 5,
@@ -61,18 +64,21 @@ def test_list_documents_endpoint(tmp_path):
 def test_list_documents_endpoint_with_indexed_only(tmp_path):
     documents = [
         {
+            "id": 1,
             "title": "员工手册",
             "file_type": "md",
             "chunk_count": 12,
             "is_indexed": True,
         },
         {
+            "id": 2,
             "title": "报销制度",
             "file_type": "pdf",
             "chunk_count": 8,
             "is_indexed": False,
         },
         {
+            "id": 3,
             "title": "请假制度",
             "file_type": "md",
             "chunk_count": 5,
@@ -97,18 +103,21 @@ def test_list_documents_endpoint_with_indexed_only(tmp_path):
 def test_list_documents_endpoint_with_file_type(tmp_path):
     documents = [
         {
+            "id": 1,
             "title": "员工手册",
             "file_type": "md",
             "chunk_count": 12,
             "is_indexed": True,
         },
         {
+            "id": 2,
             "title": "报销制度",
             "file_type": "pdf",
             "chunk_count": 8,
             "is_indexed": False,
         },
         {
+            "id": 4,
             "title": "培训资料",
             "file_type": "pdf",
             "chunk_count": 3,
@@ -133,18 +142,21 @@ def test_list_documents_endpoint_with_file_type(tmp_path):
 def test_list_documents_endpoint_with_indexed_only_and_file_type(tmp_path):
     documents = [
         {
+            "id": 1,
             "title": "员工手册",
             "file_type": "md",
             "chunk_count": 12,
             "is_indexed": True,
         },
         {
+            "id": 2,
             "title": "报销制度",
             "file_type": "pdf",
             "chunk_count": 8,
             "is_indexed": False,
         },
         {
+            "id": 3,
             "title": "请假制度",
             "file_type": "md",
             "chunk_count": 5,
@@ -169,6 +181,7 @@ def test_list_documents_endpoint_with_indexed_only_and_file_type(tmp_path):
 def test_get_document_by_title(tmp_path):
     documents = [
         {
+            "id": 1,
             "title": "员工手册",
             "file_type": "md",
             "chunk_count": 12,
@@ -204,6 +217,7 @@ def test_delete_document_endpoint(tmp_path):
     file_path = tmp_path / "documents.json"
     documents = [
         {
+            "id": 1,
             "title": "测试文档",
             "file_type": "md",
             "chunk_count": 1,
@@ -245,6 +259,7 @@ def test_create_document_endpoint(tmp_path):
     response = client.post(
         "/api/v1/documents",
         json={
+            "id": 4,
             "title": "培训资料",
             "file_type": "pdf",
             "chunk_count": 3,
@@ -266,6 +281,7 @@ def test_create_document_endpoint(tmp_path):
 def test_create_document_endpoint_returns_409_when_title_exists(tmp_path):
     documents = [
         {
+            "id": 4,
             "title": "培训资料",
             "file_type": "pdf",
             "chunk_count": 3,
@@ -277,6 +293,7 @@ def test_create_document_endpoint_returns_409_when_title_exists(tmp_path):
     response = client.post(
         "/api/v1/documents",
         json={
+            "id": 4,
             "title": "培训资料",
             "file_type": "pdf",
             "chunk_count": 3,
@@ -293,6 +310,7 @@ def test_create_document_endpoint_rejects_empty_title():
     response = client.post(
         "/api/v1/documents",
         json={
+            "id": 4,
             "title": "",
             "file_type": "pdf",
             "chunk_count": 3,
