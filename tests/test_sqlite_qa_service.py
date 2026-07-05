@@ -88,3 +88,33 @@ def test_build_sqlite_chat_response_ranks_chunks(tmp_path):
     )
 
     assert response.citations[0].text == "差旅报销需要提交报销材料。"
+
+
+def test_build_sqlite_chat_response_respects_top_k(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="报销制度",
+        file_type="md",
+        chunk_count=3,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(connection, document["id"], "报销片段1")
+    insert_chunk_to_db(connection, document["id"], "报销片段2")
+    insert_chunk_to_db(connection, document["id"], "报销片段3")
+
+    connection.close()
+
+    response = build_sqlite_chat_response(
+        "报销",
+        database_path=str(database_path),
+        top_k=2,
+    )
+
+    assert len(response.citations) == 2

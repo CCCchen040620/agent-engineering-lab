@@ -11,7 +11,11 @@ from week05.models import ChatResponse, Citation
 from backend.services.ranking_service import rank_chunks
 
 
-def build_sqlite_chat_response(question: str, database_path: str = SQLITE_DATABASE_PATH) -> ChatResponse:
+def build_sqlite_chat_response(
+    question: str,
+    database_path: str = SQLITE_DATABASE_PATH,
+    top_k: int = 3,
+) -> ChatResponse:
     keyword = extract_keyword(question)
 
     connection = create_connection(database_path)
@@ -26,7 +30,7 @@ def build_sqlite_chat_response(question: str, database_path: str = SQLITE_DATABA
 
     snippets = []
 
-    for chunk in chunk_results:
+    for chunk in chunk_results[:top_k]:
         snippets.append(
             {
                 "title": chunk["document_title"],
