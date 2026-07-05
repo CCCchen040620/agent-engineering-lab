@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.services.sqlite_qa_service import build_sqlite_chat_response
 from backend.services.sqlite_document_repository import (
@@ -104,7 +104,7 @@ def delete_db_document_by_id(
 @router.post("/chat", response_model=ChatResponse)
 def sqlite_chat(
     request: ChatRequest,
-    top_k: int = 3,
+    top_k: int = Query(default=3, ge=1, le=5),
     database_path: str = Depends(get_database_path),
 ):
     return build_sqlite_chat_response(

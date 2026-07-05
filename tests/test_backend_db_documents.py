@@ -279,3 +279,21 @@ def test_sqlite_chat_endpoint_respects_top_k(tmp_path):
     data = response.json()
 
     assert len(data["citations"]) == 2
+
+
+def test_sqlite_chat_endpoint_rejects_invalid_top_k():
+    response = client.post(
+        "/api/v1/db/chat?top_k=0",
+        json={"question": "报销"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_sqlite_chat_endpoint_rejects_too_large_top_k():
+    response = client.post(
+        "/api/v1/db/chat?top_k=6",
+        json={"question": "报销"},
+    )
+
+    assert response.status_code == 422
