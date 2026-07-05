@@ -8,6 +8,7 @@ from backend.services.sqlite_document_repository import (
     insert_document_to_db,
     try_insert_document_to_db,
     list_documents_from_db_filtered,
+    find_document_from_db_by_id,
 )
 
 
@@ -134,3 +135,38 @@ def test_list_documents_from_db_filtered_by_file_type(tmp_path):
 
     assert len(documents) == 1
     assert documents[0]["title"] == "报销制度"
+
+
+def test_find_document_from_db_by_id(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=12,
+        is_indexed=True,
+    )
+
+    found_document = find_document_from_db_by_id(connection, document["id"])
+
+    connection.close()
+
+    assert found_document is not None
+    assert found_document["title"] == "员工手册"
+
+
+def test_find_document_from_db_by_id_returns_none_when_not_found(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+
+    found_document = find_document_from_db_by_id(connection, 999)
+
+    connection.close()
+
+    assert found_document is None

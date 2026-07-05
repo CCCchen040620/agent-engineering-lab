@@ -138,3 +138,23 @@ def list_documents_from_db_filtered(
         documents.append(row_to_document(row))
 
     return documents
+
+
+def find_document_from_db_by_id(connection, document_id: int) -> dict | None:
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT id, title, file_type, chunk_count, is_indexed
+        FROM documents
+        WHERE id = ?
+        """,
+        (document_id,),
+    )
+
+    row = cursor.fetchone()
+
+    if row is None:
+        return None
+
+    return row_to_document(row)
