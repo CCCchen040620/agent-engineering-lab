@@ -1,4 +1,4 @@
-def search_documents(documents: list, keyword: str) -> list:
+def search_documents(documents: list[dict], keyword: str) -> list[dict]:
     results = []
 
     for document in documents:
