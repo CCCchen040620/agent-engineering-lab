@@ -191,3 +191,36 @@ def create_chunks_table(connection) -> None:
     )
 
     connection.commit()
+
+
+def insert_chunk_to_db(connection, document_id: int, text: str) -> dict:
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        INSERT INTO chunks (document_id, text)
+        VALUES (?, ?)
+        """,
+        (document_id, text),
+    )
+
+    connection.commit()
+
+    chunk_id = cursor.lastrowid
+
+    cursor.execute(
+        """
+        SELECT id, document_id, text
+        FROM chunks
+        WHERE id = ?
+        """,
+        (chunk_id,),
+    )
+
+    row = cursor.fetchone()
+
+    return {
+        "id": row[0],
+        "document_id": row[1],
+        "text": row[2],
+    }

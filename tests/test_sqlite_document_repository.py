@@ -11,6 +11,7 @@ from backend.services.sqlite_document_repository import (
     find_document_from_db_by_id,
     delete_document_from_db_by_id,
     create_chunks_table,
+    insert_chunk_to_db,
 )
 
 
@@ -232,3 +233,31 @@ def test_create_chunks_table(tmp_path):
 
     assert row is not None
     assert row[0] == "chunks"
+
+
+def test_insert_chunk_to_db(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=1,
+        is_indexed=True,
+    )
+
+    chunk = insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="新员工入职后需要在 30 天内完成安全培训。",
+    )
+
+    connection.close()
+
+    assert chunk["id"] == 1
+    assert chunk["document_id"] == document["id"]
+    assert chunk["text"] == "新员工入职后需要在 30 天内完成安全培训。"
