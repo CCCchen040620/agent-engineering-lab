@@ -114,11 +114,15 @@ SQLite 版接口使用本地数据库 `data/app.db` 保存文档数据。
 支持查询参数：
 
 - `top_k`：最多返回几个引用片段，默认 `3`，范围 `1` 到 `5`
+- `mode`：检索模式，默认 `keyword`
+- `keyword`：使用 SQLite `LIKE` 关键词检索
+- `vector`：使用 jieba 分词、词频向量和余弦相似度检索
 
 示例：
 
 ```text
 POST /api/v1/db/chat?top_k=2
+POST /api/v1/db/chat?mode=vector&top_k=2
 ```
 
 返回示例：
