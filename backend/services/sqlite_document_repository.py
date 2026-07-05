@@ -51,3 +51,38 @@ def list_documents_from_db(connection) -> list[dict]:
         documents.append(row_to_document(row))
 
     return documents
+
+
+def insert_document_to_db(
+    connection,
+    title: str,
+    file_type: str,
+    chunk_count: int,
+    is_indexed: bool,
+) -> dict:
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        INSERT INTO documents (title, file_type, chunk_count, is_indexed)
+        VALUES (?, ?, ?, ?)
+        """,
+        (title, file_type, chunk_count, int(is_indexed)),
+    )
+
+    connection.commit()
+
+    document_id = cursor.lastrowid
+
+    cursor.execute(
+        """
+        SELECT id, title, file_type, chunk_count, is_indexed
+        FROM documents
+        WHERE id = ?
+        """,
+        (document_id,),
+    )
+
+    row = cursor.fetchone()
+
+    return row_to_document(row)
