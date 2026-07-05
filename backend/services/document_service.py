@@ -15,3 +15,11 @@ def filter_documents(
         results.append(document)
 
     return results
+
+
+def find_document_by_title(documents: list[dict], title: str) -> dict | None:
+    for document in documents:
+        if document["title"] == title:
+            return document
+
+    return None

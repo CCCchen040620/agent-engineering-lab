@@ -54,3 +54,21 @@ def test_list_documents_endpoint_with_indexed_only_and_file_type():
     assert len(data) == 2
     assert data[0]["title"] == "员工手册"
     assert data[1]["title"] == "请假制度"
+
+
+def test_get_document_by_title():
+    response = client.get("/api/v1/documents/员工手册")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["title"] == "员工手册"
+    assert data["file_type"] == "md"
+
+
+def test_get_document_by_title_returns_404_when_not_found():
+    response = client.get("/api/v1/documents/不存在的文档")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "文档不存在。"
