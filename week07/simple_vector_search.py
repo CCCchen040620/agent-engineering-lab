@@ -1,3 +1,6 @@
+import math
+
+
 def tokenize(text: str) -> list[str]:
     return text.split()
 
@@ -35,13 +38,21 @@ def dot_product(first_vector: dict[str, int], second_vector: dict[str, int]) -> 
     return score
 
 
+def vector_length(vector: dict[str, int]) -> float:
+    total = 0
+
+    for value in vector.values():
+        total = total + value * value
+
+    return math.sqrt(total)
+
+
 def main():
-    first = build_term_frequency("报销 发票")
-    second = build_term_frequency("报销 报销 发票")
+    vector = build_term_frequency("报销 报销 报销 发票 发票 发票 发票")
 
-    score = dot_product(first, second)
+    length = vector_length(vector)
 
-    print("点积分数：", score)
+    print("向量长度：", length)
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@ from week07.simple_vector_search import (
     count_shared_terms,
     tokenize,
     dot_product,
+    vector_length,
 )
 
 
@@ -37,3 +38,14 @@ def test_dot_product():
     score = dot_product(first, second)
 
     assert score == 3
+
+
+def test_vector_length():
+    vector = {
+        "报销": 3,
+        "发票": 4,
+    }
+
+    length = vector_length(vector)
+
+    assert length == 5
