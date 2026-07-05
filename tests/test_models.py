@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from week05.models import ChatRequest, ChatResponse, Citation
+from week05.models import ChatRequest, ChatResponse, Citation, Document
 
 
 def test_create_citation_model():
@@ -154,3 +154,27 @@ def test_create_chat_request_model():
 def test_chat_request_rejects_empty_question():
     with pytest.raises(ValidationError):
         ChatRequest(question="")
+
+
+def test_create_document_model():
+    document = Document(
+        title="员工手册",
+        file_type="md",
+        chunk_count=12,
+        is_indexed=True,
+    )
+
+    assert document.title == "员工手册"
+    assert document.file_type == "md"
+    assert document.chunk_count == 12
+    assert document.is_indexed == True
+
+
+def test_document_rejects_empty_title():
+    with pytest.raises(ValidationError):
+        Document(
+            title="",
+            file_type="md",
+            chunk_count=12,
+            is_indexed=True,
+        )
