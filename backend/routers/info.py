@@ -23,5 +23,6 @@ def get_info():
             "sqlite_create_document",
             "sqlite_get_document_by_id",
             "sqlite_delete_document_by_id",
+            "sqlite_chat_with_citations",
         ],
     }

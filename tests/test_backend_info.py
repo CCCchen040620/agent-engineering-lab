@@ -23,3 +23,4 @@ def test_info_endpoint():
     assert "sqlite_list_documents" in data["features"]
     assert "sqlite_create_document" in data["features"]
     assert "sqlite_delete_document_by_id" in data["features"]
+    assert "sqlite_chat_with_citations" in data["features"]

@@ -94,3 +94,34 @@ SQLite 版接口使用本地数据库 `data/app.db` 保存文档数据。
   "id": 2
 }
 ```
+
+## SQLite 问答接口
+
+### POST /api/v1/db/chat
+
+从 SQLite `chunks` 表检索文档片段，并生成带引用来源的回答。
+
+请求示例：
+
+```json
+{
+  "question": "新员工什么时候完成安全培训？"
+}
+```
+
+返回示例：
+
+```json
+{
+  "question": "新员工什么时候完成安全培训？",
+  "keyword": "安全培训",
+  "answer": "根据知识库资料：...",
+  "citations": [
+    {
+      "title": "员工手册",
+      "text": "新员工入职后需要在 30 天内完成安全培训。",
+      "path": "sqlite://1"
+    }
+  ]
+}
+```
