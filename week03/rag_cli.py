@@ -1,6 +1,7 @@
 from week03.qa_service import answer_question
 from week03.evaluate_refusal import evaluate_refusal_questions
 from week03.evaluate_retrieval import evaluate_retrieval_questions
+from week04.structured_answer import build_structured_answer
 
 
 def run_refusal_evaluation():
@@ -44,8 +45,12 @@ def main():
 
     if choice == "1":
         question = input("请输入你的问题：")
-        answer = answer_question(question)
-        print(answer)
+        result = build_structured_answer(question)
+        
+        print("问题：", result["question"])
+        print("检索关键词：", result["keyword"])
+        print("回答：")
+        print(result["answer"])
     elif choice == "2":
         result = run_refusal_evaluation()
         print("无答案问题数量：", result["total"])
