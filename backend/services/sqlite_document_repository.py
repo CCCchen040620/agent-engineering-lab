@@ -86,3 +86,22 @@ def insert_document_to_db(
     row = cursor.fetchone()
 
     return row_to_document(row)
+
+
+def try_insert_document_to_db(
+    connection,
+    title: str,
+    file_type: str,
+    chunk_count: int,
+    is_indexed: bool,
+) -> dict | None:
+    try:
+        return insert_document_to_db(
+            connection,
+            title=title,
+            file_type=file_type,
+            chunk_count=chunk_count,
+            is_indexed=is_indexed,
+        )
+    except sqlite3.IntegrityError:
+        return None
