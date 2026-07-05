@@ -1,3 +1,11 @@
+import json
+
+
+def save_documents(file_path: str, documents: list[dict]) -> None:
+    with open(file_path, "w", encoding="utf-8") as file:
+        json.dump(documents, file, ensure_ascii=False, indent=2)
+
+
 def filter_documents(
     documents: list[dict],
     indexed_only: bool = False,

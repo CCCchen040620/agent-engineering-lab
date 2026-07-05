@@ -1,7 +1,9 @@
+from week02.load_documents import load_documents
 from backend.services.document_service import (
     delete_document_by_title,
     filter_documents,
     find_document_by_title,
+    save_documents,
 )
 
 
@@ -86,3 +88,21 @@ def test_delete_document_by_title_returns_false_when_not_found():
 
     assert deleted == False
     assert results == documents
+
+
+def test_save_documents(tmp_path):
+    file_path = tmp_path / "documents.json"
+    documents = [
+        {
+            "title": "测试文档",
+            "file_type": "md",
+            "chunk_count": 1,
+            "is_indexed": True,
+        }
+    ]
+
+    save_documents(str(file_path), documents)
+
+    loaded_documents = load_documents(str(file_path))
+
+    assert loaded_documents == documents
