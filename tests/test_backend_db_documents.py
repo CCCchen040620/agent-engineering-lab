@@ -105,3 +105,41 @@ def test_create_db_document_endpoint_returns_409_for_duplicate_title(tmp_path):
     assert first_response.status_code == 201
     assert second_response.status_code == 409
     assert second_response.json()["detail"] == "文档已存在。"
+
+
+def test_get_db_document_by_id(tmp_path):
+    use_temp_database(tmp_path)
+
+    create_response = client.post(
+        "/api/v1/db/documents",
+        json={
+            "title": "员工手册",
+            "file_type": "md",
+            "chunk_count": 12,
+            "is_indexed": True,
+        },
+    )
+
+    document_id = create_response.json()["id"]
+
+    response = client.get(f"/api/v1/db/documents/{document_id}")
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["id"] == document_id
+    assert data["title"] == "员工手册"
+
+
+def test_get_db_document_by_id_returns_404_when_not_found(tmp_path):
+    use_temp_database(tmp_path)
+
+    response = client.get("/api/v1/db/documents/999")
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "文档不存在。"

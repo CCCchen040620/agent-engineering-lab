@@ -5,6 +5,7 @@ from backend.services.sqlite_document_repository import (
     create_documents_table,
     list_documents_from_db_filtered,
     try_insert_document_to_db,
+    find_document_from_db_by_id,
 )
 from week04.settings import SQLITE_DATABASE_PATH
 from week05.models import Document, DocumentCreateRequest
@@ -58,5 +59,23 @@ def create_db_document(
 
     if document is None:
         raise HTTPException(status_code=409, detail="文档已存在。")
+
+    return document
+
+
+@router.get("/documents/{document_id}", response_model=Document)
+def get_db_document_by_id(
+    document_id: int,
+    database_path: str = Depends(get_database_path),
+):
+    connection = create_connection(database_path)
+
+    create_documents_table(connection)
+    document = find_document_from_db_by_id(connection, document_id)
+
+    connection.close()
+
+    if document is None:
+        raise HTTPException(status_code=404, detail="文档不存在。")
 
     return document
