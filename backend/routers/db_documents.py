@@ -7,6 +7,7 @@ from backend.services.sqlite_document_repository import (
 )
 from week04.settings import SQLITE_DATABASE_PATH
 from week05.models import Document
+from backend.services.document_service import filter_documents
 
 
 router = APIRouter(prefix="/api/v1/db")
@@ -17,7 +18,7 @@ def get_database_path() -> str:
 
 
 @router.get("/documents", response_model=list[Document])
-def list_db_documents():
+def list_db_documents(indexed_only: bool = False, file_type: str | None = None):
     connection = create_connection(get_database_path())
 
     create_documents_table(connection)
@@ -25,4 +26,8 @@ def list_db_documents():
 
     connection.close()
 
-    return documents
+    return filter_documents(
+        documents,
+        indexed_only=indexed_only,
+        file_type=file_type,
+    )
