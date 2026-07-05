@@ -24,3 +24,10 @@ class Document(BaseModel):
     file_type: str = Field(min_length=1)
     chunk_count: int
     is_indexed: bool
+
+
+class DocumentCreateRequest(BaseModel):
+    title: str = Field(min_length=1)
+    file_type: str = Field(min_length=1)
+    chunk_count: int
+    is_indexed: bool = False
