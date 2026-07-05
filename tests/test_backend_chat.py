@@ -30,3 +30,19 @@ def test_chat_endpoint_rejects_empty_question():
     )
 
     assert response.status_code == 422
+
+
+def test_chat_endpoint_refuses_unknown_question():
+    response = client.post(
+        "/api/v1/chat",
+        json={"question": "公司有没有股票期权？"},
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["question"] == "公司有没有股票期权？"
+    assert data["keyword"] == "公司有没有股票期权？"
+    assert "暂时无法回答" in data["answer"]
+    assert data["citations"] == []
