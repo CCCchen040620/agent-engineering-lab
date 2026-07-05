@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from week05.models import ChatResponse, Citation
+from week05.models import ChatRequest, ChatResponse, Citation
 
 
 def test_create_citation_model():
@@ -143,3 +143,14 @@ def test_chat_response_rejects_empty_answer():
             keyword="差旅报销",
             answer="",
         )
+
+
+def test_create_chat_request_model():
+    request = ChatRequest(question="差旅报销多久内提交？")
+
+    assert request.question == "差旅报销多久内提交？"
+
+
+def test_chat_request_rejects_empty_question():
+    with pytest.raises(ValidationError):
+        ChatRequest(question="")

@@ -8,6 +8,10 @@ class Citation(BaseModel):
     path: str = Field(min_length=1)
 
 
+class ChatRequest(BaseModel):
+    question: str = Field(min_length=1)
+
+    
 class ChatResponse(BaseModel):
     question: str = Field(min_length=1)
     keyword: str = Field(min_length=1)
