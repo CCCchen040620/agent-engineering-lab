@@ -47,10 +47,10 @@ def main():
         question = input("请输入你的问题：")
         result = build_structured_answer(question)
         
-        print("问题：", result["question"])
-        print("检索关键词：", result["keyword"])
+        print("问题：", result.question)
+        print("检索关键词：", result.keyword)
         print("回答：")
-        print(result["answer"])
+        print(result.answer)
     elif choice == "2":
         result = run_refusal_evaluation()
         print("无答案问题数量：", result["total"])
