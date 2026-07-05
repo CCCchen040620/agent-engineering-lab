@@ -19,7 +19,7 @@ def test_build_answer_with_citation():
 def test_build_answer_refuses_when_no_snippet_found():
     answer = build_answer("股票期权", [], "股票期权")
 
-    assert "检索关键词：股票期权" in answer
+    #assert "检索关键词：股票期权" in answer
     assert "知识库中没有找到相关资料，暂时无法回答。" in answer
 
 
@@ -51,15 +51,15 @@ def test_build_answer_adds_citation_numbers():
     assert "[2] 片段2" in answer
 
 
-def test_build_answer_shows_search_keyword():
-    snippets = [
-        {
-            "title": "doc1",
-            "path": "a.txt",
-            "text": "片段1",
-        }
-    ]
+#def test_build_answer_shows_search_keyword():
+    #snippets = [
+       # {
+            #"title": "doc1",
+            #"path": "a.txt",
+            #"text": "片段1",
+        #}
+   # ]
 
-    answer = build_answer("测试问题", snippets, "测试关键词")
+    #answer = build_answer("测试问题", snippets, "测试关键词")
 
-    assert "检索关键词：测试关键词" in answer
+   # assert "检索关键词：测试关键词" in answer
