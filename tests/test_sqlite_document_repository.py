@@ -9,6 +9,7 @@ from backend.services.sqlite_document_repository import (
     try_insert_document_to_db,
     list_documents_from_db_filtered,
     find_document_from_db_by_id,
+    delete_document_from_db_by_id,
 )
 
 
@@ -170,3 +171,39 @@ def test_find_document_from_db_by_id_returns_none_when_not_found(tmp_path):
     connection.close()
 
     assert found_document is None
+
+
+def test_delete_document_from_db_by_id(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=12,
+        is_indexed=True,
+    )
+
+    deleted = delete_document_from_db_by_id(connection, document["id"])
+    documents = list_documents_from_db(connection)
+
+    connection.close()
+
+    assert deleted == True
+    assert documents == []
+
+
+def test_delete_document_from_db_by_id_returns_false_when_not_found(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+
+    deleted = delete_document_from_db_by_id(connection, 999)
+
+    connection.close()
+
+    assert deleted == False

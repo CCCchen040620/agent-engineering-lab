@@ -158,3 +158,19 @@ def find_document_from_db_by_id(connection, document_id: int) -> dict | None:
         return None
 
     return row_to_document(row)
+
+
+def delete_document_from_db_by_id(connection, document_id: int) -> bool:
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        DELETE FROM documents
+        WHERE id = ?
+        """,
+        (document_id,),
+    )
+
+    connection.commit()
+
+    return cursor.rowcount > 0
