@@ -143,3 +143,40 @@ def test_get_db_document_by_id_returns_404_when_not_found(tmp_path):
 
     assert response.status_code == 404
     assert response.json()["detail"] == "文档不存在。"
+
+
+def test_delete_db_document_by_id(tmp_path):
+    use_temp_database(tmp_path)
+
+    create_response = client.post(
+        "/api/v1/db/documents",
+        json={
+            "title": "员工手册",
+            "file_type": "md",
+            "chunk_count": 12,
+            "is_indexed": True,
+        },
+    )
+
+    document_id = create_response.json()["id"]
+
+    response = client.delete(f"/api/v1/db/documents/{document_id}")
+
+    list_response = client.get("/api/v1/db/documents")
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 200
+    assert response.json() == {"message": "文档已删除。", "id": document_id}
+    assert list_response.json() == []
+
+
+def test_delete_db_document_by_id_returns_404_when_not_found(tmp_path):
+    use_temp_database(tmp_path)
+
+    response = client.delete("/api/v1/db/documents/999")
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "文档不存在。"
