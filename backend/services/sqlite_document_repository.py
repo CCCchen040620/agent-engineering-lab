@@ -280,3 +280,37 @@ def search_chunks_by_text(connection, keyword: str) -> list[dict]:
         )
 
     return chunks
+
+
+def search_chunks_with_document_by_text(connection, keyword: str) -> list[dict]:
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT
+            chunks.id,
+            chunks.document_id,
+            documents.title,
+            chunks.text
+        FROM chunks
+        JOIN documents ON chunks.document_id = documents.id
+        WHERE chunks.text LIKE ?
+        """,
+        ("%" + keyword + "%",),
+    )
+
+    rows = cursor.fetchall()
+
+    results = []
+
+    for row in rows:
+        results.append(
+            {
+                "chunk_id": row[0],
+                "document_id": row[1],
+                "document_title": row[2],
+                "text": row[3],
+            }
+        )
+
+    return results
