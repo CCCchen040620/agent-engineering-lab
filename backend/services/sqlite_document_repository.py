@@ -174,3 +174,20 @@ def delete_document_from_db_by_id(connection, document_id: int) -> bool:
     connection.commit()
 
     return cursor.rowcount > 0
+
+
+def create_chunks_table(connection) -> None:
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS chunks (
+            id INTEGER PRIMARY KEY,
+            document_id INTEGER NOT NULL,
+            text TEXT NOT NULL,
+            FOREIGN KEY (document_id) REFERENCES documents (id)
+        )
+        """
+    )
+
+    connection.commit()

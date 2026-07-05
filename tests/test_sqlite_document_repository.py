@@ -10,6 +10,7 @@ from backend.services.sqlite_document_repository import (
     list_documents_from_db_filtered,
     find_document_from_db_by_id,
     delete_document_from_db_by_id,
+    create_chunks_table,
 )
 
 
@@ -207,3 +208,27 @@ def test_delete_document_from_db_by_id_returns_false_when_not_found(tmp_path):
     connection.close()
 
     assert deleted == False
+
+
+def test_create_chunks_table(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    cursor = connection.cursor()
+    cursor.execute(
+        """
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table' AND name = 'chunks'
+        """
+    )
+
+    row = cursor.fetchone()
+
+    connection.close()
+
+    assert row is not None
+    assert row[0] == "chunks"
