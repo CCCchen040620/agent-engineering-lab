@@ -29,7 +29,8 @@ http://127.0.0.1:8000/docs
 }
 ```
 
-### 文档接口
+## JSON 文档接口（Legacy）
+> 说明：这组接口使用 `data/documents.json` 保存文档数据，是早期学习阶段实现的旧版接口。当前推荐使用 SQLite 文档接口。
 
 - `GET /api/v1/documents`：查看文档列表
 - `GET /api/v1/documents?indexed_only=true`：只查看已索引文档
@@ -39,6 +40,7 @@ http://127.0.0.1:8000/docs
 - `DELETE /api/v1/documents/by-id/{document_id}`：按 id 删除文档
 
 ## SQLite 文档接口
+> 说明：这组接口使用 `data/app.db` 保存文档数据，是当前推荐的主线文档接口。
 
 SQLite 版接口使用本地数据库 `data/app.db` 保存文档数据。
 
@@ -96,6 +98,7 @@ SQLite 版接口使用本地数据库 `data/app.db` 保存文档数据。
 ```
 
 ## SQLite 问答接口
+> 说明：这是当前推荐的问答接口，基于 SQLite `chunks` 表检索片段并返回引用来源。
 
 ### POST /api/v1/db/chat
 
