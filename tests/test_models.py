@@ -98,3 +98,21 @@ def test_citation_rejects_empty_text():
             text="",
             path="data/company_docs/reimbursement_policy.txt",
         )
+
+
+def test_citation_rejects_empty_title():
+    with pytest.raises(ValidationError):
+        Citation(
+            title="",
+            text="差旅报销需要在出差结束后 7 天内提交。",
+            path="data/company_docs/reimbursement_policy.txt",
+        )
+
+
+def test_citation_rejects_empty_path():
+    with pytest.raises(ValidationError):
+        Citation(
+            title="reimbursement_policy",
+            text="差旅报销需要在出差结束后 7 天内提交。",
+            path="",
+        )

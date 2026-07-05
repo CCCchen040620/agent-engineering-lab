@@ -3,9 +3,9 @@ from pydantic import BaseModel, Field
 
 
 class Citation(BaseModel):
-    title: str
+    title: str = Field(min_length=1)
     text: str = Field(min_length=1)
-    path: str
+    path: str = Field(min_length=1)
 
 
 class ChatResponse(BaseModel):
