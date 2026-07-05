@@ -9,7 +9,7 @@ class Citation(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    question: str
-    keyword: str
-    answer: str
+    question: str = Field(min_length=1)
+    keyword: str = Field(min_length=1)
+    answer: str = Field(min_length=1)
     citations: list[Citation] = Field(default_factory=list)

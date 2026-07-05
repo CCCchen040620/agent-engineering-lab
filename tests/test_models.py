@@ -116,3 +116,30 @@ def test_citation_rejects_empty_path():
             text="差旅报销需要在出差结束后 7 天内提交。",
             path="",
         )
+
+
+def test_chat_response_rejects_empty_question():
+    with pytest.raises(ValidationError):
+        ChatResponse(
+            question="",
+            keyword="差旅报销",
+            answer="差旅报销需要在出差结束后 7 天内提交。",
+        )
+
+
+def test_chat_response_rejects_empty_keyword():
+    with pytest.raises(ValidationError):
+        ChatResponse(
+            question="差旅报销多久内提交？",
+            keyword="",
+            answer="差旅报销需要在出差结束后 7 天内提交。",
+        )
+
+
+def test_chat_response_rejects_empty_answer():
+    with pytest.raises(ValidationError):
+        ChatResponse(
+            question="差旅报销多久内提交？",
+            keyword="差旅报销",
+            answer="",
+        )
