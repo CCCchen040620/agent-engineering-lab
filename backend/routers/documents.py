@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException
 #from week02.document_list import documents
 from week02.load_documents import load_documents
 from week04.settings import DOCUMENTS_JSON_PATH
-from week05.models import Document
+from week05.models import Document, DocumentCreateRequest
 from backend.services.document_service import (
+    add_document,
     delete_document_by_title,
     filter_documents,
     find_document_by_title,
@@ -44,6 +45,23 @@ def get_document(
 
     if document is None:
         raise HTTPException(status_code=404, detail="文档不存在。")
+
+    return document
+
+
+@router.post("/documents", response_model=Document, status_code=201)
+def create_document(
+    request: DocumentCreateRequest,
+    file_path: str = Depends(get_documents_file_path),
+):
+    documents = load_documents(file_path)
+
+    results, document = add_document(documents, request)
+
+    if document is None:
+        raise HTTPException(status_code=409, detail="文档已存在。")
+
+    save_documents(file_path, results)
 
     return document
 

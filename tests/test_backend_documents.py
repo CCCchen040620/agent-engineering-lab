@@ -237,3 +237,66 @@ def test_delete_document_endpoint_returns_404_when_not_found(tmp_path):
 
     assert response.status_code == 404
     assert response.json()["detail"] == "文档不存在。"
+
+
+def test_create_document_endpoint(tmp_path):
+    use_temp_documents_file(tmp_path, [])
+
+    response = client.post(
+        "/api/v1/documents",
+        json={
+            "title": "培训资料",
+            "file_type": "pdf",
+            "chunk_count": 3,
+        },
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 201
+
+    data = response.json()
+
+    assert data["title"] == "培训资料"
+    assert data["file_type"] == "pdf"
+    assert data["chunk_count"] == 3
+    assert data["is_indexed"] == False
+
+
+def test_create_document_endpoint_returns_409_when_title_exists(tmp_path):
+    documents = [
+        {
+            "title": "培训资料",
+            "file_type": "pdf",
+            "chunk_count": 3,
+            "is_indexed": False,
+        }
+    ]
+    use_temp_documents_file(tmp_path, documents)
+
+    response = client.post(
+        "/api/v1/documents",
+        json={
+            "title": "培训资料",
+            "file_type": "pdf",
+            "chunk_count": 3,
+        },
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "文档已存在。"
+
+
+def test_create_document_endpoint_rejects_empty_title():
+    response = client.post(
+        "/api/v1/documents",
+        json={
+            "title": "",
+            "file_type": "pdf",
+            "chunk_count": 3,
+        },
+    )
+
+    assert response.status_code == 422
