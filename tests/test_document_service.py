@@ -8,6 +8,7 @@ from backend.services.document_service import (
     find_document_by_title,
     save_documents,
     find_document_by_id,
+    delete_document_by_id,
 )
 
 
@@ -188,3 +189,27 @@ def test_find_document_by_id_returns_none_when_not_found():
     result = find_document_by_id(documents, 999)
 
     assert result is None
+
+
+def test_delete_document_by_id():
+    documents = [
+        {"id": 1, "title": "员工手册"},
+        {"id": 2, "title": "报销制度"},
+    ]
+
+    results, deleted = delete_document_by_id(documents, 2)
+
+    assert deleted == True
+    assert len(results) == 1
+    assert results[0]["title"] == "员工手册"
+
+
+def test_delete_document_by_id_returns_false_when_not_found():
+    documents = [
+        {"id": 1, "title": "员工手册"},
+    ]
+
+    results, deleted = delete_document_by_id(documents, 999)
+
+    assert deleted == False
+    assert results == documents

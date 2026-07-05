@@ -35,6 +35,23 @@ def find_document_by_title(documents: list[dict], title: str) -> dict | None:
     return None
 
 
+def delete_document_by_id(
+    documents: list[dict],
+    document_id: int,
+) -> tuple[list[dict], bool]:
+    results = []
+    deleted = False
+
+    for document in documents:
+        if document["id"] == document_id:
+            deleted = True
+            continue
+
+        results.append(document)
+
+    return results, deleted
+
+    
 def delete_document_by_title(documents: list[dict], title: str) -> tuple[list[dict], bool]:
     results = []
     deleted = False
@@ -90,3 +107,5 @@ def find_document_by_id(documents: list[dict], document_id: int) -> dict | None:
             return document
 
     return None
+
+
