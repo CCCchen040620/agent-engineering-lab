@@ -353,3 +353,43 @@ def test_get_document_by_id_returns_404_when_not_found(tmp_path):
 
     assert response.status_code == 404
     assert response.json()["detail"] == "文档不存在。"
+
+
+def test_delete_document_by_id_endpoint(tmp_path):
+    file_path = tmp_path / "documents.json"
+    documents = [
+        {
+            "id": 1,
+            "title": "测试文档",
+            "file_type": "md",
+            "chunk_count": 1,
+            "is_indexed": True,
+        }
+    ]
+    save_documents(str(file_path), documents)
+
+    app.dependency_overrides[get_documents_file_path] = lambda: str(file_path)
+
+    response = client.delete("/api/v1/documents/by-id/1")
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json() == {"message": "文档已删除。", "id": 1}
+
+    loaded_documents = load_documents(str(file_path))
+    assert loaded_documents == []
+
+
+def test_delete_document_by_id_endpoint_returns_404_when_not_found(tmp_path):
+    file_path = tmp_path / "documents.json"
+    save_documents(str(file_path), [])
+
+    app.dependency_overrides[get_documents_file_path] = lambda: str(file_path)
+
+    response = client.delete("/api/v1/documents/by-id/999")
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "文档不存在。"

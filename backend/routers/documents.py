@@ -12,6 +12,7 @@ from backend.services.document_service import (
     find_document_by_title,
     save_documents,
     find_document_by_id,
+    delete_document_by_id,
 )
 
 
@@ -81,6 +82,23 @@ def create_document(
     return document
 
 
+@router.delete("/documents/by-id/{document_id}")
+def delete_document_by_id_endpoint(
+    document_id: int,
+    file_path: str = Depends(get_documents_file_path),
+):
+    documents = load_documents(file_path)
+
+    results, deleted = delete_document_by_id(documents, document_id)
+
+    if not deleted:
+        raise HTTPException(status_code=404, detail="文档不存在。")
+
+    save_documents(file_path, results)
+
+    return {"message": "文档已删除。", "id": document_id}
+
+    
 @router.delete("/documents/{title}")
 def delete_document(
     title: str,
