@@ -1,4 +1,8 @@
-from backend.services.document_service import filter_documents, find_document_by_title
+from backend.services.document_service import (
+    delete_document_by_title,
+    filter_documents,
+    find_document_by_title,
+)
 
 
 def test_filter_documents_by_indexed_only():
@@ -58,3 +62,27 @@ def test_find_document_by_title_returns_none_when_not_found():
     result = find_document_by_title(documents, "不存在的文档")
 
     assert result is None
+
+
+def test_delete_document_by_title():
+    documents = [
+        {"title": "员工手册", "file_type": "md", "is_indexed": True},
+        {"title": "报销制度", "file_type": "pdf", "is_indexed": False},
+    ]
+
+    results, deleted = delete_document_by_title(documents, "报销制度")
+
+    assert deleted == True
+    assert len(results) == 1
+    assert results[0]["title"] == "员工手册"
+
+
+def test_delete_document_by_title_returns_false_when_not_found():
+    documents = [
+        {"title": "员工手册", "file_type": "md", "is_indexed": True},
+    ]
+
+    results, deleted = delete_document_by_title(documents, "不存在的文档")
+
+    assert deleted == False
+    assert results == documents
