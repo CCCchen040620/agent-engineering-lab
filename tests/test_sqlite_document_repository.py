@@ -15,6 +15,7 @@ from backend.services.sqlite_document_repository import (
     list_chunks_by_document_id,
     search_chunks_by_text,
     search_chunks_with_document_by_text,
+    list_chunks_with_documents,
 )
 
 
@@ -363,3 +364,33 @@ def test_search_chunks_with_document_by_text(tmp_path):
     assert len(results) == 1
     assert results[0]["document_title"] == "员工手册"
     assert results[0]["text"] == "新员工入职后需要在 30 天内完成安全培训。"
+
+
+def test_list_chunks_with_documents(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="报销制度",
+        file_type="md",
+        chunk_count=1,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="员工报销需要提交发票。",
+    )
+
+    results = list_chunks_with_documents(connection)
+
+    connection.close()
+
+    assert len(results) == 1
+    assert results[0]["document_title"] == "报销制度"
+    assert results[0]["text"] == "员工报销需要提交发票。"
