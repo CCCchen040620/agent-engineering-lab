@@ -1,8 +1,19 @@
 import math
+import jieba
 
 
 def tokenize(text: str) -> list[str]:
-    return text.split()
+    tokens = jieba.lcut(text)
+
+    results = []
+
+    for token in tokens:
+        clean_token = token.strip()
+
+        if clean_token != "" and clean_token not in ["。", "，", "？", "！"]:
+            results.append(clean_token)
+
+    return results
 
 
 def build_term_frequency(text: str) -> dict[str, int]:

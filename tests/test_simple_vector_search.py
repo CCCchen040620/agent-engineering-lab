@@ -11,10 +11,12 @@ from week07.simple_vector_search import (
 )
 
 
-def test_tokenize_splits_by_space():
-    tokens = tokenize("报销 发票 审批")
+def test_tokenize_extracts_words():
+    tokens = tokenize("员工报销需要提交发票。")
 
-    assert tokens == ["报销", "发票", "审批"]
+    assert "报销" in tokens
+    assert "发票" in tokens
+    assert "。" not in tokens
 
 
 def test_build_term_frequency():
@@ -96,3 +98,16 @@ def test_search_chunks_by_similarity_respects_top_k():
     results = search_chunks_by_similarity("报销", chunks, top_k=2)
 
     assert len(results) == 2
+
+
+def test_search_chunks_by_similarity_handles_chinese_without_spaces():
+    chunks = [
+        {"text": "员工报销需要提交发票。"},
+        {"text": "新员工需要完成安全培训。"},
+        {"text": "年假需要提前申请。"},
+    ]
+
+    results = search_chunks_by_similarity("报销 发票", chunks, top_k=1)
+
+    assert results[0]["text"] == "员工报销需要提交发票。"
+    assert results[0]["score"] > 0

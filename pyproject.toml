@@ -7,7 +7,9 @@ name = "enterprise-knowledge-agent-learning"
 version = "0.1.0"
 description = "A beginner-friendly, project-based path to building an enterprise knowledge agent."
 requires-python = ">=3.13,<3.14"
-dependencies = []
+dependencies = [
+    "jieba>=0.42,<1",
+]
 
 [project.optional-dependencies]
 dev = [
