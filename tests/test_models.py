@@ -89,3 +89,12 @@ def test_chat_response_default_empty_citations():
     )
 
     assert response.citations == []
+
+
+def test_citation_rejects_empty_text():
+    with pytest.raises(ValidationError):
+        Citation(
+            title="reimbursement_policy",
+            text="",
+            path="data/company_docs/reimbursement_policy.txt",
+        )

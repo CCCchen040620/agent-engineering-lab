@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 class Citation(BaseModel):
     title: str
-    text: str
+    text: str = Field(min_length=1)
     path: str
 
 
