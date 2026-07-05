@@ -1,3 +1,4 @@
+"""Legacy JSON-backed API routes for document management."""
 from fastapi import APIRouter, Depends, HTTPException
 
 #from week02.document_dict import document

@@ -1,3 +1,4 @@
+"""SQLite-backed API routes for document management and RAG chat."""
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.services.sqlite_qa_service import build_sqlite_chat_response
