@@ -13,7 +13,7 @@ def create_documents_table(connection):
         """
         CREATE TABLE IF NOT EXISTS documents (
             id INTEGER PRIMARY KEY,
-            title TEXT NOT NULL,
+            title TEXT NOT NULL UNIQUE,
             file_type TEXT NOT NULL,
             chunk_count INTEGER NOT NULL,
             is_indexed INTEGER NOT NULL

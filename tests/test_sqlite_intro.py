@@ -1,3 +1,6 @@
+import sqlite3
+import pytest
+
 from week06.sqlite_intro import (
     create_connection,
     create_documents_table,
@@ -82,3 +85,31 @@ def test_sqlite_find_document_by_title(tmp_path):
 
     assert document is not None
     assert document["title"] == "员工手册"
+
+
+def test_sqlite_title_unique_constraint(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        INSERT INTO documents (title, file_type, chunk_count, is_indexed)
+        VALUES (?, ?, ?, ?)
+        """,
+        ("员工手册", "md", 12, 1),
+    )
+
+    with pytest.raises(sqlite3.IntegrityError):
+        cursor.execute(
+            """
+            INSERT INTO documents (title, file_type, chunk_count, is_indexed)
+            VALUES (?, ?, ?, ?)
+            """,
+            ("员工手册", "md", 12, 1),
+        )
+
+    connection.close()
