@@ -42,5 +42,6 @@ py -3.13 week01/hello_agent.py
 - [错误档案](docs/error-log.md)
 - [英文术语卡](docs/glossary.md)
 - [师生协作方式](MENTORING.md)
+- [当前 API 文档](docs/api.md)
 
-当前状态：**第 1 阶段 / 第 1 周 / 第 1 课**
+当前状态：**第 3 阶段 / 第 6-8 周 / 第 1 课**
