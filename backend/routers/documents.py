@@ -1,11 +1,16 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 #from week02.document_dict import document
 #from week02.document_list import documents
 from week02.load_documents import load_documents
 from week04.settings import DOCUMENTS_JSON_PATH
 from week05.models import Document
-from backend.services.document_service import filter_documents, find_document_by_title
+from backend.services.document_service import (
+    delete_document_by_title,
+    filter_documents,
+    find_document_by_title,
+    save_documents,
+)
 
 
 router = APIRouter(prefix="/api/v1")
@@ -15,8 +20,12 @@ def get_documents_file_path() -> str:
 
 
 @router.get("/documents", response_model=list[Document])
-def list_documents(indexed_only: bool = False, file_type: str | None = None):
-    documents = load_documents(get_documents_file_path())
+def list_documents(
+    indexed_only: bool = False, 
+    file_type: str | None = None, 
+    file_path: str = Depends(get_documents_file_path),
+):
+    documents = load_documents(file_path)
 
     return filter_documents(
         documents,
@@ -26,11 +35,31 @@ def list_documents(indexed_only: bool = False, file_type: str | None = None):
 
 
 @router.get("/documents/{title}", response_model=Document)
-def get_document(title: str):
-    documents = load_documents(get_documents_file_path())
+def get_document(
+    title: str,
+    file_path: str = Depends(get_documents_file_path),
+):
+    documents = load_documents(file_path)
     document = find_document_by_title(documents, title)
 
     if document is None:
         raise HTTPException(status_code=404, detail="文档不存在。")
 
     return document
+
+
+@router.delete("/documents/{title}")
+def delete_document(
+    title: str,
+    file_path: str = Depends(get_documents_file_path),
+):
+    documents = load_documents(file_path)
+
+    results, deleted = delete_document_by_title(documents, title)
+
+    if not deleted:
+        raise HTTPException(status_code=404, detail="文档不存在。")
+
+    save_documents(file_path, results)
+
+    return {"message": "文档已删除。", "title": title} 
