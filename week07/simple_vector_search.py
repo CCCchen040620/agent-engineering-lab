@@ -47,12 +47,23 @@ def vector_length(vector: dict[str, int]) -> float:
     return math.sqrt(total)
 
 
+def cosine_similarity(first_vector: dict[str, int], second_vector: dict[str, int]) -> float:
+    first_length = vector_length(first_vector)
+    second_length = vector_length(second_vector)
+
+    if first_length == 0 or second_length == 0:
+        return 0
+
+    return dot_product(first_vector, second_vector) / (first_length * second_length)
+
+
 def main():
-    vector = build_term_frequency("报销 报销 报销 发票 发票 发票 发票")
+    first = build_term_frequency("报销 发票")
+    second = build_term_frequency("报销 发票 审批")
 
-    length = vector_length(vector)
+    score = cosine_similarity(first, second)
 
-    print("向量长度：", length)
+    print("余弦相似度：", score)
 
 
 if __name__ == "__main__":

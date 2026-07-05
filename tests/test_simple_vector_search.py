@@ -1,9 +1,12 @@
+import pytest
+
 from week07.simple_vector_search import (
     build_term_frequency,
     count_shared_terms,
     tokenize,
     dot_product,
     vector_length,
+    cosine_similarity,
 )
 
 
@@ -49,3 +52,21 @@ def test_vector_length():
     length = vector_length(vector)
 
     assert length == 5
+
+
+def test_cosine_similarity_same_text():
+    first = build_term_frequency("报销 发票")
+    second = build_term_frequency("报销 发票")
+
+    score = cosine_similarity(first, second)
+
+    assert score == pytest.approx(1)
+
+
+def test_cosine_similarity_no_shared_terms():
+    first = build_term_frequency("报销 发票")
+    second = build_term_frequency("安全 培训")
+
+    score = cosine_similarity(first, second)
+
+    assert score == 0
