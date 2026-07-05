@@ -4,7 +4,7 @@ from week03.snippet_search import search_snippets
 from week04.settings import COMPANY_DOCS_FOLDER
 
 
-def evaluate_retrieval_questions(questions):
+def evaluate_retrieval_questions(questions: list[dict]) -> dict:
     documents = load_text_documents(COMPANY_DOCS_FOLDER)
     passed_count = 0
 
