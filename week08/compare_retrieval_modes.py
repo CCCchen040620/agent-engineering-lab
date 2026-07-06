@@ -1,5 +1,7 @@
 import sys
 
+import time
+
 from backend.services.sqlite_precomputed_embedding_search_service import (
     search_sqlite_chunks_by_precomputed_embedding,
 )
@@ -18,6 +20,16 @@ from backend.services.sqlite_vector_search_service import (
 )
 from week03.keyword_extractor import extract_keyword
 from week04.settings import SQLITE_DATABASE_PATH
+
+
+def measure_time(function):
+    start_time = time.perf_counter()
+
+    result = function()
+
+    end_time = time.perf_counter()
+
+    return result, end_time - start_time
 
 
 def print_result(mode: str, results: list[dict]):
@@ -71,19 +83,25 @@ def compare_retrieval_modes(
     top_k: int = 3,
     min_score: float = 0.0,
 ):
-    keyword_results = search_by_keyword(question, top_k=top_k)
-
-    vector_results = search_sqlite_chunks_by_similarity(
-        database_path=SQLITE_DATABASE_PATH,
-        query=question,
-        top_k=top_k,
-        min_score=min_score,
+    keyword_results, keyword_duration = measure_time(
+        lambda: search_by_keyword(question, top_k=top_k)
     )
 
-    embedding_results = search_sqlite_chunks_by_embedding(
-        database_path=SQLITE_DATABASE_PATH,
-        query=question,
-        top_k=top_k,
+    vector_results, vector_duration = measure_time(
+        lambda: search_sqlite_chunks_by_similarity(
+            database_path=SQLITE_DATABASE_PATH,
+            query=question,
+            top_k=top_k,
+            min_score=min_score,
+        )
+    )
+
+    embedding_results, embedding_duration = measure_time(
+        lambda: search_sqlite_chunks_by_embedding(
+            database_path=SQLITE_DATABASE_PATH,
+            query=question,
+            top_k=top_k,
+        )
     )
 
     embedding_results = [
@@ -91,10 +109,12 @@ def compare_retrieval_modes(
         if result["score"] >= min_score
     ]
 
-    precomputed_embedding_results = search_sqlite_chunks_by_precomputed_embedding(
-        database_path=SQLITE_DATABASE_PATH,
-        query=question,
-        top_k=top_k,
+    precomputed_embedding_results, precomputed_embedding_duration = measure_time(
+        lambda: search_sqlite_chunks_by_precomputed_embedding(
+            database_path=SQLITE_DATABASE_PATH,
+            query=question,
+            top_k=top_k,
+        )
     )
 
     precomputed_embedding_results = [
@@ -107,10 +127,13 @@ def compare_retrieval_modes(
     print("最低分数：", min_score)
     print()
 
-    print_result("keyword", keyword_results)
-    print_result("vector", vector_results)
-    print_result("embedding", embedding_results)
-    print_result("precomputed_embedding", precomputed_embedding_results)
+    print_result(f"keyword ({keyword_duration:.3f}s)", keyword_results)
+    print_result(f"vector ({vector_duration:.3f}s)", vector_results)
+    print_result(f"embedding ({embedding_duration:.3f}s)", embedding_results)
+    print_result(
+        f"precomputed_embedding ({precomputed_embedding_duration:.3f}s)",
+        precomputed_embedding_results,
+    )
 
 
 def main():
