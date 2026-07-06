@@ -2,8 +2,8 @@ from backend.services.document_indexing_service import (
     create_document_with_chunks_and_embeddings,
 )
 from backend.services.sqlite_document_repository import create_connection
+from backend.services.sqlite_embedding_repository import list_chunks_with_embeddings
 from backend.services.sqlite_precomputed_embedding_search_service import (
-    list_chunks_with_embeddings,
     search_sqlite_chunks_by_precomputed_embedding,
 )
 

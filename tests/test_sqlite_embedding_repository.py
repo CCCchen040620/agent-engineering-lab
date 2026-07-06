@@ -10,6 +10,7 @@ from backend.services.sqlite_embedding_repository import (
     find_chunk_embedding_by_chunk_id,
     insert_chunk_embedding_to_db,
     list_chunk_embeddings_from_db,
+    list_chunks_with_embeddings,
     ensure_chunk_embedding,
     summarize_document_embedding_status,
 )
@@ -203,3 +204,38 @@ def test_summarize_document_embedding_status(tmp_path):
             "is_embedding_complete": False,
         }
     ]
+
+
+def test_list_chunks_with_embeddings(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+    create_chunk_embeddings_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="远程办公制度",
+        file_type="md",
+        chunk_count=1,
+        is_indexed=True,
+    )
+    chunk = insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="员工可以远程办公。",
+    )
+    insert_chunk_embedding_to_db(
+        connection,
+        chunk_id=chunk["id"],
+        embedding=[0.1, 0.2, 0.3],
+    )
+
+    chunks = list_chunks_with_embeddings(connection)
+
+    connection.close()
+
+    assert len(chunks) == 1
+    assert chunks[0]["document_title"] == "远程办公制度"
+    assert chunks[0]["embedding_json"] == "[0.1, 0.2, 0.3]"

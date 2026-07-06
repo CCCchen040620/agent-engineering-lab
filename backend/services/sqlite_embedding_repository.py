@@ -152,3 +152,38 @@ def summarize_document_embedding_status(connection) -> list[dict]:
         )
 
     return results
+
+
+def list_chunks_with_embeddings(connection) -> list[dict]:
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT
+            chunks.id,
+            chunks.document_id,
+            documents.title,
+            chunks.text,
+            chunk_embeddings.embedding_json
+        FROM chunks
+        JOIN documents ON chunks.document_id = documents.id
+        JOIN chunk_embeddings ON chunk_embeddings.chunk_id = chunks.id
+        """
+    )
+
+    rows = cursor.fetchall()
+
+    results = []
+
+    for row in rows:
+        results.append(
+            {
+                "chunk_id": row[0],
+                "document_id": row[1],
+                "document_title": row[2],
+                "text": row[3],
+                "embedding_json": row[4],
+            }
+        )
+
+    return results
