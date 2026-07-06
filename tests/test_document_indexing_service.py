@@ -1,6 +1,7 @@
 from backend.services.document_indexing_service import (
     create_document_with_chunks,
     split_text_into_chunks,
+    split_long_text,
 )
 from backend.services.sqlite_document_repository import (
     create_connection,
@@ -64,3 +65,49 @@ def test_create_document_with_chunks_returns_none_for_duplicate_title(tmp_path):
 
     assert second_document is None
     assert len(chunks) == 1
+
+
+def test_split_text_into_chunks_supports_question_and_exclamation_marks():
+    chunks = split_text_into_chunks(
+        "员工可以远程办公吗？可以！需要提前申请。"
+    )
+
+    assert chunks == [
+        "员工可以远程办公吗。",
+        "可以。",
+        "需要提前申请。",
+    ]
+
+
+def test_split_text_into_chunks_supports_new_lines():
+    chunks = split_text_into_chunks(
+        "第一行内容\n第二行内容"
+    )
+
+    assert chunks == [
+        "第一行内容。",
+        "第二行内容。",
+    ]
+
+
+def test_split_long_text_by_max_chunk_size():
+    chunks = split_long_text("abcdefghij", max_chunk_size=4)
+
+    assert chunks == [
+        "abcd",
+        "efgh",
+        "ij",
+    ]
+
+
+def test_split_text_into_chunks_splits_long_chunk():
+    chunks = split_text_into_chunks(
+        "abcdefghij",
+        max_chunk_size=4,
+    )
+
+    assert chunks == [
+        "abcd",
+        "efgh",
+        "ij。",
+    ]

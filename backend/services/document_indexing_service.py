@@ -6,16 +6,40 @@ from backend.services.sqlite_document_repository import (
 )
 
 
-def split_text_into_chunks(content: str) -> list[str]:
-    raw_chunks = content.replace("\n", "。").split("。")
+def split_long_text(text: str, max_chunk_size: int) -> list[str]:
+    chunks = []
+
+    for start in range(0, len(text), max_chunk_size):
+        chunks.append(text[start : start + max_chunk_size])
+
+    return chunks
+
+
+def split_text_into_chunks(
+    content: str,
+    max_chunk_size: int = 120,
+) -> list[str]:
+    normalized_content = content.replace("\n", "。")
+
+    for separator in ["！", "？", "!", "?"]:
+        normalized_content = normalized_content.replace(separator, "。")
+
+    raw_chunks = normalized_content.split("。")
 
     chunks = []
 
     for raw_chunk in raw_chunks:
         chunk = raw_chunk.strip()
 
-        if chunk != "":
-            chunks.append(chunk + "。")
+        if chunk == "":
+            continue
+
+        chunk = chunk + "。"
+
+        if len(chunk) <= max_chunk_size:
+            chunks.append(chunk)
+        else:
+            chunks.extend(split_long_text(chunk, max_chunk_size))
 
     return chunks
 
