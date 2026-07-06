@@ -30,3 +30,4 @@ def test_info_endpoint():
     assert "similarity_min_score_filter" in data["features"]
     assert "local_llm_failure_fallback" in data["features"]
     assert "sqlite_feedback_storage" in data["features"]
+    assert "sqlite_feedback_list" in data["features"]
