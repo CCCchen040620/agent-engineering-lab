@@ -1,12 +1,13 @@
 import json
 from urllib import request
+from backend.config import EMBEDDING_MODEL, OLLAMA_BASE_URL
 
 
 def embed_with_ollama(
     text: str,
-    model: str = "bge-m3:latest",
+    model: str = EMBEDDING_MODEL,
 ) -> list[float]:
-    url = "http://localhost:11434/api/embed"
+    url = OLLAMA_BASE_URL + "/api/embed"
 
     body = {
         "model": model,

@@ -1,4 +1,5 @@
 from typing import Callable
+from backend.config import DEFAULT_MIN_SCORE, DEFAULT_TOP_K
 from backend.services.sqlite_precomputed_embedding_search_service import (
     search_sqlite_chunks_by_precomputed_embedding,
 )
@@ -21,9 +22,9 @@ from week05.models import ChatResponse, Citation
 def search_sqlite_snippets(
     question: str,
     database_path: str,
-    top_k: int = 3,
+    top_k: int = DEFAULT_TOP_K,
     mode: str = "vector",
-    min_score: float = 0.3,
+    min_score: float = DEFAULT_MIN_SCORE,
 ) -> tuple[str, list[dict]]:
     keyword = extract_keyword(question)
 
@@ -92,9 +93,9 @@ def search_sqlite_snippets(
 def build_sqlite_llm_chat_response(
     question: str,
     database_path: str = SQLITE_DATABASE_PATH,
-    top_k: int = 3,
+    top_k: int = DEFAULT_TOP_K,
     mode: str = "vector",
-    min_score: float = 0.3,
+    min_score: float = DEFAULT_MIN_SCORE,
     generator: Callable[[str], str] = generate_with_ollama,
 ) -> ChatResponse:
     keyword, snippets = search_sqlite_snippets(

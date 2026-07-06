@@ -1,9 +1,10 @@
 import json
 from urllib import request
+from backend.config import LLM_MODEL, OLLAMA_BASE_URL
 
 
-def generate_with_ollama(prompt: str, model: str = "qwen3.6:latest") -> str:
-    url = "http://localhost:11434/api/generate"
+def generate_with_ollama(prompt: str, model: str = LLM_MODEL) -> str:
+    url = OLLAMA_BASE_URL + "/api/generate"
 
     body = {
         "model": model,
@@ -28,7 +29,7 @@ def generate_with_ollama(prompt: str, model: str = "qwen3.6:latest") -> str:
     return result["response"]
 
 
-def try_generate_with_ollama(prompt: str, model: str = "qwen3.6:latest") -> dict:
+def try_generate_with_ollama(prompt: str, model: str = LLM_MODEL) -> dict:
     try:
         response = generate_with_ollama(prompt, model)
 

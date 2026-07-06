@@ -1,6 +1,6 @@
 """SQLite-backed API routes for document management and RAG chat."""
 from fastapi import APIRouter, Depends, HTTPException, Query
-
+from backend.config import DEFAULT_MIN_SCORE, DEFAULT_TOP_K
 from backend.services.document_indexing_service import (
     create_document_with_chunks,
     split_text_into_chunks,
@@ -169,7 +169,7 @@ def delete_db_document_by_id(
 @router.post("/chat", response_model=ChatResponse)
 def sqlite_chat(
     request: ChatRequest,
-    top_k: int = Query(default=3, ge=1, le=5),
+    top_k: int = Query(default=DEFAULT_TOP_K, ge=1, le=5),
     mode: str = "keyword",
     database_path: str = Depends(get_database_path),
 ):
@@ -184,9 +184,9 @@ def sqlite_chat(
 @router.post("/chat/llm", response_model=ChatResponse)
 def sqlite_llm_chat(
     request: ChatRequest,
-    top_k: int = Query(default=3, ge=1, le=5),
+    top_k: int = Query(default=DEFAULT_TOP_K, ge=1, le=5),
     mode: str = "vector",
-    min_score: float = Query(default=0.3, ge=0, le=1),
+    min_score: float = Query(default=DEFAULT_MIN_SCORE, ge=0, le=1),
     database_path: str = Depends(get_database_path),
 ):
     return build_sqlite_llm_chat_response(
