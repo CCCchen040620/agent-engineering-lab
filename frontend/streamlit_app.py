@@ -60,7 +60,7 @@ with st.sidebar:
 
     mode = st.radio(
         "检索模式",
-        ["vector", "keyword"],
+        ["embedding", "vector", "keyword"],
         index=0,
     )
 

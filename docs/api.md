@@ -198,6 +198,15 @@ POST /api/v1/db/chat?mode=vector&top_k=2
   ]
 }
 
+支持查询参数：
+
+- `top_k`：最多返回几个引用片段，默认 `3`
+- `mode`：检索模式，支持 `keyword`、`vector`、`embedding`
+- `mode=keyword`：使用 SQLite `LIKE` 关键词检索
+- `mode=vector`：使用 jieba 分词、词频向量和余弦相似度检索
+- `mode=embedding`：使用 Ollama `bge-m3` 生成语义向量，并用余弦相似度检索 chunks
+- `min_score`：相似度最低门槛，默认 `0.3`
+
 异常降级说明：
 
 当本地 Ollama/Qwen 服务不可用、超时或生成失败时，接口不会直接崩溃，而是返回友好提示：
