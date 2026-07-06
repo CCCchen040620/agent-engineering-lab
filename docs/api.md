@@ -200,3 +200,19 @@ POST /api/v1/db/chat?mode=vector&top_k=2
   "answer": "新员工需要在入职后30天内完成安全培训。",
   "rating": "helpful"
 }
+
+### GET /api/v1/feedback
+
+查看已保存的用户反馈列表。
+
+返回示例：
+
+```json
+[
+  {
+    "id": 1,
+    "question": "新员工什么时候完成安全培训？",
+    "answer": "新员工需要在入职后30天内完成安全培训。",
+    "rating": "helpful"
+  }
+]
