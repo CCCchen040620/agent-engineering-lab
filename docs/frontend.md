@@ -39,3 +39,9 @@ ollama list
   - 当前反馈会保存到 SQLite 数据库，后续可用于统计回答质量。
   - 👍 有帮助
   - 👎 没帮助
+
+### 反馈管理页
+
+启动方式：
+
+python -m streamlit run frontend/admin_feedback.py
