@@ -244,9 +244,11 @@ POST /api/v1/db/chat?mode=vector&top_k=2
   "file_type": "md",
   "content": "员工每周可以申请一天远程办公。远程办公需要提前提交申请。"
 }
+```
 
 成功返回：
 
+```json
 {
   "id": 4,
   "title": "远程办公制度",
@@ -254,3 +256,14 @@ POST /api/v1/db/chat?mode=vector&top_k=2
   "chunk_count": 2,
   "is_indexed": true
 }
+```
+
+说明：
+
+- `content` 会按句号、问号、感叹号和换行进行简单切分。
+- 英文标点 `?` 和 `!` 也会被识别为切分边界。
+- 空片段会被自动过滤。
+- 超过最大长度的片段会继续按固定长度切分。
+- `chunk_count` 由系统根据切分结果自动计算。
+- `is_indexed` 根据是否成功生成 chunks 自动设置。
+- 新增后可以立即通过 `/api/v1/db/chat/llm` 检索和问答。
