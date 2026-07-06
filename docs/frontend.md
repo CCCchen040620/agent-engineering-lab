@@ -43,9 +43,10 @@ ollama list
   - 👎 没帮助
 - 在侧边栏新增知识文档
 - 根据文档正文自动切分 chunks
-- 新增文档后可立即参与 RAG 问答
-  “注意事项”:
-  新增知识文档会写入本地 SQLite 数据库 `data/app.db`。该数据库属于运行时数据，已通过 `.gitignore` 忽略，不会提交到 Git。
+- 新增文档后可立即参与 RAG 问答:
+  - 新增知识文档时，系统会自动切分 chunks，并使用 Ollama `bge-m3` 为 chunks 生成 embeddings，以便 `precomputed_embedding` 模式检索。
+  - “注意事项”:
+  - 新增知识文档会写入本地 SQLite 数据库 `data/app.db`。该数据库属于运行时数据，已通过 `.gitignore` 忽略，不会提交到 Git。
 
 ### 反馈管理页
 
