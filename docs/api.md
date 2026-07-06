@@ -216,3 +216,18 @@ POST /api/v1/db/chat?mode=vector&top_k=2
     "rating": "helpful"
   }
 ]
+
+### GET /api/v1/feedback/summary
+
+查看用户反馈统计结果。
+
+返回示例：
+
+```json
+{
+  "total": 2,
+  "helpful": 1,
+  "not_helpful": 1
+}
+
+该接口可用于后续计算回答满意率，例如：helpful / total
