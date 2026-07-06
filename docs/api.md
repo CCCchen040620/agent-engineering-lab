@@ -153,6 +153,8 @@ POST /api/v1/db/chat?mode=vector&top_k=2
   "question": "新员工什么时候完成安全培训？"
 }
 
+返回示例：
+
 {
   "question": "新员工什么时候完成安全培训？",
   "keyword": "安全培训",
@@ -164,4 +166,13 @@ POST /api/v1/db/chat?mode=vector&top_k=2
       "path": "sqlite://1"
     }
   ]
+}
+
+异常降级说明：
+
+当本地 Ollama/Qwen 服务不可用、超时或生成失败时，接口不会直接崩溃，而是返回友好提示：
+
+```json
+{
+  "answer": "本地模型暂时不可用，请稍后再试。"
 }

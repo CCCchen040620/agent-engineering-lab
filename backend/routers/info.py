@@ -27,5 +27,6 @@ def get_info():
             "sqlite_vector_retrieval",
             "sqlite_llm_chat_with_local_qwen",
             "similarity_min_score_filter",
+            "local_llm_failure_fallback",
         ],
     }
