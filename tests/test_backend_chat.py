@@ -43,6 +43,6 @@ def test_chat_endpoint_refuses_unknown_question():
     data = response.json()
 
     assert data["question"] == "公司有没有股票期权？"
-    assert data["keyword"] == "公司有没有股票期权？"
+    assert data["keyword"] == "股票期权"
     assert "暂时无法回答" in data["answer"]
     assert data["citations"] == []
