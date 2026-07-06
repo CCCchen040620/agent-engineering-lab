@@ -1,6 +1,8 @@
 import streamlit as st
 
-from backend.services.document_indexing_service import create_document_with_chunks
+from backend.services.document_indexing_service import (
+    create_document_with_chunks_and_embeddings,
+)
 from backend.services.sqlite_llm_qa_service import build_sqlite_llm_chat_response
 from backend.services.sqlite_document_repository import create_connection
 from backend.services.sqlite_feedback_repository import (
@@ -43,7 +45,7 @@ def save_feedback(question: str, answer: str, rating: str) -> dict:
 def save_document_with_content(title: str, file_type: str, content: str) -> dict | None:
     connection = create_connection(SQLITE_DATABASE_PATH)
 
-    document = create_document_with_chunks(
+    document = create_document_with_chunks_and_embeddings(
         connection,
         title=title,
         file_type=file_type,
@@ -93,11 +95,12 @@ with st.sidebar:
         if document_title.strip() == "" or document_content.strip() == "":
             st.warning("文档标题和正文不能为空。")
         else:
-            document = save_document_with_content(
-                title=document_title.strip(),
-                file_type=document_file_type,
-                content=document_content.strip(),
-            )
+            with st.spinner("正在新增文档、切分 chunks 并生成 embeddings..."):
+                document = save_document_with_content(
+                    title=document_title.strip(),
+                    file_type=document_file_type,
+                    content=document_content.strip(),
+                )
 
             if document is None:
                 st.error("文档标题已存在，无法重复新增。")
