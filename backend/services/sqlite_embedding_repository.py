@@ -97,3 +97,20 @@ def list_chunk_embeddings_from_db(connection) -> list[dict]:
         embeddings.append(row_to_chunk_embedding(row))
 
     return embeddings
+
+
+def ensure_chunk_embedding(
+    connection,
+    chunk_id: int,
+    embedding: list[float],
+) -> dict:
+    existing_embedding = find_chunk_embedding_by_chunk_id(connection, chunk_id)
+
+    if existing_embedding is not None:
+        return existing_embedding
+
+    return insert_chunk_embedding_to_db(
+        connection,
+        chunk_id=chunk_id,
+        embedding=embedding,
+    )
