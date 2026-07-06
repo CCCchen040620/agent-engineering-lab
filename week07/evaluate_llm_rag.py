@@ -1,3 +1,5 @@
+import sys
+
 from pathlib import Path
 
 from backend.services.sqlite_llm_qa_service import build_sqlite_llm_chat_response
@@ -17,9 +19,18 @@ def print_result(response: ChatResponse):
     print("-" * 50)
 
 
-def build_markdown_report(responses: list[ChatResponse]) -> str:
+def build_markdown_report(
+    responses: list[ChatResponse],
+    mode: str = "vector",
+    min_score: float = 0.3,
+) -> str:
     lines = [
         "# LLM RAG 自动评测报告",
+        "",
+        "## 评测配置",
+        "",
+        f"- 检索模式：`{mode}`",
+        f"- 最低相似度：`{min_score}`",
         "",
         "## 评测结果",
         "",
@@ -81,6 +92,16 @@ def save_markdown_report(
 
 
 def main():
+    if len(sys.argv) >= 2:
+        mode = sys.argv[1]
+    else:
+        mode = "vector"
+
+    if len(sys.argv) >= 3:
+        min_score = float(sys.argv[2])
+    else:
+        min_score = 0.3
+
     questions = [
         "新员工什么时候完成安全培训？",
         "员工每天需要工作多久？",
@@ -92,11 +113,19 @@ def main():
     responses = []
 
     for question in questions:
-        response = build_sqlite_llm_chat_response(question)
+        response = build_sqlite_llm_chat_response(
+            question,
+            mode=mode,
+            min_score=min_score,
+        )
         responses.append(response)
         print_result(response)
 
-    markdown = build_markdown_report(responses)
+    markdown = build_markdown_report(
+        responses,
+        mode=mode,
+        min_score=min_score,
+    )
     save_markdown_report(markdown)
 
     print("评测报告已保存：docs/evaluations/llm-rag-run.md")

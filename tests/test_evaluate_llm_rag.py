@@ -18,11 +18,17 @@ def test_build_markdown_report():
         )
     ]
 
-    markdown = build_markdown_report(responses)
+    markdown = build_markdown_report(
+        responses,
+        mode="embedding",
+        min_score=0.8,
+    )
 
     assert "# LLM RAG 自动评测报告" in markdown
     assert "新员工什么时候完成安全培训？" in markdown
     assert "员工手册" in markdown
+    assert "检索模式：`embedding`" in markdown
+    assert "最低相似度：`0.8`" in markdown
 
 
 def test_save_markdown_report(tmp_path):
