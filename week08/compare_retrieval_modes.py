@@ -1,3 +1,5 @@
+import sys
+
 from backend.services.ranking_service import rank_chunks
 from backend.services.sqlite_document_repository import (
     create_chunks_table,
@@ -87,7 +89,10 @@ def compare_retrieval_modes(question: str, top_k: int = 3):
 
 
 def main():
-    question = "主管审批后什么时候生效？"
+    if len(sys.argv) >= 2:
+        question = sys.argv[1]
+    else:
+        question = "主管审批后什么时候生效？"
 
     compare_retrieval_modes(question, top_k=3)
 
