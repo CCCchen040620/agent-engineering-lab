@@ -11,6 +11,7 @@ from backend.services.sqlite_embedding_repository import (
     insert_chunk_embedding_to_db,
     list_chunk_embeddings_from_db,
     ensure_chunk_embedding,
+    summarize_document_embedding_status,
 )
 
 
@@ -154,3 +155,51 @@ def test_ensure_chunk_embedding_returns_existing_embedding(tmp_path):
 
     assert first_embedding["id"] == second_embedding["id"]
     assert second_embedding["embedding"] == [0.1, 0.2, 0.3]
+
+
+def test_summarize_document_embedding_status(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+    create_chunk_embeddings_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="远程办公制度",
+        file_type="md",
+        chunk_count=2,
+        is_indexed=True,
+    )
+
+    first_chunk = insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="员工可以远程办公。",
+    )
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="远程办公需要提前申请。",
+    )
+
+    insert_chunk_embedding_to_db(
+        connection,
+        chunk_id=first_chunk["id"],
+        embedding=[0.1, 0.2, 0.3],
+    )
+
+    statuses = summarize_document_embedding_status(connection)
+
+    connection.close()
+
+    assert statuses == [
+        {
+            "document_id": document["id"],
+            "title": "远程办公制度",
+            "chunk_count": 2,
+            "embedding_count": 1,
+            "is_embedding_complete": False,
+        }
+    ]

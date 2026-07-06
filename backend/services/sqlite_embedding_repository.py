@@ -114,3 +114,41 @@ def ensure_chunk_embedding(
         chunk_id=chunk_id,
         embedding=embedding,
     )
+
+
+def summarize_document_embedding_status(connection) -> list[dict]:
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT
+            documents.id,
+            documents.title,
+            documents.chunk_count,
+            COUNT(chunk_embeddings.id) AS embedding_count
+        FROM documents
+        LEFT JOIN chunks ON chunks.document_id = documents.id
+        LEFT JOIN chunk_embeddings ON chunk_embeddings.chunk_id = chunks.id
+        GROUP BY documents.id, documents.title, documents.chunk_count
+        """
+    )
+
+    rows = cursor.fetchall()
+
+    results = []
+
+    for row in rows:
+        chunk_count = row[2]
+        embedding_count = row[3]
+
+        results.append(
+            {
+                "document_id": row[0],
+                "title": row[1],
+                "chunk_count": chunk_count,
+                "embedding_count": embedding_count,
+                "is_embedding_complete": chunk_count == embedding_count,
+            }
+        )
+
+    return results
