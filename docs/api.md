@@ -97,6 +97,36 @@ SQLite 版接口使用本地数据库 `data/app.db` 保存文档数据。
 }
 ```
 
+### GET /api/v1/db/documents/{document_id}/chunks
+
+查看某个 SQLite 文档切分后的 chunks。
+
+示例：
+
+```text
+GET /api/v1/db/documents/6/chunks
+
+返回示例：
+
+[
+  {
+    "id": 1,
+    "document_id": 6,
+    "text": "员工可以远程办公吗。"
+  },
+  {
+    "id": 2,
+    "document_id": 6,
+    "text": "可以。"
+  }
+]
+
+如果文档不存在，返回：
+
+404 Not Found
+
+说明：RAG 检索实际使用的是 chunks，而不是整篇文档。该接口可用于调试文档切分和检索质量。
+
 ## SQLite 问答接口
 > 说明：这是当前推荐的问答接口，基于 SQLite `chunks` 表检索片段并返回引用来源。
 
