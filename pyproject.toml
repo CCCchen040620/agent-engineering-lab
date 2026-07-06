@@ -9,6 +9,7 @@ description = "A beginner-friendly, project-based path to building an enterprise
 requires-python = ">=3.13,<3.14"
 dependencies = [
     "jieba>=0.42,<1",
+    "streamlit",
 ]
 
 [project.optional-dependencies]
