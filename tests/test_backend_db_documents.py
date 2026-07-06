@@ -382,3 +382,20 @@ def test_create_db_document_with_content_endpoint(tmp_path):
     assert data["chunk_count"] == 2
     assert data["is_indexed"] == True
     assert len(chunks) == 2
+
+
+def test_create_db_document_with_content_rejects_no_valid_chunks(tmp_path):
+    use_temp_database(tmp_path)
+
+    response = client.post(
+        "/api/v1/db/documents/with-content",
+        json={
+            "title": "空内容制度",
+            "file_type": "md",
+            "content": "。。。\n   ！！！？？？",
+        },
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 409

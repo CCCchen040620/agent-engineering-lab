@@ -111,3 +111,19 @@ def test_split_text_into_chunks_splits_long_chunk():
         "efgh",
         "ij。",
     ]
+
+
+def test_create_document_with_chunks_returns_none_when_no_valid_chunks(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    document = create_document_with_chunks(
+        connection,
+        title="空内容制度",
+        file_type="md",
+        content="。。。\n   ！！！？？？",
+    )
+
+    connection.close()
+
+    assert document is None

@@ -54,6 +54,9 @@ def create_document_with_chunks(
     create_chunks_table(connection)
 
     chunks = split_text_into_chunks(content)
+    
+    if chunks == []:
+       return None
 
     document = try_insert_document_to_db(
         connection,
