@@ -231,3 +231,26 @@ POST /api/v1/db/chat?mode=vector&top_k=2
 }
 
 该接口可用于后续计算回答满意率，例如：helpful / total
+
+### POST /api/v1/db/documents/with-content
+
+新增 SQLite 文档，并根据正文内容自动切分 chunks。
+
+请求示例：
+
+```json
+{
+  "title": "远程办公制度",
+  "file_type": "md",
+  "content": "员工每周可以申请一天远程办公。远程办公需要提前提交申请。"
+}
+
+成功返回：
+
+{
+  "id": 4,
+  "title": "远程办公制度",
+  "file_type": "md",
+  "chunk_count": 2,
+  "is_indexed": true
+}
