@@ -16,6 +16,7 @@ from week04.settings import SQLITE_DATABASE_PATH
 def backfill_chunk_embeddings(
     database_path: str = SQLITE_DATABASE_PATH,
 ) -> dict:
+    """为历史 chunks 补齐缺失的 embeddings。"""
     connection = create_connection(database_path)
 
     create_documents_table(connection)

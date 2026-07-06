@@ -2,6 +2,7 @@ import json
 
 
 def create_chunk_embeddings_table(connection) -> None:
+    """创建保存 chunk embedding 的 SQLite 表。"""
     cursor = connection.cursor()
 
     cursor.execute(
@@ -117,6 +118,7 @@ def ensure_chunk_embedding(
 
 
 def summarize_document_embedding_status(connection) -> list[dict]:
+    """统计每份文档的 chunks 是否已经完成 embedding 索引。"""
     cursor = connection.cursor()
 
     cursor.execute(

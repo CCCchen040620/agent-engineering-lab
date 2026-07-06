@@ -19,6 +19,7 @@ def search_sqlite_chunks_by_precomputed_embedding(
     top_k: int = 3,
     embedder: Callable[[str], list[float]] | None = None,
 ) -> list[dict]:
+    """使用已保存的 chunk embeddings 检索 SQLite chunks。"""
     if embedder is None:
         embedder = embed_with_ollama
 

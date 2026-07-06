@@ -7,6 +7,7 @@ def embed_with_ollama(
     text: str,
     model: str = EMBEDDING_MODEL,
 ) -> list[float]:
+    """调用 Ollama embedding API，把文本转换成语义向量。"""
     url = OLLAMA_BASE_URL + "/api/embed"
 
     body = {
