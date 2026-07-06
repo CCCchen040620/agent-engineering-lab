@@ -1,3 +1,10 @@
+from typing import Callable
+
+from backend.services.ollama_embedding_service import embed_with_ollama
+from backend.services.sqlite_embedding_repository import (
+    create_chunk_embeddings_table,
+    insert_chunk_embedding_to_db,
+)
 from backend.services.sqlite_document_repository import (
     create_chunks_table,
     create_documents_table,
@@ -74,6 +81,51 @@ def create_document_with_chunks(
             connection,
             document_id=document["id"],
             text=chunk,
+        )
+
+    return document
+
+
+def create_document_with_chunks_and_embeddings(
+    connection,
+    title: str,
+    file_type: str,
+    content: str,
+    embedder: Callable[[str], list[float]] = embed_with_ollama,
+) -> dict | None:
+    create_documents_table(connection)
+    create_chunks_table(connection)
+    create_chunk_embeddings_table(connection)
+
+    chunks = split_text_into_chunks(content)
+
+    if chunks == []:
+        return None
+
+    document = try_insert_document_to_db(
+        connection,
+        title=title,
+        file_type=file_type,
+        chunk_count=len(chunks),
+        is_indexed=True,
+    )
+
+    if document is None:
+        return None
+
+    for chunk_text in chunks:
+        chunk = insert_chunk_to_db(
+            connection,
+            document_id=document["id"],
+            text=chunk_text,
+        )
+
+        embedding = embedder(chunk_text)
+
+        insert_chunk_embedding_to_db(
+            connection,
+            chunk_id=chunk["id"],
+            embedding=embedding,
         )
 
     return document
