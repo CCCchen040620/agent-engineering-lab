@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from pydantic import BaseModel, Field
+from typing import Literal
 
 
 class Citation(BaseModel):
@@ -32,3 +33,16 @@ class DocumentCreateRequest(BaseModel):
     file_type: str = Field(min_length=1)
     chunk_count: int
     is_indexed: bool = False
+
+
+class FeedbackCreateRequest(BaseModel):
+    question: str = Field(min_length=1)
+    answer: str = Field(min_length=1)
+    rating: Literal["helpful", "not_helpful"]
+
+
+class Feedback(BaseModel):
+    id: int
+    question: str = Field(min_length=1)
+    answer: str = Field(min_length=1)
+    rating: Literal["helpful", "not_helpful"]
