@@ -69,3 +69,5 @@ python -m streamlit run frontend/admin_documents.py
 - 查看每个文档的 embedding 索引状态
 - 对比 `chunk_count` 和 `embedding_count`
 - 判断文档是否完成 `precomputed_embedding` 检索准备
+- 一键补齐缺失的 chunk embeddings
+- 补索引会调用 Ollama `bge-m3`，可能需要等待一段时间
