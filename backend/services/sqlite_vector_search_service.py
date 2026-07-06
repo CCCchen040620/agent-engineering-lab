@@ -11,14 +11,13 @@ def search_sqlite_chunks_by_similarity(
     database_path: str,
     query: str,
     top_k: int = 3,
+    min_score: float = 0.0,
 ) -> list[dict]:
     connection = create_connection(database_path)
 
     create_documents_table(connection)
     create_chunks_table(connection)
 
-    # 先用 query 做一次宽检索。当前仍然依赖 SQL LIKE，
-    # 后面会升级成直接读取全部 chunks 或 embedding 检索。
     chunks = list_chunks_with_documents(connection)
 
     connection.close()
@@ -34,4 +33,9 @@ def search_sqlite_chunks_by_similarity(
             }
         )
 
-    return search_chunks_by_similarity(query, similarity_chunks, top_k=top_k)
+    return search_chunks_by_similarity(
+        query,
+        similarity_chunks,
+        top_k=top_k,
+        min_score=min_score,
+    )

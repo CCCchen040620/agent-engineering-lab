@@ -123,6 +123,7 @@ def sqlite_llm_chat(
     request: ChatRequest,
     top_k: int = Query(default=3, ge=1, le=5),
     mode: str = "vector",
+    min_score: float = Query(default=0.3, ge=0, le=1),
     database_path: str = Depends(get_database_path),
 ):
     return build_sqlite_llm_chat_response(
@@ -130,4 +131,5 @@ def sqlite_llm_chat(
         database_path=database_path,
         top_k=top_k,
         mode=mode,
+        min_score=min_score,
     )

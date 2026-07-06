@@ -20,6 +20,7 @@ def search_sqlite_snippets(
     database_path: str,
     top_k: int = 3,
     mode: str = "vector",
+    min_score: float = 0.3,
 ) -> tuple[str, list[dict]]:
     keyword = extract_keyword(question)
 
@@ -28,6 +29,7 @@ def search_sqlite_snippets(
             database_path=database_path,
             query=question,
             top_k=top_k,
+            min_score=min_score,
         )
 
         return keyword, snippets
@@ -61,6 +63,7 @@ def build_sqlite_llm_chat_response(
     database_path: str = SQLITE_DATABASE_PATH,
     top_k: int = 3,
     mode: str = "vector",
+    min_score: float = 0.3,
     generator: Callable[[str], str] = generate_with_ollama,
 ) -> ChatResponse:
     keyword, snippets = search_sqlite_snippets(
@@ -68,6 +71,7 @@ def build_sqlite_llm_chat_response(
         database_path=database_path,
         top_k=top_k,
         mode=mode,
+        min_score=min_score,
     )
 
     citations = []

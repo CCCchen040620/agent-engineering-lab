@@ -111,3 +111,20 @@ def test_search_chunks_by_similarity_handles_chinese_without_spaces():
 
     assert results[0]["text"] == "员工报销需要提交发票。"
     assert results[0]["score"] > 0
+
+
+def test_search_chunks_by_similarity_filters_by_min_score():
+    chunks = [
+        {"text": "员工报销需要提交发票。"},
+        {"text": "新员工需要完成安全培训。"},
+    ]
+
+    results = search_chunks_by_similarity(
+        "报销 发票",
+        chunks,
+        top_k=2,
+        min_score=0.3,
+    )
+
+    assert len(results) == 1
+    assert results[0]["text"] == "员工报销需要提交发票。"

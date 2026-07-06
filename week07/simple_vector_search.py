@@ -72,6 +72,7 @@ def search_chunks_by_similarity(
     query: str,
     chunks: list[dict],
     top_k: int = 3,
+    min_score: float = 0.0,
 ) -> list[dict]:
     query_vector = build_term_frequency(query)
     results = []
@@ -83,7 +84,8 @@ def search_chunks_by_similarity(
         result = chunk.copy()
         result["score"] = score
 
-        results.append(result)
+        if score >= min_score:
+            results.append(result)
 
     results.sort(key=lambda chunk: chunk["score"], reverse=True)
 
