@@ -1,5 +1,6 @@
 import streamlit as st
 
+from backend.services.document_indexing_service import create_document_with_chunks
 from backend.services.sqlite_llm_qa_service import build_sqlite_llm_chat_response
 from backend.services.sqlite_document_repository import create_connection
 from backend.services.sqlite_feedback_repository import (
@@ -39,6 +40,21 @@ def save_feedback(question: str, answer: str, rating: str) -> dict:
     return feedback
 
 
+def save_document_with_content(title: str, file_type: str, content: str) -> dict | None:
+    connection = create_connection(SQLITE_DATABASE_PATH)
+
+    document = create_document_with_chunks(
+        connection,
+        title=title,
+        file_type=file_type,
+        content=content,
+    )
+
+    connection.close()
+
+    return document
+
+
 with st.sidebar:
     st.header("检索设置")
 
@@ -65,6 +81,30 @@ with st.sidebar:
 
     if st.button("清空对话历史"):
         st.session_state["chat_history"] = []
+
+    st.divider()
+    st.header("新增知识文档")
+
+    document_title = st.text_input("文档标题")
+    document_file_type = st.selectbox("文件类型", ["md", "txt", "pdf"])
+    document_content = st.text_area("文档正文", height=160)
+
+    if st.button("新增并索引"):
+        if document_title.strip() == "" or document_content.strip() == "":
+            st.warning("文档标题和正文不能为空。")
+        else:
+            document = save_document_with_content(
+                title=document_title.strip(),
+                file_type=document_file_type,
+                content=document_content.strip(),
+            )
+
+            if document is None:
+                st.error("文档标题已存在，无法重复新增。")
+            else:
+                st.success(
+                    f"已新增文档：{document['title']}，切分片段数：{document['chunk_count']}"
+                )
 
 st.subheader("示例问题")
 
