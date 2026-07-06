@@ -12,6 +12,9 @@ st.set_page_config(
 st.title("企业知识库 Agent")
 st.write("基于 SQLite 知识库、本地 Ollama/Qwen 和 RAG 的智能问答助手。")
 
+if "chat_history" not in st.session_state:
+    st.session_state["chat_history"] = []
+
 with st.sidebar:
     st.header("检索设置")
 
@@ -35,6 +38,9 @@ with st.sidebar:
         value=0.3,
         step=0.05,
     )
+
+    if st.button("清空对话历史"):
+        st.session_state["chat_history"] = []
 
 st.subheader("示例问题")
 
@@ -68,6 +74,7 @@ if st.button("提问"):
                 mode=mode,
                 min_score=min_score,
             )
+            st.session_state["chat_history"].append(response.model_dump())
 
         st.subheader("回答")
 
@@ -93,3 +100,19 @@ if st.button("提问"):
                 with st.expander(f"[{index}] {citation.title}"):
                     st.write(citation.text)
                     st.caption(citation.path)
+
+if st.session_state["chat_history"] != []:
+    st.subheader("对话历史")
+
+    for item in reversed(st.session_state["chat_history"]):
+        with st.expander(item["question"]):
+            st.write(item["answer"])
+            st.caption(
+                f"关键词：{item['keyword']} | 引用数量：{len(item['citations'])}"
+            )
+
+            if item["citations"] != []:
+                for index, citation in enumerate(item["citations"], start=1):
+                    st.markdown(
+                        f"- [{index}] {citation['title']}：{citation['text']}"
+                    )
