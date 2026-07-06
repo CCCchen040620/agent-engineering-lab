@@ -10,10 +10,12 @@ from backend.services.sqlite_llm_qa_service import build_sqlite_llm_chat_respons
 from backend.services.sqlite_document_repository import (
     create_connection,
     create_documents_table,
+    create_chunks_table,
     list_documents_from_db_filtered,
     try_insert_document_to_db,
     find_document_from_db_by_id,
     delete_document_from_db_by_id,
+    list_chunks_by_document_id,
 )
 from week04.settings import SQLITE_DATABASE_PATH
 from week05.models import (
@@ -22,6 +24,7 @@ from week05.models import (
     Document,
     DocumentCreateRequest,
     DocumentCreateWithContentRequest,
+    Chunk,
 )
 
 
@@ -120,6 +123,29 @@ def get_db_document_by_id(
         raise HTTPException(status_code=404, detail="文档不存在。")
 
     return document
+
+
+@router.get("/documents/{document_id}/chunks", response_model=list[Chunk])
+def list_db_document_chunks(
+    document_id: int,
+    database_path: str = Depends(get_database_path),
+):
+    connection = create_connection(database_path)
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = find_document_from_db_by_id(connection, document_id)
+
+    if document is None:
+        connection.close()
+        raise HTTPException(status_code=404, detail="文档不存在。")
+
+    chunks = list_chunks_by_document_id(connection, document_id)
+
+    connection.close()
+
+    return chunks
 
 
 @router.delete("/documents/{document_id}")

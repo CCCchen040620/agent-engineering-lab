@@ -428,3 +428,41 @@ def test_create_db_document_with_content_returns_409_for_duplicate_title(tmp_pat
     assert first_response.status_code == 201
     assert second_response.status_code == 409
     assert second_response.json()["detail"] == "文档已存在。"
+
+
+def test_list_db_document_chunks_endpoint(tmp_path):
+    database_path = use_temp_database(tmp_path)
+
+    create_response = client.post(
+        "/api/v1/db/documents/with-content",
+        json={
+            "title": "远程办公制度",
+            "file_type": "md",
+            "content": "员工每周可以申请一天远程办公。远程办公需要提前提交申请。",
+        },
+    )
+
+    document_id = create_response.json()["id"]
+
+    response = client.get(f"/api/v1/db/documents/{document_id}/chunks")
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data) == 2
+    assert data[0]["document_id"] == document_id
+    assert data[0]["text"] == "员工每周可以申请一天远程办公。"
+
+
+def test_list_db_document_chunks_endpoint_returns_404_when_document_not_found(tmp_path):
+    use_temp_database(tmp_path)
+
+    response = client.get("/api/v1/db/documents/999/chunks")
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "文档不存在。"

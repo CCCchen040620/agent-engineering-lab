@@ -32,3 +32,4 @@ def test_info_endpoint():
     assert "sqlite_feedback_storage" in data["features"]
     assert "sqlite_feedback_list" in data["features"]
     assert "sqlite_feedback_summary" in data["features"]
+    assert "sqlite_list_document_chunks" in data["features"]

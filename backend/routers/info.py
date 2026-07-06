@@ -31,5 +31,6 @@ def get_info():
             "sqlite_feedback_storage",
             "sqlite_feedback_list",
             "sqlite_feedback_summary",
+            "sqlite_list_document_chunks",
         ],
     }

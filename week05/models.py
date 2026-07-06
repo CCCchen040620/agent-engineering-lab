@@ -52,3 +52,9 @@ class DocumentCreateWithContentRequest(BaseModel):
     title: str = Field(min_length=1)
     file_type: str = Field(min_length=1)
     content: str = Field(min_length=1)
+
+
+class Chunk(BaseModel):
+    id: int
+    document_id: int
+    text: str = Field(min_length=1)
