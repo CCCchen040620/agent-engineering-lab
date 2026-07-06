@@ -160,3 +160,54 @@ def test_build_sqlite_chat_response_embedding_mode(monkeypatch, tmp_path):
     assert len(response.citations) == 1
     assert response.citations[0].title == "远程办公制度"
     assert response.citations[0].text == "员工可以远程办公。"
+
+
+def test_build_sqlite_chat_response_precomputed_embedding_mode(monkeypatch, tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    def chunk_embedder(text: str) -> list[float]:
+        embeddings = {
+            "员工可以远程办公。": [0.9, 0.1],
+            "员工报销需要提交发票。": [0.0, 1.0],
+        }
+
+        return embeddings[text]
+
+    from backend.services.document_indexing_service import (
+        create_document_with_chunks_and_embeddings,
+    )
+
+    create_document_with_chunks_and_embeddings(
+        connection,
+        title="远程办公制度",
+        file_type="md",
+        content="员工可以远程办公。员工报销需要提交发票。",
+        embedder=chunk_embedder,
+    )
+
+    connection.close()
+
+    def query_embedder(text: str) -> list[float]:
+        return [1.0, 0.0]
+
+    monkeypatch.setattr(
+        "backend.services.sqlite_precomputed_embedding_search_service.embed_with_ollama",
+        query_embedder,
+    )
+
+    def fake_generator(prompt: str) -> str:
+        return "员工可以远程办公。"
+
+    response = build_sqlite_llm_chat_response(
+        "远程办公怎么申请？",
+        database_path=str(database_path),
+        mode="precomputed_embedding",
+        min_score=0.3,
+        generator=fake_generator,
+    )
+
+    assert response.answer == "员工可以远程办公。"
+    assert len(response.citations) == 1
+    assert response.citations[0].title == "远程办公制度"
+    assert response.citations[0].text == "员工可以远程办公。"
