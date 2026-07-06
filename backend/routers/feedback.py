@@ -5,6 +5,7 @@ from backend.services.sqlite_feedback_repository import (
     create_feedback_table,
     insert_feedback_to_db,
     list_feedback_from_db,
+    summarize_feedback_from_db,
 )
 from week04.settings import SQLITE_DATABASE_PATH
 from week05.models import Feedback, FeedbackCreateRequest
@@ -51,3 +52,18 @@ def list_feedback(
     connection.close()
 
     return feedback_items
+
+
+@router.get("/feedback/summary")
+def get_feedback_summary(
+    database_path: str = Depends(get_feedback_database_path),
+):
+    connection = create_connection(database_path)
+
+    create_feedback_table(connection)
+
+    summary = summarize_feedback_from_db(connection)
+
+    connection.close()
+
+    return summary

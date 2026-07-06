@@ -3,6 +3,7 @@ from backend.services.sqlite_feedback_repository import (
     create_feedback_table,
     insert_feedback_to_db,
     list_feedback_from_db,
+    summarize_feedback_from_db,
 )
 
 
@@ -45,3 +46,33 @@ def test_list_feedback_from_db(tmp_path):
 
     assert len(feedback_items) == 1
     assert feedback_items[0]["rating"] == "not_helpful"
+
+
+def test_summarize_feedback_from_db(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_feedback_table(connection)
+
+    insert_feedback_to_db(
+        connection,
+        question="问题1",
+        answer="回答1",
+        rating="helpful",
+    )
+    insert_feedback_to_db(
+        connection,
+        question="问题2",
+        answer="回答2",
+        rating="not_helpful",
+    )
+
+    summary = summarize_feedback_from_db(connection)
+
+    connection.close()
+
+    assert summary == {
+        "total": 2,
+        "helpful": 1,
+        "not_helpful": 1,
+    }

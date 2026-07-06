@@ -30,5 +30,6 @@ def get_info():
             "local_llm_failure_fallback",
             "sqlite_feedback_storage",
             "sqlite_feedback_list",
+            "sqlite_feedback_summary",
         ],
     }

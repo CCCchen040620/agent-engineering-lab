@@ -31,3 +31,4 @@ def test_info_endpoint():
     assert "local_llm_failure_fallback" in data["features"]
     assert "sqlite_feedback_storage" in data["features"]
     assert "sqlite_feedback_list" in data["features"]
+    assert "sqlite_feedback_summary" in data["features"]

@@ -76,3 +76,23 @@ def list_feedback_from_db(connection) -> list[dict]:
         feedback_items.append(row_to_feedback(row))
 
     return feedback_items
+
+
+def summarize_feedback_from_db(connection) -> dict:
+    feedback_items = list_feedback_from_db(connection)
+
+    helpful_count = 0
+    not_helpful_count = 0
+
+    for feedback in feedback_items:
+        if feedback["rating"] == "helpful":
+            helpful_count = helpful_count + 1
+
+        if feedback["rating"] == "not_helpful":
+            not_helpful_count = not_helpful_count + 1
+
+    return {
+        "total": len(feedback_items),
+        "helpful": helpful_count,
+        "not_helpful": not_helpful_count,
+    }

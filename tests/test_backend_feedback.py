@@ -72,3 +72,36 @@ def test_list_feedback_endpoint(tmp_path):
 
     assert len(data) == 1
     assert data[0]["rating"] == "helpful"
+
+
+def test_feedback_summary_endpoint(tmp_path):
+    database_path = tmp_path / "test.db"
+    app.dependency_overrides[get_feedback_database_path] = lambda: str(database_path)
+
+    client.post(
+        "/api/v1/feedback",
+        json={
+            "question": "问题1",
+            "answer": "回答1",
+            "rating": "helpful",
+        },
+    )
+    client.post(
+        "/api/v1/feedback",
+        json={
+            "question": "问题2",
+            "answer": "回答2",
+            "rating": "not_helpful",
+        },
+    )
+
+    response = client.get("/api/v1/feedback/summary")
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "total": 2,
+        "helpful": 1,
+        "not_helpful": 1,
+    }
