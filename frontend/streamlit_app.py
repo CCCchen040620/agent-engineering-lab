@@ -70,6 +70,16 @@ if st.button("提问"):
             )
 
         st.subheader("回答")
+
+        if "本地模型暂时不可用" in response.answer:
+            st.warning("本地模型暂时不可用，请稍后再试。")
+        elif "暂时无法回答" in response.answer:
+            st.warning("知识库中没有找到相关资料，系统已拒答。")
+        elif len(response.citations) > 0:
+            st.success("已基于知识库引用生成回答。")
+        else:
+            st.info("已生成回答，但本次没有引用来源。")
+
         st.write(response.answer)
 
         st.caption(f"检索关键词：{response.keyword}")
