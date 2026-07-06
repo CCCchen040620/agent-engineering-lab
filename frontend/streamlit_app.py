@@ -74,7 +74,9 @@ if st.button("提问"):
                 mode=mode,
                 min_score=min_score,
             )
-            st.session_state["chat_history"].append(response.model_dump())
+            history_item = response.model_dump()
+            history_item["feedback"] = None
+            st.session_state["chat_history"].append(history_item)
 
         st.subheader("回答")
 
@@ -104,15 +106,34 @@ if st.button("提问"):
 if st.session_state["chat_history"] != []:
     st.subheader("对话历史")
 
-    for item in reversed(st.session_state["chat_history"]):
+    for index, item in reversed(
+        list(enumerate(st.session_state["chat_history"]))
+    ):
         with st.expander(item["question"]):
             st.write(item["answer"])
             st.caption(
                 f"关键词：{item['keyword']} | 引用数量：{len(item['citations'])}"
             )
 
+            feedback_columns = st.columns(2)
+
+            if feedback_columns[0].button(
+                "👍 有帮助",
+                key=f"helpful_{index}",
+            ):
+                st.session_state["chat_history"][index]["feedback"] = "有帮助"
+
+            if feedback_columns[1].button(
+                "👎 没帮助",
+                key=f"not_helpful_{index}",
+            ):
+                st.session_state["chat_history"][index]["feedback"] = "没帮助"
+
+            if item["feedback"] is not None:
+                st.caption(f"反馈：{item['feedback']}")
+
             if item["citations"] != []:
-                for index, citation in enumerate(item["citations"], start=1):
+                for citation_index, citation in enumerate(item["citations"], start=1):
                     st.markdown(
-                        f"- [{index}] {citation['title']}：{citation['text']}"
+                        f"- [{citation_index}] {citation['title']}：{citation['text']}"
                     )
