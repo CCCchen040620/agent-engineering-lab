@@ -36,9 +36,25 @@ with st.sidebar:
         step=0.05,
     )
 
+st.subheader("示例问题")
+
+example_questions = [
+    "新员工什么时候完成安全培训？",
+    "员工每天需要工作多久？",
+    "请假需要怎么申请？",
+    "公司有没有股票期权？",
+]
+
+columns = st.columns(len(example_questions))
+
+for column, example_question in zip(columns, example_questions):
+    if column.button(example_question):
+        st.session_state["question"] = example_question
+
 question = st.text_input(
     "请输入你的问题",
     placeholder="例如：新员工什么时候完成安全培训？",
+    key="question",
 )
 
 if st.button("提问"):
