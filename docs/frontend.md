@@ -25,6 +25,7 @@ ollama list
   - `vector`：使用 jieba 分词、词频向量和余弦相似度检索
   - `keyword`：使用 SQLite `LIKE` 关键词检索
   - `embedding`：使用 Ollama `bge-m3` 语义向量检索
+  - `precomputed_embedding`：使用已保存的 chunk embedding 检索，适合日常问答
 - 调整 `top_k`
 - 调整 `min_score`
 - 展示本地 Qwen 生成的回答

@@ -212,6 +212,7 @@ POST /api/v1/db/chat?mode=vector&top_k=2
 - `keyword`：使用 SQLite `LIKE` 做关键词检索，速度快、可解释，但对自然语言表达变化不敏感。
 - `vector`：使用 jieba 分词、词频向量和余弦相似度检索，适合学习向量检索原理。
 - `embedding`：使用 Ollama `bge-m3` 生成语义向量，并通过余弦相似度检索 chunks。该模式语义能力更强，但会实时调用本地 embedding 模型，速度相对较慢。
+- `precomputed_embedding`：使用入库时预先保存的 chunk embedding 检索。查询时只计算用户问题的 embedding，速度通常快于实时 `embedding` 模式。
 
 调参说明：
 
