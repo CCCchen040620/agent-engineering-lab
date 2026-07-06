@@ -1,6 +1,12 @@
 import streamlit as st
 
 from backend.services.sqlite_llm_qa_service import build_sqlite_llm_chat_response
+from backend.services.sqlite_document_repository import create_connection
+from backend.services.sqlite_feedback_repository import (
+    create_feedback_table,
+    insert_feedback_to_db,
+)
+from week04.settings import SQLITE_DATABASE_PATH
 
 
 st.set_page_config(
@@ -14,6 +20,24 @@ st.write("基于 SQLite 知识库、本地 Ollama/Qwen 和 RAG 的智能问答�
 
 if "chat_history" not in st.session_state:
     st.session_state["chat_history"] = []
+
+
+def save_feedback(question: str, answer: str, rating: str) -> dict:
+    connection = create_connection(SQLITE_DATABASE_PATH)
+
+    create_feedback_table(connection)
+
+    feedback = insert_feedback_to_db(
+        connection,
+        question=question,
+        answer=answer,
+        rating=rating,
+    )
+
+    connection.close()
+
+    return feedback
+
 
 with st.sidebar:
     st.header("检索设置")
@@ -76,6 +100,7 @@ if st.button("提问"):
             )
             history_item = response.model_dump()
             history_item["feedback"] = None
+            history_item["feedback_id"] = None
             st.session_state["chat_history"].append(history_item)
 
         st.subheader("回答")
@@ -121,16 +146,30 @@ if st.session_state["chat_history"] != []:
                 "👍 有帮助",
                 key=f"helpful_{index}",
             ):
+                feedback = save_feedback(
+                    question=item["question"],
+                    answer=item["answer"],
+                    rating="helpful",
+                )
                 st.session_state["chat_history"][index]["feedback"] = "有帮助"
+                st.session_state["chat_history"][index]["feedback_id"] = feedback["id"]
 
             if feedback_columns[1].button(
                 "👎 没帮助",
                 key=f"not_helpful_{index}",
             ):
+                feedback = save_feedback(
+                    question=item["question"],
+                    answer=item["answer"],
+                    rating="not_helpful",
+                )
                 st.session_state["chat_history"][index]["feedback"] = "没帮助"
+                st.session_state["chat_history"][index]["feedback_id"] = feedback["id"]
 
             if item["feedback"] is not None:
-                st.caption(f"反馈：{item['feedback']}")
+                st.caption(
+                    f"反馈：{item['feedback']} | 反馈编号：{item['feedback_id']}"
+                )
 
             if item["citations"] != []:
                 for citation_index, citation in enumerate(item["citations"], start=1):
