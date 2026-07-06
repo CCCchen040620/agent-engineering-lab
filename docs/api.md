@@ -267,3 +267,8 @@ POST /api/v1/db/chat?mode=vector&top_k=2
 - `chunk_count` 由系统根据切分结果自动计算。
 - `is_indexed` 根据是否成功生成 chunks 自动设置。
 - 新增后可以立即通过 `/api/v1/db/chat/llm` 检索和问答。
+
+错误返回：
+
+- `409 Conflict`：文档标题已存在
+- `422 Unprocessable Entity`：文档正文没有有效内容，无法切分出 chunks
