@@ -1,5 +1,6 @@
 import streamlit as st
 
+from week08.backfill_chunk_embeddings import backfill_chunk_embeddings
 from backend.services.sqlite_document_repository import (
     create_chunks_table,
     create_connection,
@@ -72,6 +73,19 @@ if embedding_statuses == []:
     st.info("暂无 embedding 索引状态。")
 else:
     st.dataframe(embedding_statuses, use_container_width=True)
+
+st.subheader("补齐 Embedding 索引")
+
+st.write("如果某些文档的 embedding 未完成，可以点击下面按钮补齐缺失索引。")
+
+if st.button("补齐缺失 embeddings"):
+    with st.spinner("正在调用 bge-m3 生成缺失 embeddings..."):
+        result = backfill_chunk_embeddings()
+
+    st.success("补索引完成")
+    st.write("总 chunks 数量：", result["total_chunks"])
+    st.write("新增 embedding 数量：", result["created"])
+    st.write("已存在跳过数量：", result["skipped"])
 
 if documents == []:
     st.info("暂无文档。")
