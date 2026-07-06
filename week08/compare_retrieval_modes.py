@@ -1,5 +1,8 @@
 import sys
 
+from backend.services.sqlite_precomputed_embedding_search_service import (
+    search_sqlite_chunks_by_precomputed_embedding,
+)
 from backend.services.ranking_service import rank_chunks
 from backend.services.sqlite_document_repository import (
     create_chunks_table,
@@ -88,6 +91,17 @@ def compare_retrieval_modes(
         if result["score"] >= min_score
     ]
 
+    precomputed_embedding_results = search_sqlite_chunks_by_precomputed_embedding(
+        database_path=SQLITE_DATABASE_PATH,
+        query=question,
+        top_k=top_k,
+    )
+
+    precomputed_embedding_results = [
+        result for result in precomputed_embedding_results
+        if result["score"] >= min_score
+    ]
+
     print("问题：", question)
     print("提取关键词：", extract_keyword(question))
     print("最低分数：", min_score)
@@ -96,6 +110,7 @@ def compare_retrieval_modes(
     print_result("keyword", keyword_results)
     print_result("vector", vector_results)
     print_result("embedding", embedding_results)
+    print_result("precomputed_embedding", precomputed_embedding_results)
 
 
 def main():
