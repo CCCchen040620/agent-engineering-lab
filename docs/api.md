@@ -141,3 +141,27 @@ POST /api/v1/db/chat?mode=vector&top_k=2
   ]
 }
 ```
+
+### POST /api/v1/db/chat/llm
+
+使用 SQLite `chunks` 表检索文档片段，构造 RAG Prompt，并调用本地 Ollama/Qwen 生成回答。
+
+请求示例：
+
+```json
+{
+  "question": "新员工什么时候完成安全培训？"
+}
+
+{
+  "question": "新员工什么时候完成安全培训？",
+  "keyword": "安全培训",
+  "answer": "新员工需要在入职后30天内完成安全培训。",
+  "citations": [
+    {
+      "title": "员工手册",
+      "text": "新员工入职后需要在 30 天内完成安全培训。",
+      "path": "sqlite://1"
+    }
+  ]
+}
