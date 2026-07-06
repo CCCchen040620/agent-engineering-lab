@@ -127,11 +127,20 @@ def compare_retrieval_modes(
     print("最低分数：", min_score)
     print()
 
-    print_result(f"keyword ({keyword_duration:.3f}s)", keyword_results)
-    print_result(f"vector ({vector_duration:.3f}s)", vector_results)
-    print_result(f"embedding ({embedding_duration:.3f}s)", embedding_results)
     print_result(
-        f"precomputed_embedding ({precomputed_embedding_duration:.3f}s)",
+        f"keyword ({keyword_duration:.3f}s, {len(keyword_results)} results)",
+        keyword_results,
+    )
+    print_result(
+        f"vector ({vector_duration:.3f}s, {len(vector_results)} results)",
+        vector_results,
+    )
+    print_result(
+        f"embedding ({embedding_duration:.3f}s, {len(embedding_results)} results)",
+        embedding_results,
+    )
+    print_result(
+        f"precomputed_embedding ({precomputed_embedding_duration:.3f}s, {len(precomputed_embedding_results)} results)",
         precomputed_embedding_results,
     )
 
