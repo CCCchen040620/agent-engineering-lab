@@ -91,6 +91,22 @@ with st.sidebar:
     document_file_type = st.selectbox("文件类型", ["md", "txt", "pdf"])
     document_content = st.text_area("文档正文", height=160)
 
+    uploaded_file = st.file_uploader(
+        "上传 txt 文件",
+        type=["txt"],
+    )
+
+    if uploaded_file is not None:
+        uploaded_text = uploaded_file.read().decode("utf-8")
+        document_content = uploaded_text
+
+        if document_title.strip() == "":
+            document_title = uploaded_file.name.rsplit(".", 1)[0]
+
+        document_file_type = "txt"
+
+        st.info(f"已读取上传文件：{uploaded_file.name}")
+
     if st.button("新增并索引"):
         if document_title.strip() == "" or document_content.strip() == "":
             st.warning("文档标题和正文不能为空。")
