@@ -28,5 +28,6 @@ def get_info():
             "sqlite_llm_chat_with_local_qwen",
             "similarity_min_score_filter",
             "local_llm_failure_fallback",
+            "sqlite_feedback_storage",
         ],
     }

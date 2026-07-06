@@ -176,3 +176,27 @@ POST /api/v1/db/chat?mode=vector&top_k=2
 {
   "answer": "本地模型暂时不可用，请稍后再试。"
 }
+
+## 反馈接口
+
+### POST /api/v1/feedback
+
+保存用户对回答的反馈。
+
+请求示例：
+
+```json
+{
+  "question": "新员工什么时候完成安全培训？",
+  "answer": "新员工需要在入职后30天内完成安全培训。",
+  "rating": "helpful"
+}
+
+成功返回：
+
+{
+  "id": 1,
+  "question": "新员工什么时候完成安全培训？",
+  "answer": "新员工需要在入职后30天内完成安全培训。",
+  "rating": "helpful"
+}

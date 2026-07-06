@@ -29,3 +29,4 @@ def test_info_endpoint():
     assert "sqlite_llm_chat_with_local_qwen" in data["features"]
     assert "similarity_min_score_filter" in data["features"]
     assert "local_llm_failure_fallback" in data["features"]
+    assert "sqlite_feedback_storage" in data["features"]
