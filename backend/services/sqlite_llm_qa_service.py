@@ -89,7 +89,11 @@ def build_sqlite_llm_chat_response(
         answer = "知识库中没有找到相关资料，暂时无法回答。"
     else:
         prompt = build_rag_prompt(question, snippets)
-        answer = generator(prompt).strip()
+
+        try:
+            answer = generator(prompt).strip()
+        except Exception:
+            answer = "本地模型暂时不可用，请稍后再试。"
 
     return ChatResponse(
         question=question,
