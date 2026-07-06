@@ -207,6 +207,19 @@ POST /api/v1/db/chat?mode=vector&top_k=2
 - `mode=embedding`：使用 Ollama `bge-m3` 生成语义向量，并用余弦相似度检索 chunks
 - `min_score`：相似度最低门槛，默认 `0.3`
 
+检索模式说明：
+
+- `keyword`：使用 SQLite `LIKE` 做关键词检索，速度快、可解释，但对自然语言表达变化不敏感。
+- `vector`：使用 jieba 分词、词频向量和余弦相似度检索，适合学习向量检索原理。
+- `embedding`：使用 Ollama `bge-m3` 生成语义向量，并通过余弦相似度检索 chunks。该模式语义能力更强，但会实时调用本地 embedding 模型，速度相对较慢。
+
+调参说明：
+
+- `top_k` 控制最多返回几个候选片段。
+- `min_score` 控制最低相似度门槛。
+- 较低的 `min_score` 会提高召回率，但可能引入弱相关片段。
+- 较高的 `min_score` 会减少噪声，但可能漏掉有用片段。
+
 异常降级说明：
 
 当本地 Ollama/Qwen 服务不可用、超时或生成失败时，接口不会直接崩溃，而是返回友好提示：
