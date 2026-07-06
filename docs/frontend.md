@@ -65,3 +65,7 @@ python -m streamlit run frontend/admin_documents.py
   SQLite 文档列表
   指定文档的 chunks 切分结果
 说明：该页面更适合作为内部管理/调试页面，用于检查文档是否正确入库，以及正文是否被合理切分。
+
+- 查看每个文档的 embedding 索引状态
+- 对比 `chunk_count` 和 `embedding_count`
+- 判断文档是否完成 `precomputed_embedding` 检索准备
