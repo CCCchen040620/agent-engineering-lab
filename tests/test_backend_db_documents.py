@@ -398,4 +398,33 @@ def test_create_db_document_with_content_rejects_no_valid_chunks(tmp_path):
 
     clear_dependency_overrides()
 
-    assert response.status_code == 409
+    assert response.status_code == 422
+    assert response.json()["detail"] == "文档正文没有有效内容。"
+
+
+def test_create_db_document_with_content_returns_409_for_duplicate_title(tmp_path):
+    use_temp_database(tmp_path)
+
+    first_response = client.post(
+        "/api/v1/db/documents/with-content",
+        json={
+            "title": "远程办公制度",
+            "file_type": "md",
+            "content": "员工每周可以申请一天远程办公。",
+        },
+    )
+
+    second_response = client.post(
+        "/api/v1/db/documents/with-content",
+        json={
+            "title": "远程办公制度",
+            "file_type": "md",
+            "content": "远程办公需要提前提交申请。",
+        },
+    )
+
+    clear_dependency_overrides()
+
+    assert first_response.status_code == 201
+    assert second_response.status_code == 409
+    assert second_response.json()["detail"] == "文档已存在。"

@@ -1,7 +1,10 @@
 """SQLite-backed API routes for document management and RAG chat."""
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from backend.services.document_indexing_service import create_document_with_chunks
+from backend.services.document_indexing_service import (
+    create_document_with_chunks,
+    split_text_into_chunks,
+)
 from backend.services.sqlite_qa_service import build_sqlite_chat_response
 from backend.services.sqlite_llm_qa_service import build_sqlite_llm_chat_response
 from backend.services.sqlite_document_repository import (
@@ -79,6 +82,11 @@ def create_db_document_with_content(
     request: DocumentCreateWithContentRequest,
     database_path: str = Depends(get_database_path),
 ):
+    chunks = split_text_into_chunks(request.content)
+
+    if chunks == []:
+        raise HTTPException(status_code=422, detail="文档正文没有有效内容。")
+
     connection = create_connection(database_path)
 
     document = create_document_with_chunks(
