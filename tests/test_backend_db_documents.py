@@ -8,6 +8,7 @@ from backend.services.sqlite_document_repository import (
     create_documents_table,
     insert_chunk_to_db,
     insert_document_to_db,
+    list_chunks_by_document_id,
 )
 
 
@@ -353,3 +354,31 @@ def test_sqlite_llm_chat_endpoint_refuses_unknown_question(tmp_path):
 
     assert "暂时无法回答" in data["answer"]
     assert data["citations"] == []
+
+
+def test_create_db_document_with_content_endpoint(tmp_path):
+    database_path = use_temp_database(tmp_path)
+
+    response = client.post(
+        "/api/v1/db/documents/with-content",
+        json={
+            "title": "远程办公制度",
+            "file_type": "md",
+            "content": "员工每周可以申请一天远程办公。远程办公需要提前提交申请。",
+        },
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 201
+
+    data = response.json()
+
+    connection = create_connection(str(database_path))
+    chunks = list_chunks_by_document_id(connection, data["id"])
+    connection.close()
+
+    assert data["title"] == "远程办公制度"
+    assert data["chunk_count"] == 2
+    assert data["is_indexed"] == True
+    assert len(chunks) == 2

@@ -1,6 +1,7 @@
 """SQLite-backed API routes for document management and RAG chat."""
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from backend.services.document_indexing_service import create_document_with_chunks
 from backend.services.sqlite_qa_service import build_sqlite_chat_response
 from backend.services.sqlite_llm_qa_service import build_sqlite_llm_chat_response
 from backend.services.sqlite_document_repository import (
@@ -12,7 +13,13 @@ from backend.services.sqlite_document_repository import (
     delete_document_from_db_by_id,
 )
 from week04.settings import SQLITE_DATABASE_PATH
-from week05.models import ChatRequest, ChatResponse, Document, DocumentCreateRequest
+from week05.models import (
+    ChatRequest,
+    ChatResponse,
+    Document,
+    DocumentCreateRequest,
+    DocumentCreateWithContentRequest,
+)
 
 
 router = APIRouter(prefix="/api/v1/db")
@@ -57,6 +64,28 @@ def create_db_document(
         file_type=request.file_type,
         chunk_count=request.chunk_count,
         is_indexed=request.is_indexed,
+    )
+
+    connection.close()
+
+    if document is None:
+        raise HTTPException(status_code=409, detail="文档已存在。")
+
+    return document
+
+
+@router.post("/documents/with-content", response_model=Document, status_code=201)
+def create_db_document_with_content(
+    request: DocumentCreateWithContentRequest,
+    database_path: str = Depends(get_database_path),
+):
+    connection = create_connection(database_path)
+
+    document = create_document_with_chunks(
+        connection,
+        title=request.title,
+        file_type=request.file_type,
+        content=request.content,
     )
 
     connection.close()

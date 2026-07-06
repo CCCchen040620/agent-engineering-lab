@@ -46,3 +46,9 @@ class Feedback(BaseModel):
     question: str = Field(min_length=1)
     answer: str = Field(min_length=1)
     rating: Literal["helpful", "not_helpful"]
+
+
+class DocumentCreateWithContentRequest(BaseModel):
+    title: str = Field(min_length=1)
+    file_type: str = Field(min_length=1)
+    content: str = Field(min_length=1)
