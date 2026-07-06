@@ -7,6 +7,10 @@ from backend.services.sqlite_document_repository import (
     list_chunks_by_document_id,
     list_documents_from_db,
 )
+from backend.services.sqlite_embedding_repository import (
+    create_chunk_embeddings_table,
+    summarize_document_embedding_status,
+)
 from week04.settings import SQLITE_DATABASE_PATH
 
 
@@ -20,6 +24,20 @@ def load_documents() -> list[dict]:
     connection.close()
 
     return documents
+
+
+def load_embedding_statuses() -> list[dict]:
+    connection = create_connection(SQLITE_DATABASE_PATH)
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+    create_chunk_embeddings_table(connection)
+
+    statuses = summarize_document_embedding_status(connection)
+
+    connection.close()
+
+    return statuses
 
 
 def load_chunks(document_id: int) -> list[dict]:
@@ -45,8 +63,15 @@ st.title("文档管理")
 st.write("查看企业知识库中的文档和切分片段。")
 
 documents = load_documents()
+embedding_statuses = load_embedding_statuses()
 
 st.subheader("文档列表")
+st.subheader("Embedding 索引状态")
+
+if embedding_statuses == []:
+    st.info("暂无 embedding 索引状态。")
+else:
+    st.dataframe(embedding_statuses, use_container_width=True)
 
 if documents == []:
     st.info("暂无文档。")
