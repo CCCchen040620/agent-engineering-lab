@@ -33,3 +33,7 @@ def test_info_endpoint():
     assert "sqlite_feedback_list" in data["features"]
     assert "sqlite_feedback_summary" in data["features"]
     assert "sqlite_list_document_chunks" in data["features"]
+    assert "embedding_retrieval" in data["features"]
+    assert "precomputed_embedding_retrieval" in data["features"]
+    assert "chunk_embedding_backfill" in data["features"]
+    assert "document_embedding_status" in data["features"]

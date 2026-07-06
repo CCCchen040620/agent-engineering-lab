@@ -32,5 +32,9 @@ def get_info():
             "sqlite_feedback_list",
             "sqlite_feedback_summary",
             "sqlite_list_document_chunks",
+            "embedding_retrieval",
+            "precomputed_embedding_retrieval",
+            "chunk_embedding_backfill",
+            "document_embedding_status",
         ],
     }
