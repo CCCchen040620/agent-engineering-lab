@@ -101,3 +101,62 @@ def test_build_sqlite_llm_chat_response_handles_generator_error(tmp_path):
 
     assert "本地模型暂时不可用" in response.answer
     assert len(response.citations) == 1
+
+
+def test_build_sqlite_chat_response_embedding_mode(monkeypatch, tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="远程办公制度",
+        file_type="md",
+        chunk_count=2,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="员工可以远程办公。",
+    )
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="员工报销需要提交发票。",
+    )
+
+    connection.close()
+
+    embeddings = {
+        "远程办公怎么申请？": [1.0, 0.0],
+        "员工可以远程办公。": [0.9, 0.1],
+        "员工报销需要提交发票。": [0.0, 1.0],
+    }
+
+    def fake_embedder(text: str) -> list[float]:
+        return embeddings[text]
+
+    monkeypatch.setattr(
+        "backend.services.sqlite_embedding_search_service.embed_with_ollama",
+        fake_embedder,
+    )
+
+    def fake_generator(prompt: str) -> str:
+        return "员工可以远程办公。"
+
+    response = build_sqlite_llm_chat_response(
+        "远程办公怎么申请？",
+        database_path=str(database_path),
+        mode="embedding",
+        min_score=0.3,
+        generator=fake_generator,
+    )
+
+    assert response.answer == "员工可以远程办公。"
+    assert len(response.citations) == 1
+    assert response.citations[0].title == "远程办公制度"
+    assert response.citations[0].text == "员工可以远程办公。"

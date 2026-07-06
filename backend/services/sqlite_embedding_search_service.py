@@ -14,8 +14,11 @@ def search_sqlite_chunks_by_embedding(
     database_path: str,
     query: str,
     top_k: int = 3,
-    embedder: Callable[[str], list[float]] = embed_with_ollama,
+    embedder: Callable[[str], list[float]] | None = None,
 ) -> list[dict]:
+    if embedder is None:
+        embedder = embed_with_ollama
+        
     connection = create_connection(database_path)
 
     create_documents_table(connection)

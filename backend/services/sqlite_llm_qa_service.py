@@ -1,5 +1,6 @@
 from typing import Callable
 
+from backend.services.sqlite_embedding_search_service import search_sqlite_chunks_by_embedding
 from backend.services.ollama_service import generate_with_ollama
 from backend.services.prompt_service import build_rag_prompt
 from backend.services.ranking_service import rank_chunks
@@ -31,6 +32,20 @@ def search_sqlite_snippets(
             top_k=top_k,
             min_score=min_score,
         )
+
+        return keyword, snippets
+
+    if mode == "embedding":
+        snippets = search_sqlite_chunks_by_embedding(
+            database_path=database_path,
+            query=question,
+            top_k=top_k,
+        )
+
+        snippets = [
+            snippet for snippet in snippets
+            if snippet["score"] >= min_score
+        ]
 
         return keyword, snippets
 
