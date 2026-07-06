@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.services.sqlite_qa_service import build_sqlite_chat_response
+from backend.services.sqlite_llm_qa_service import build_sqlite_llm_chat_response
 from backend.services.sqlite_document_repository import (
     create_connection,
     create_documents_table,
@@ -110,6 +111,21 @@ def sqlite_chat(
     database_path: str = Depends(get_database_path),
 ):
     return build_sqlite_chat_response(
+        request.question,
+        database_path=database_path,
+        top_k=top_k,
+        mode=mode,
+    )
+
+
+@router.post("/chat/llm", response_model=ChatResponse)
+def sqlite_llm_chat(
+    request: ChatRequest,
+    top_k: int = Query(default=3, ge=1, le=5),
+    mode: str = "vector",
+    database_path: str = Depends(get_database_path),
+):
+    return build_sqlite_llm_chat_response(
         request.question,
         database_path=database_path,
         top_k=top_k,

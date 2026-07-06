@@ -335,3 +335,21 @@ def test_sqlite_chat_endpoint_vector_mode(tmp_path):
 
     assert len(data["citations"]) == 1
     assert data["citations"][0]["title"] == "报销制度"
+
+
+def test_sqlite_llm_chat_endpoint_refuses_unknown_question(tmp_path):
+    use_temp_database(tmp_path)
+
+    response = client.post(
+        "/api/v1/db/chat/llm",
+        json={"question": "公司有没有股票期权？"},
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert "暂时无法回答" in data["answer"]
+    assert data["citations"] == []
