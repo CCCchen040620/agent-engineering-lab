@@ -325,3 +325,10 @@ POST /api/v1/db/chat?mode=vector&top_k=2
 
 - `409 Conflict`：文档标题已存在
 - `422 Unprocessable Entity`：文档正文没有有效内容，无法切分出 chunks
+
+### Embedding 补索引
+
+当历史 chunks 缺少 embeddings 时，可以运行：
+
+```powershell
+python -m week08.backfill_chunk_embeddings
