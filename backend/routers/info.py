@@ -24,5 +24,8 @@ def get_info():
             "sqlite_get_document_by_id",
             "sqlite_delete_document_by_id",
             "sqlite_chat_with_citations",
+            "sqlite_vector_retrieval",
+            "sqlite_llm_chat_with_local_qwen",
+            "similarity_min_score_filter",
         ],
     }

@@ -25,3 +25,6 @@ def test_info_endpoint():
     assert "sqlite_create_document" in data["features"]
     assert "sqlite_delete_document_by_id" in data["features"]
     assert "sqlite_chat_with_citations" in data["features"]
+    assert "sqlite_vector_retrieval" in data["features"]
+    assert "sqlite_llm_chat_with_local_qwen" in data["features"]
+    assert "similarity_min_score_filter" in data["features"]
