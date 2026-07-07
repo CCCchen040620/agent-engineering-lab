@@ -10,7 +10,7 @@ from backend.services.sqlite_feedback_repository import (
     create_feedback_table,
     insert_feedback_to_db,
 )
-from backend.services.sqlite_llm_qa_service import build_sqlite_llm_chat_response
+from frontend.api_client import chat_with_llm_api
 from week04.settings import SQLITE_DATABASE_PATH
 
 
@@ -201,41 +201,46 @@ if st.button("提问"):
         st.warning("请输入问题后再提问。")
     else:
         with st.spinner("正在检索知识库并调用本地 Qwen 生成回答..."):
-            response = build_sqlite_llm_chat_response(
-                question.strip(),
+            response, error_message = chat_with_llm_api(
+                base_url=BACKEND_API_BASE_URL,
+                question=question.strip(),
                 top_k=top_k,
                 mode=mode,
                 min_score=min_score,
             )
-            history_item = response.model_dump()
+
+        if error_message is not None:
+            st.error(error_message)
+        else:
+            history_item = response.copy()
             history_item["feedback"] = None
             history_item["feedback_id"] = None
             st.session_state["chat_history"].append(history_item)
 
-        st.subheader("回答")
+            st.subheader("回答")
 
-        if "本地模型暂时不可用" in response.answer:
-            st.warning("本地模型暂时不可用，请稍后再试。")
-        elif "暂时无法回答" in response.answer:
-            st.warning("知识库中没有找到相关资料，系统已拒答。")
-        elif len(response.citations) > 0:
-            st.success("已基于知识库引用生成回答。")
-        else:
-            st.info("已生成回答，但本次没有引用来源。")
+            if "本地模型暂时不可用" in response["answer"]:
+                st.warning("本地模型暂时不可用，请稍后再试。")
+            elif "暂时无法回答" in response["answer"]:
+                st.warning("知识库中没有找到相关资料，系统已拒答。")
+            elif len(response["citations"]) > 0:
+                st.success("已基于知识库引用生成回答。")
+            else:
+                st.info("已生成回答，但本次没有引用来源。")
 
-        st.write(response.answer)
+            st.write(response["answer"])
 
-        st.caption(f"检索关键词：{response.keyword}")
+            st.caption(f"检索关键词：{response['keyword']}")
 
-        st.subheader("引用来源")
+            st.subheader("引用来源")
 
-        if response.citations == []:
-            st.info("本次回答没有引用来源。")
-        else:
-            for index, citation in enumerate(response.citations, start=1):
-                with st.expander(f"[{index}] {citation.title}"):
-                    st.write(citation.text)
-                    st.caption(citation.path)
+            if response["citations"] == []:
+                st.info("本次回答没有引用来源。")
+            else:
+                for index, citation in enumerate(response["citations"], start=1):
+                    with st.expander(f"[{index}] {citation['title']}"):
+                        st.write(citation["text"])
+                        st.caption(citation["path"])
 
 if st.session_state["chat_history"] != []:
     st.subheader("对话历史")
