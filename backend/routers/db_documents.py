@@ -1,8 +1,9 @@
 """SQLite-backed API routes for document management and RAG chat."""
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from backend.config import DEFAULT_MIN_SCORE, DEFAULT_TOP_K
 from backend.services.document_indexing_service import (
     create_document_with_chunks,
+    create_document_with_chunks_and_embeddings,
     split_text_into_chunks,
 )
 from backend.services.sqlite_qa_service import build_sqlite_chat_response
@@ -97,6 +98,54 @@ def create_db_document_with_content(
         title=request.title,
         file_type=request.file_type,
         content=request.content,
+    )
+
+    connection.close()
+
+    if document is None:
+        raise HTTPException(status_code=409, detail="文档已存在。")
+
+    return document
+
+
+@router.post("/documents/upload-text", response_model=Document, status_code=201)
+async def upload_text_document(
+    file: UploadFile = File(...),
+    title: str | None = Form(default=None),
+    database_path: str = Depends(get_database_path),
+):
+    filename = file.filename or "uploaded.txt"
+
+    if not filename.lower().endswith(".txt"):
+        raise HTTPException(status_code=422, detail="仅支持 txt 文件。")
+
+    content_bytes = await file.read()
+
+    try:
+        content = content_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        raise HTTPException(
+            status_code=422,
+            detail="文件读取失败，请上传 UTF-8 编码的 txt 文件。",
+        )
+
+    chunks = split_text_into_chunks(content)
+
+    if chunks == []:
+        raise HTTPException(status_code=422, detail="文档正文没有有效内容。")
+
+    if title is None or title.strip() == "":
+        document_title = filename.rsplit(".", 1)[0]
+    else:
+        document_title = title.strip()
+
+    connection = create_connection(database_path)
+
+    document = create_document_with_chunks_and_embeddings(
+        connection,
+        title=document_title,
+        file_type="txt",
+        content=content,
     )
 
     connection.close()

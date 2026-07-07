@@ -91,8 +91,11 @@ def create_document_with_chunks_and_embeddings(
     title: str,
     file_type: str,
     content: str,
-    embedder: Callable[[str], list[float]] = embed_with_ollama,
+    embedder: Callable[[str], list[float]] | None = None,
 ) -> dict | None:
+    if embedder is None:
+        embedder = embed_with_ollama
+
     create_documents_table(connection)
     create_chunks_table(connection)
     create_chunk_embeddings_table(connection)

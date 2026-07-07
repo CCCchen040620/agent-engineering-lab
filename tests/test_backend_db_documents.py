@@ -466,3 +466,130 @@ def test_list_db_document_chunks_endpoint_returns_404_when_document_not_found(tm
 
     assert response.status_code == 404
     assert response.json()["detail"] == "文档不存在。"
+def test_upload_text_document_endpoint(monkeypatch, tmp_path):
+    database_path = use_temp_database(tmp_path)
+
+    def fake_embed_with_ollama(text: str) -> list[float]:
+        return [float(len(text)), 1.0]
+
+    monkeypatch.setattr(
+        "backend.services.document_indexing_service.embed_with_ollama",
+        fake_embed_with_ollama,
+    )
+
+    response = client.post(
+        "/api/v1/db/documents/upload-text",
+        data={"title": "访客制度"},
+        files={
+            "file": (
+                "visitor_policy.txt",
+                "访客进入办公区需要提前登记。访客需要由员工陪同进入办公区。".encode(
+                    "utf-8"
+                ),
+                "text/plain",
+            )
+        },
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 201
+
+    data = response.json()
+
+    connection = create_connection(str(database_path))
+    chunks = list_chunks_by_document_id(connection, data["id"])
+    connection.close()
+
+    assert data["title"] == "访客制度"
+    assert data["file_type"] == "txt"
+    assert data["chunk_count"] == 2
+    assert len(chunks) == 2
+
+
+def test_upload_text_document_endpoint_uses_filename_as_title(monkeypatch, tmp_path):
+    use_temp_database(tmp_path)
+
+    def fake_embed_with_ollama(text: str) -> list[float]:
+        return [float(len(text)), 1.0]
+
+    monkeypatch.setattr(
+        "backend.services.document_indexing_service.embed_with_ollama",
+        fake_embed_with_ollama,
+    )
+
+    response = client.post(
+        "/api/v1/db/documents/upload-text",
+        files={
+            "file": (
+                "visitor_policy.txt",
+                "访客进入办公区需要提前登记。".encode("utf-8"),
+                "text/plain",
+            )
+        },
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 201
+    assert response.json()["title"] == "visitor_policy"
+
+
+def test_upload_text_document_endpoint_rejects_non_txt_file(tmp_path):
+    use_temp_database(tmp_path)
+
+    response = client.post(
+        "/api/v1/db/documents/upload-text",
+        files={
+            "file": (
+                "visitor_policy.pdf",
+                "访客进入办公区需要提前登记。".encode("utf-8"),
+                "application/pdf",
+            )
+        },
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "仅支持 txt 文件。"
+
+
+def test_upload_text_document_endpoint_rejects_invalid_encoding(tmp_path):
+    use_temp_database(tmp_path)
+
+    response = client.post(
+        "/api/v1/db/documents/upload-text",
+        files={
+            "file": (
+                "visitor_policy.txt",
+                b"\xff\xfe\xfd",
+                "text/plain",
+            )
+        },
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "文件读取失败，请上传 UTF-8 编码的 txt 文件。"
+
+
+def test_upload_text_document_endpoint_rejects_no_valid_chunks(tmp_path):
+    use_temp_database(tmp_path)
+
+    response = client.post(
+        "/api/v1/db/documents/upload-text",
+        files={
+            "file": (
+                "empty_policy.txt",
+                "。。。\n   ！！！？？？".encode("utf-8"),
+                "text/plain",
+            )
+        },
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "文档正文没有有效内容。"
