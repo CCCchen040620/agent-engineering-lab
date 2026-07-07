@@ -440,7 +440,8 @@ POST /api/v1/agent/chat?mode=keyword&top_k=3
       },
       "observation": {
         "found": true,
-        "document_id": 1
+        "document_id": 1,
+        "match_type": "exact"
       },
       "next_action": "read_document_chunks"
     },
@@ -514,6 +515,10 @@ POST /api/v1/agent/chat?mode=keyword&top_k=3
 - `steps` 字段用于展示 Agent 的执行过程，包括工具名、工具输入、观察结果和下一步动作。
 - 当前支持的文档列表类问法包括：“知识库里有哪些文档？”、“请列出文档”、“查看文档列表”。
 - 当前支持的读取文档类问法包括：“查看员工手册的片段”、“读取请假制度的内容”、“员工手册有哪些内容”。
+- 读取文档时，`find_document_by_title_tool` 的 `match_type` 表示标题匹配方式：
+  - `exact`：文档标题精确匹配，例如“员工手册”匹配“员工手册”
+  - `contains`：用户输入是文档标题的一部分，例如“手册”匹配“员工手册”
+  - `null`：没有找到匹配文档
 - 当读取文档类问题缺少明确文档标题时，Agent 会调用 `ask_clarification_tool` 进行澄清。
 - 后续可以把这个流程迁移到 LangGraph 状态图。
 

@@ -33,6 +33,7 @@ ollama list
   - `tool`：本步骤调用的工具
   - `input`：工具输入
   - `observation`：工具执行后的观察结果
+    - 读取文档时，`observation.match_type` 会显示标题匹配方式，例如 `exact` 或 `contains`
   - `next_action`：Agent 决定的下一步动作
 - 可以在 Simple Agent 模式下尝试提问：“知识库里有哪些文档？”
 - 也可以尝试：“查看员工手册的片段” 或 “查看这份文档的片段”
