@@ -127,6 +127,15 @@ GET /api/v1/db/documents/6/chunks
 
 说明：RAG 检索实际使用的是 chunks，而不是整篇文档。该接口可用于调试文档切分和检索质量。
 
+### POST /api/v1/db/documents/upload-text
+
+上传 `.txt` 文件，并自动完成文档入库、chunks 切分和 embeddings 生成。
+
+请求类型：
+
+```text
+multipart/form-data
+
 ## SQLite 问答接口
 > 说明：这是当前推荐的问答接口，基于 SQLite `chunks` 表检索片段并返回引用来源。
 
