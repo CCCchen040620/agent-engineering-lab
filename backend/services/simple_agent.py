@@ -5,7 +5,10 @@ from typing import Callable
 from backend.config import DEFAULT_MIN_SCORE, DEFAULT_TOP_K
 from backend.services.agent_tools import (
     answer_with_context_tool,
+    ask_clarification_tool,
+    find_document_by_title_tool,
     list_documents_tool,
+    read_document_chunks_tool,
     refuse_answer_tool,
     search_knowledge_base_tool,
 )
@@ -24,7 +27,36 @@ def decide_agent_intent(question: str) -> str:
     if "文档列表" in question:
         return "list_documents"
 
+    if "查看" in question and ("片段" in question or "内容" in question):
+        return "read_document"
+
+    if "读取" in question and ("片段" in question or "内容" in question):
+        return "read_document"
+
+    if "有哪些内容" in question:
+        return "read_document"
+
     return "answer_question"
+
+
+def extract_document_title(question: str) -> str:
+    """从用户问题中提取文档标题。"""
+    title = question.strip()
+
+    for prefix in ["请帮我查看", "帮我查看", "请查看", "查看", "请读取", "读取"]:
+        if title.startswith(prefix):
+            title = title.removeprefix(prefix)
+
+    for suffix in ["有哪些内容？", "有哪些内容", "的片段", "的内容", "片段", "内容", "？", "?"]:
+        title = title.replace(suffix, "")
+
+    title = title.strip()
+
+    if title in ["这份文档", "这个文档", "文档", "这份", "这个"]:
+        return ""
+
+    return title
+
 
 def run_simple_agent(
     question: str,
@@ -78,6 +110,198 @@ def run_simple_agent(
                 },
             ],
         }
+
+    if intent == "read_document":
+        document_title = extract_document_title(question)
+
+        if document_title == "":
+            final_result = ask_clarification_tool(question, "文档标题")
+
+            return {
+                "question": question,
+                "keyword": "文档标题",
+                "answer": final_result["answer"],
+                "citations": [],
+                "steps": [
+                    {
+                        "step": 1,
+                        "tool": "decide_agent_intent",
+                        "input": {
+                            "question": question,
+                        },
+                        "observation": {
+                            "intent": intent,
+                        },
+                        "next_action": "extract_document_title",
+                    },
+                    {
+                        "step": 2,
+                        "tool": "extract_document_title",
+                        "input": {
+                            "question": question,
+                        },
+                        "observation": {
+                            "document_title": "",
+                            "missing_field": "文档标题",
+                        },
+                        "next_action": "ask_clarification",
+                    },
+                    {
+                        "step": 3,
+                        "tool": "ask_clarification_tool",
+                        "input": {
+                            "missing_field": "文档标题",
+                        },
+                        "observation": {
+                            "answer": final_result["answer"],
+                        },
+                        "next_action": "finish",
+                    },
+                ],
+            }
+
+        document_result = find_document_by_title_tool(
+            title=document_title,
+            database_path=database_path,
+        )
+
+        if document_result["found"] == False:
+            final_result = ask_clarification_tool(question, "正确的文档标题")
+
+            return {
+                "question": question,
+                "keyword": document_title,
+                "answer": final_result["answer"],
+                "citations": [],
+                "steps": [
+                    {
+                        "step": 1,
+                        "tool": "decide_agent_intent",
+                        "input": {
+                            "question": question,
+                        },
+                        "observation": {
+                            "intent": intent,
+                        },
+                        "next_action": "extract_document_title",
+                    },
+                    {
+                        "step": 2,
+                        "tool": "extract_document_title",
+                        "input": {
+                            "question": question,
+                        },
+                        "observation": {
+                            "document_title": document_title,
+                        },
+                        "next_action": "find_document_by_title",
+                    },
+                    {
+                        "step": 3,
+                        "tool": "find_document_by_title_tool",
+                        "input": {
+                            "title": document_title,
+                        },
+                        "observation": {
+                            "found": False,
+                        },
+                        "next_action": "ask_clarification",
+                    },
+                    {
+                        "step": 4,
+                        "tool": "ask_clarification_tool",
+                        "input": {
+                            "missing_field": "正确的文档标题",
+                        },
+                        "observation": {
+                            "answer": final_result["answer"],
+                        },
+                        "next_action": "finish",
+                    },
+                ],
+            }
+
+        document = document_result["document"]
+
+        chunks_result = read_document_chunks_tool(
+            document_id=document["id"],
+            database_path=database_path,
+        )
+
+        chunks = chunks_result["chunks"]
+
+        chunk_lines = []
+
+        for index, chunk in enumerate(chunks, start=1):
+            chunk_lines.append(f"[{index}] {chunk['text']}")
+
+        answer = document["title"] + " 的片段如下：\n" + "\n".join(chunk_lines)
+
+        citations = []
+
+        for chunk in chunks:
+            citations.append(
+                {
+                    "title": document["title"],
+                    "text": chunk["text"],
+                    "path": "sqlite://" + str(document["id"]),
+                }
+            )
+
+        return {
+            "question": question,
+            "keyword": document_title,
+            "answer": answer,
+            "citations": citations,
+            "steps": [
+                {
+                    "step": 1,
+                    "tool": "decide_agent_intent",
+                    "input": {
+                        "question": question,
+                    },
+                    "observation": {
+                        "intent": intent,
+                    },
+                    "next_action": "extract_document_title",
+                },
+                {
+                    "step": 2,
+                    "tool": "extract_document_title",
+                    "input": {
+                        "question": question,
+                    },
+                    "observation": {
+                        "document_title": document_title,
+                    },
+                    "next_action": "find_document_by_title",
+                },
+                {
+                    "step": 3,
+                    "tool": "find_document_by_title_tool",
+                    "input": {
+                        "title": document_title,
+                    },
+                    "observation": {
+                        "found": True,
+                        "document_id": document["id"],
+                    },
+                    "next_action": "read_document_chunks",
+                },
+                {
+                    "step": 4,
+                    "tool": "read_document_chunks_tool",
+                    "input": {
+                        "document_id": document["id"],
+                    },
+                    "observation": {
+                        "chunk_count": len(chunks),
+                    },
+                    "next_action": "finish",
+                },
+            ],
+        }
+
     """运行一个最小版知识库 Agent。"""
     search_result = search_knowledge_base_tool(
         question=question,

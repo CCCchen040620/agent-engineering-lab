@@ -1,4 +1,8 @@
-from backend.services.simple_agent import decide_agent_intent, run_simple_agent
+from backend.services.simple_agent import (
+    decide_agent_intent,
+    extract_document_title,
+    run_simple_agent,
+)
 from backend.services.sqlite_document_repository import (
     create_chunks_table,
     create_connection,
@@ -134,3 +138,86 @@ def test_run_simple_agent_lists_documents(tmp_path):
     assert result["steps"][1]["tool"] == "list_documents_tool"
     assert result["steps"][1]["observation"]["document_count"] == 2
     assert result["steps"][1]["next_action"] == "finish"
+
+
+def test_decide_agent_intent_returns_read_document():
+    assert decide_agent_intent("查看员工手册的片段") == "read_document"
+    assert decide_agent_intent("读取请假制度的内容") == "read_document"
+    assert decide_agent_intent("员工手册有哪些内容") == "read_document"
+
+
+def test_extract_document_title():
+    assert extract_document_title("查看员工手册的片段") == "员工手册"
+    assert extract_document_title("读取请假制度的内容") == "请假制度"
+    assert extract_document_title("员工手册有哪些内容") == "员工手册"
+
+
+def test_extract_document_title_returns_empty_when_missing_title():
+    assert extract_document_title("查看这份文档的片段") == ""
+
+
+def test_run_simple_agent_reads_document_chunks(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=2,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="员工每天需要完成 8 小时工作。",
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="新员工需要完成安全培训。",
+    )
+
+    connection.close()
+
+    result = run_simple_agent(
+        question="查看员工手册的片段",
+        database_path=str(database_path),
+    )
+
+    assert result["keyword"] == "员工手册"
+    assert "员工每天需要完成 8 小时工作。" in result["answer"]
+    assert "新员工需要完成安全培训。" in result["answer"]
+    assert len(result["citations"]) == 2
+
+    assert result["steps"][0]["tool"] == "decide_agent_intent"
+    assert result["steps"][0]["observation"]["intent"] == "read_document"
+
+    assert result["steps"][1]["tool"] == "extract_document_title"
+    assert result["steps"][1]["observation"]["document_title"] == "员工手册"
+
+    assert result["steps"][2]["tool"] == "find_document_by_title_tool"
+    assert result["steps"][2]["observation"]["found"] == True
+
+    assert result["steps"][3]["tool"] == "read_document_chunks_tool"
+    assert result["steps"][3]["observation"]["chunk_count"] == 2
+
+
+def test_run_simple_agent_asks_clarification_when_document_title_is_missing(tmp_path):
+    database_path = tmp_path / "test.db"
+
+    result = run_simple_agent(
+        question="查看这份文档的片段",
+        database_path=str(database_path),
+    )
+
+    assert result["keyword"] == "文档标题"
+    assert result["answer"] == "请补充文档标题。"
+    assert result["citations"] == []
+    assert result["steps"][0]["observation"]["intent"] == "read_document"
+    assert result["steps"][2]["tool"] == "ask_clarification_tool"
