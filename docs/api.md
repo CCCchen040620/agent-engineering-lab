@@ -239,6 +239,76 @@ POST /api/v1/db/chat?mode=vector&top_k=2
   "answer": "本地模型暂时不可用，请稍后再试。"
 }
 
+## Agent 接口
+
+### POST /api/v1/agent/chat
+
+运行第一版简单 Agent 流程。
+
+该接口会执行：
+
+1. 搜索知识库
+2. 判断是否找到相关片段
+3. 如果有片段，则基于上下文生成回答
+4. 如果没有片段，则明确拒答
+5. 返回回答、引用来源和执行步骤
+
+请求示例：
+
+```json
+{
+  "question": "新员工什么时候完成安全培训？"
+}
+```
+
+可选查询参数：
+
+- `top_k`：最多使用几个检索片段，默认 `3`，范围 `1-5`
+- `mode`：检索模式，默认 `keyword`
+- `min_score`：最低相似度分数，默认读取项目配置
+
+示例：
+
+```text
+POST /api/v1/agent/chat?mode=keyword&top_k=3
+```
+
+返回示例：
+
+```json
+{
+  "question": "新员工什么时候完成安全培训？",
+  "keyword": "安全培训",
+  "answer": "新员工需要在入职后 30 天内完成安全培训。",
+  "citations": [
+    {
+      "title": "员工手册",
+      "text": "新员工入职后需要在 30 天内完成安全培训。",
+      "path": "sqlite://1"
+    }
+  ],
+  "steps": [
+    {
+      "name": "search_knowledge_base",
+      "status": "completed",
+      "result_count": 1
+    },
+    {
+      "name": "answer_or_refuse",
+      "status": "completed",
+      "action": "answer_with_context"
+    }
+  ]
+}
+```
+
+说明：
+
+- 这是项目中的第一版 Agent 流程。
+- 当前还没有使用 LangGraph，而是用普通 Python 函数手写决策流程。
+- `steps` 字段用于展示 Agent 的执行过程。
+- 后续可以把这个流程迁移到 LangGraph 状态图。
+
 ## 反馈接口
 
 ### POST /api/v1/feedback

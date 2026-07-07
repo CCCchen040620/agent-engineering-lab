@@ -73,7 +73,38 @@ http://127.0.0.1:8000/docs
 http://127.0.0.1:8000/health
 ```
 
-## 4. 启动 Streamlit 用户问答页
+## 4. 调用 Agent API
+
+启动 FastAPI 后端后，可以在接口文档中测试：
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+接口路径：
+
+```text
+POST /api/v1/agent/chat
+```
+
+请求示例：
+
+```json
+{
+  "question": "新员工什么时候完成安全培训？"
+}
+```
+
+该接口会返回：
+
+- Agent 最终回答
+- 引用来源
+- 检索关键词
+- Agent 执行步骤 `steps`
+
+`steps` 字段用于观察 Agent 的执行过程，例如先搜索知识库，再决定基于上下文回答或拒答。
+
+## 5. 启动 Streamlit 用户问答页
 
 ```powershell
 python -m streamlit run frontend/streamlit_app.py
@@ -86,7 +117,7 @@ python -m streamlit run frontend/streamlit_app.py
 - 查看引用来源
 - 提交回答反馈
 
-## 5. 启动反馈管理页
+## 6. 启动反馈管理页
 
 ```powershell
 python -m streamlit run frontend/admin_feedback.py
@@ -98,7 +129,7 @@ python -m streamlit run frontend/admin_feedback.py
 - 查看有帮助 / 没帮助数量
 - 查看反馈列表
 
-## 6. 启动文档管理页
+## 7. 启动文档管理页
 
 ```powershell
 python -m streamlit run frontend/admin_documents.py
@@ -111,7 +142,7 @@ python -m streamlit run frontend/admin_documents.py
 - 查看 embedding 索引状态
 - 补齐缺失 embeddings
 
-## 7. 检查本地 Ollama 模型
+## 8. 检查本地 Ollama 模型
 
 ```powershell
 ollama list
@@ -124,7 +155,7 @@ qwen3.6:latest  用于生成回答
 bge-m3:latest   用于生成 embeddings
 ```
 
-## 8. 补齐历史 chunk embeddings
+## 9. 补齐历史 chunk embeddings
 
 ```powershell
 python -m week08.backfill_chunk_embeddings
@@ -139,7 +170,7 @@ python -m week08.backfill_chunk_embeddings
 
 该脚本可以重复运行。
 
-## 9. 运行 LLM RAG 评测
+## 10. 运行 LLM RAG 评测
 
 默认配置：
 
@@ -159,7 +190,7 @@ python -m week07.evaluate_llm_rag embedding 0.8
 docs/evaluations/llm-rag-run.md
 ```
 
-## 10. 比较检索模式
+## 11. 比较检索模式
 
 默认问题：
 
@@ -180,7 +211,7 @@ python -m week08.compare_retrieval_modes "员工可以远程办公吗？" 0.8
 - `embedding`
 - `precomputed_embedding`
 
-## 11. 配置环境变量
+## 12. 配置环境变量
 
 配置说明见：
 
