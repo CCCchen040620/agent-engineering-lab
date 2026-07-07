@@ -30,8 +30,10 @@ def run_simple_agent(
     )
 
     if search_result["snippets"] == []:
+        next_action = "refuse"
         final_result = refuse_answer_tool(question)
     else:
+        next_action = "answer_with_context"
         final_result = answer_with_context_tool(
             question=question,
             snippets=search_result["snippets"],
@@ -45,16 +47,32 @@ def run_simple_agent(
         "citations": final_result["citations"],
         "steps": [
             {
-                "name": "search_knowledge_base",
-                "status": "completed",
-                "result_count": search_result["count"],
+                "step": 1,
+                "tool": "search_knowledge_base_tool",
+                "input": {
+                    "question": question,
+                    "mode": mode,
+                    "top_k": top_k,
+                    "min_score": min_score,
+                },
+                "observation": {
+                    "keyword": search_result["keyword"],
+                    "result_count": search_result["count"],
+                },
+                "next_action": next_action,
             },
             {
-                "name": "answer_or_refuse",
-                "status": "completed",
-                "action": "refuse"
-                if search_result["snippets"] == []
-                else "answer_with_context",
+                "step": 2,
+                "tool": "refuse_answer_tool"
+                if next_action == "refuse"
+                else "answer_with_context_tool",
+                "input": {
+                    "snippet_count": search_result["count"],
+                },
+                "observation": {
+                    "citation_count": len(final_result["citations"]),
+                },
+                "next_action": "finish",
             },
         ],
     }

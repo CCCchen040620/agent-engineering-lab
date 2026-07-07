@@ -46,9 +46,19 @@ def test_run_simple_agent_answers_with_context(tmp_path):
     assert result["keyword"] == "安全培训"
     assert result["answer"] == "新员工需要在入职后 30 天内完成安全培训。"
     assert len(result["citations"]) == 1
-    assert result["steps"][0]["name"] == "search_knowledge_base"
-    assert result["steps"][0]["result_count"] == 1
-    assert result["steps"][1]["action"] == "answer_with_context"
+    assert result["steps"][0]["step"] == 1
+    assert result["steps"][0]["tool"] == "search_knowledge_base_tool"
+    assert result["steps"][0]["input"]["question"] == "新员工什么时候完成安全培训？"
+    assert result["steps"][0]["input"]["mode"] == "keyword"
+    assert result["steps"][0]["observation"]["keyword"] == "安全培训"
+    assert result["steps"][0]["observation"]["result_count"] == 1
+    assert result["steps"][0]["next_action"] == "answer_with_context"
+
+    assert result["steps"][1]["step"] == 2
+    assert result["steps"][1]["tool"] == "answer_with_context_tool"
+    assert result["steps"][1]["input"]["snippet_count"] == 1
+    assert result["steps"][1]["observation"]["citation_count"] == 1
+    assert result["steps"][1]["next_action"] == "finish"
 
 
 def test_run_simple_agent_refuses_without_context(tmp_path):
@@ -63,5 +73,9 @@ def test_run_simple_agent_refuses_without_context(tmp_path):
     assert result["keyword"] == "股票期权"
     assert result["answer"] == "知识库中没有找到相关资料，暂时无法回答。"
     assert result["citations"] == []
-    assert result["steps"][0]["result_count"] == 0
-    assert result["steps"][1]["action"] == "refuse"
+    assert result["steps"][0]["observation"]["result_count"] == 0
+    assert result["steps"][0]["next_action"] == "refuse"
+    assert result["steps"][1]["tool"] == "refuse_answer_tool"
+    assert result["steps"][1]["input"]["snippet_count"] == 0
+    assert result["steps"][1]["observation"]["citation_count"] == 0
+    assert result["steps"][1]["next_action"] == "finish"
