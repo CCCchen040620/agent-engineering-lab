@@ -60,20 +60,27 @@ def test_agent_chat_endpoint_answers_with_context(tmp_path):
 
     assert data["keyword"] == "安全培训"
     assert len(data["citations"]) == 1
+    assert data["answer"] == "新员工需要在入职后 30 天内完成安全培训。"
     assert data["steps"][0]["step"] == 1
-    assert data["steps"][0]["tool"] == "search_knowledge_base_tool"
+    assert data["steps"][0]["tool"] == "decide_agent_intent"
     assert data["steps"][0]["input"]["question"] == "新员工什么时候完成安全培训？"
-    assert data["steps"][0]["input"]["mode"] == "keyword"
-    assert data["steps"][0]["observation"]["keyword"] == "安全培训"
-    assert data["steps"][0]["observation"]["result_count"] == 1
-    assert data["steps"][0]["next_action"] == "answer_with_context"
+    assert data["steps"][0]["observation"]["intent"] == "answer_question"
+    assert data["steps"][0]["next_action"] == "search_knowledge_base"
 
     assert data["steps"][1]["step"] == 2
-    assert data["steps"][1]["tool"] == "answer_with_context_tool"
-    assert data["steps"][1]["input"]["snippet_count"] == 1
-    assert data["steps"][1]["observation"]["citation_count"] == 1
-    assert data["steps"][1]["next_action"] == "finish"
-    assert data["answer"] == "新员工需要在入职后 30 天内完成安全培训。"
+    assert data["steps"][1]["tool"] == "search_knowledge_base_tool"
+    assert data["steps"][1]["input"]["question"] == "新员工什么时候完成安全培训？"
+    assert data["steps"][1]["input"]["mode"] == "keyword"
+    assert data["steps"][1]["observation"]["keyword"] == "安全培训"
+    assert data["steps"][1]["observation"]["result_count"] == 1
+    assert data["steps"][1]["next_action"] == "answer_with_context"
+
+    assert data["steps"][2]["step"] == 3
+    assert data["steps"][2]["tool"] == "answer_with_context_tool"
+    assert data["steps"][2]["input"]["snippet_count"] == 1
+    assert data["steps"][2]["observation"]["citation_count"] == 1
+    assert data["steps"][2]["next_action"] == "finish"
+
 
 
 def test_agent_chat_endpoint_refuses_without_context(tmp_path):
@@ -93,11 +100,18 @@ def test_agent_chat_endpoint_refuses_without_context(tmp_path):
 
     assert data["answer"] == "知识库中没有找到相关资料，暂时无法回答。"
     assert data["citations"] == []
-    assert data["steps"][0]["tool"] == "search_knowledge_base_tool"
-    assert data["steps"][0]["observation"]["result_count"] == 0
-    assert data["steps"][0]["next_action"] == "refuse"
+    assert data["steps"][0]["step"] == 1
+    assert data["steps"][0]["tool"] == "decide_agent_intent"
+    assert data["steps"][0]["observation"]["intent"] == "answer_question"
+    assert data["steps"][0]["next_action"] == "search_knowledge_base"
 
-    assert data["steps"][1]["tool"] == "refuse_answer_tool"
-    assert data["steps"][1]["input"]["snippet_count"] == 0
-    assert data["steps"][1]["observation"]["citation_count"] == 0
-    assert data["steps"][1]["next_action"] == "finish"
+    assert data["steps"][1]["step"] == 2
+    assert data["steps"][1]["tool"] == "search_knowledge_base_tool"
+    assert data["steps"][1]["observation"]["result_count"] == 0
+    assert data["steps"][1]["next_action"] == "refuse"
+
+    assert data["steps"][2]["step"] == 3
+    assert data["steps"][2]["tool"] == "refuse_answer_tool"
+    assert data["steps"][2]["input"]["snippet_count"] == 0
+    assert data["steps"][2]["observation"]["citation_count"] == 0
+    assert data["steps"][2]["next_action"] == "finish"

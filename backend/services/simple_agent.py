@@ -5,12 +5,26 @@ from typing import Callable
 from backend.config import DEFAULT_MIN_SCORE, DEFAULT_TOP_K
 from backend.services.agent_tools import (
     answer_with_context_tool,
+    list_documents_tool,
     refuse_answer_tool,
     search_knowledge_base_tool,
 )
 from backend.services.ollama_service import generate_with_ollama
 from week04.settings import SQLITE_DATABASE_PATH
 
+
+def decide_agent_intent(question: str) -> str:
+    """判断用户问题应该使用哪类 Agent 能力。"""
+    if "有哪些文档" in question:
+        return "list_documents"
+
+    if "列出文档" in question:
+        return "list_documents"
+
+    if "文档列表" in question:
+        return "list_documents"
+
+    return "answer_question"
 
 def run_simple_agent(
     question: str,
@@ -20,6 +34,50 @@ def run_simple_agent(
     min_score: float = DEFAULT_MIN_SCORE,
     generator: Callable[[str], str] = generate_with_ollama,
 ) -> dict:
+    intent = decide_agent_intent(question)
+
+    if intent == "list_documents":
+        tool_result = list_documents_tool(database_path)
+
+        document_titles = []
+
+        for document in tool_result["documents"]:
+            document_titles.append(document["title"])
+
+        if document_titles == []:
+            answer = "知识库中还没有文档。"
+        else:
+            answer = "知识库中有这些文档：" + "、".join(document_titles)
+
+        return {
+            "question": question,
+            "keyword": "文档列表",
+            "answer": answer,
+            "citations": [],
+            "steps": [
+                {
+                    "step": 1,
+                    "tool": "decide_agent_intent",
+                    "input": {
+                        "question": question,
+                    },
+                    "observation": {
+                        "intent": intent,
+                    },
+                    "next_action": "list_documents",
+                },
+                {
+                    "step": 2,
+                    "tool": "list_documents_tool",
+                    "input": {},
+                    "observation": {
+                        "document_count": tool_result["count"],
+                        "document_titles": document_titles,
+                    },
+                    "next_action": "finish",
+                },
+            ],
+        }
     """运行一个最小版知识库 Agent。"""
     search_result = search_knowledge_base_tool(
         question=question,
@@ -48,6 +106,17 @@ def run_simple_agent(
         "steps": [
             {
                 "step": 1,
+                "tool": "decide_agent_intent",
+                "input": {
+                    "question": question,
+                },
+                "observation": {
+                    "intent": intent,
+                },
+                "next_action": "search_knowledge_base",
+            },
+            {
+                "step": 2,
                 "tool": "search_knowledge_base_tool",
                 "input": {
                     "question": question,
@@ -62,7 +131,7 @@ def run_simple_agent(
                 "next_action": next_action,
             },
             {
-                "step": 2,
+                "step": 3,
                 "tool": "refuse_answer_tool"
                 if next_action == "refuse"
                 else "answer_with_context_tool",
