@@ -115,3 +115,85 @@ def test_agent_chat_endpoint_refuses_without_context(tmp_path):
     assert data["steps"][2]["input"]["snippet_count"] == 0
     assert data["steps"][2]["observation"]["citation_count"] == 0
     assert data["steps"][2]["next_action"] == "finish"
+
+
+def test_agent_chat_endpoint_reads_document_chunks(tmp_path):
+    database_path = tmp_path / "test.db"
+    app.dependency_overrides[get_database_path] = lambda: str(database_path)
+
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=2,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="员工每天需要完成 8 小时工作。",
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="新员工需要完成安全培训。",
+    )
+
+    connection.close()
+
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={"question": "查看员工手册的片段"},
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["keyword"] == "员工手册"
+    assert "员工每天需要完成 8 小时工作。" in data["answer"]
+    assert "新员工需要完成安全培训。" in data["answer"]
+    assert len(data["citations"]) == 2
+
+    assert data["steps"][0]["tool"] == "decide_agent_intent"
+    assert data["steps"][0]["observation"]["intent"] == "read_document"
+
+    assert data["steps"][1]["tool"] == "extract_document_title"
+    assert data["steps"][1]["observation"]["document_title"] == "员工手册"
+
+    assert data["steps"][2]["tool"] == "find_document_by_title_tool"
+    assert data["steps"][2]["observation"]["found"] == True
+
+    assert data["steps"][3]["tool"] == "read_document_chunks_tool"
+    assert data["steps"][3]["observation"]["chunk_count"] == 2
+
+
+def test_agent_chat_endpoint_asks_clarification_when_document_title_is_missing(tmp_path):
+    database_path = tmp_path / "test.db"
+    app.dependency_overrides[get_database_path] = lambda: str(database_path)
+
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={"question": "查看这份文档的片段"},
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["keyword"] == "文档标题"
+    assert data["answer"] == "请补充文档标题。"
+    assert data["citations"] == []
+    assert data["steps"][0]["observation"]["intent"] == "read_document"
+    assert data["steps"][2]["tool"] == "ask_clarification_tool"
