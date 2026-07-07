@@ -245,6 +245,7 @@ def test_find_document_by_title_tool(tmp_path):
     assert result["found"] == True
     assert result["document"]["title"] == "员工手册"
     assert result["document"]["file_type"] == "md"
+    assert result["match_type"] == "exact"
 
 
 def test_find_document_by_title_tool_returns_not_found(tmp_path):
@@ -270,3 +271,30 @@ def test_find_document_by_title_tool_returns_not_found(tmp_path):
 
     assert result["found"] == False
     assert result["document"] is None
+    assert result["match_type"] is None
+
+
+def test_find_document_by_title_tool_supports_contains_match(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+
+    insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=12,
+        is_indexed=True,
+    )
+
+    connection.close()
+
+    result = find_document_by_title_tool(
+        title="手册",
+        database_path=str(database_path),
+    )
+
+    assert result["found"] == True
+    assert result["document"]["title"] == "员工手册"
+    assert result["match_type"] == "contains"

@@ -40,7 +40,7 @@ def find_document_by_title_tool(
     title: str,
     database_path: str = SQLITE_DATABASE_PATH,
 ) -> dict:
-    """根据文档标题查找文档。"""
+    """根据文档标题查找文档，优先精确匹配，再尝试包含匹配。"""
     documents_result = list_documents_tool(database_path)
 
     for document in documents_result["documents"]:
@@ -48,11 +48,21 @@ def find_document_by_title_tool(
             return {
                 "found": True,
                 "document": document,
+                "match_type": "exact",
+            }
+
+    for document in documents_result["documents"]:
+        if title in document["title"]:
+            return {
+                "found": True,
+                "document": document,
+                "match_type": "contains",
             }
 
     return {
         "found": False,
         "document": None,
+        "match_type": None,
     }
 
 
