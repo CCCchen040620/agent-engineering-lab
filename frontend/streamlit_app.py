@@ -1,14 +1,16 @@
+import requests
 import streamlit as st
 
+from backend.config import BACKEND_API_BASE_URL
 from backend.services.document_indexing_service import (
     create_document_with_chunks_and_embeddings,
 )
-from backend.services.sqlite_llm_qa_service import build_sqlite_llm_chat_response
 from backend.services.sqlite_document_repository import create_connection
 from backend.services.sqlite_feedback_repository import (
     create_feedback_table,
     insert_feedback_to_db,
 )
+from backend.services.sqlite_llm_qa_service import build_sqlite_llm_chat_response
 from week04.settings import SQLITE_DATABASE_PATH
 
 
@@ -57,6 +59,43 @@ def save_document_with_content(title: str, file_type: str, content: str) -> dict
     return document
 
 
+def upload_text_document_to_api(
+    file_name: str,
+    content: bytes,
+    title: str,
+) -> tuple[dict | None, str | None]:
+    data = {}
+
+    if title != "":
+        data["title"] = title
+
+    try:
+        response = requests.post(
+            BACKEND_API_BASE_URL + "/api/v1/db/documents/upload-text",
+            data=data,
+            files={
+                "file": (
+                    file_name,
+                    content,
+                    "text/plain",
+                )
+            },
+            timeout=300,
+        )
+    except requests.RequestException:
+        return None, "后端服务暂时不可用，请确认 FastAPI 已启动。"
+
+    if response.status_code == 201:
+        return response.json(), None
+
+    try:
+        detail = response.json()["detail"]
+    except Exception:
+        detail = "上传失败，请稍后再试。"
+
+    return None, detail
+
+
 with st.sidebar:
     st.header("检索设置")
 
@@ -96,27 +135,29 @@ with st.sidebar:
         type=["txt"],
     )
 
-    upload_error = False
-
     if uploaded_file is not None:
-        try:
-            uploaded_text = uploaded_file.read().decode("utf-8")
-            document_content = uploaded_text
+        if document_title.strip() == "":
+            document_title = uploaded_file.name.rsplit(".", 1)[0]
 
-            if document_title.strip() == "":
-                document_title = uploaded_file.name.rsplit(".", 1)[0]
+        document_file_type = "txt"
 
-            document_file_type = "txt"
-
-            st.info(f"已读取上传文件：{uploaded_file.name}")
-        except UnicodeDecodeError:
-            upload_error = True
-            document_content = ""
-            st.error("文件读取失败，请上传 UTF-8 编码的 txt 文件。")
+        st.info(f"已准备上传文件：{uploaded_file.name}")
 
     if st.button("新增并索引"):
-        if upload_error:
-            st.warning("当前上传文件读取失败，不能新增文档。")
+        if uploaded_file is not None:
+            with st.spinner("正在通过后端上传 txt 文档并生成 embeddings..."):
+                document, error_message = upload_text_document_to_api(
+                    file_name=uploaded_file.name,
+                    content=uploaded_file.getvalue(),
+                    title=document_title.strip(),
+                )
+
+            if error_message is not None:
+                st.error(error_message)
+            else:
+                st.success(
+                    f"已新增文档：{document['title']}，切分片段数：{document['chunk_count']}"
+                )
         elif document_title.strip() == "" or document_content.strip() == "":
             st.warning("文档标题和正文不能为空。")
         else:

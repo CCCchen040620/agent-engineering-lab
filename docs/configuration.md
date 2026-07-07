@@ -7,6 +7,7 @@
 | 环境变量 | 默认值 | 说明 |
 |---|---|---|
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama 服务地址 |
+| `BACKEND_API_BASE_URL` | `http://127.0.0.1:8000` | FastAPI 后端服务地址，Streamlit 上传 txt 文档时会调用这个地址 |
 | `LLM_MODEL` | `qwen3.6:latest` | 本地大模型名称，用于生成回答 |
 | `EMBEDDING_MODEL` | `bge-m3:latest` | Embedding 模型名称，用于生成语义向量 |
 | `DEFAULT_TOP_K` | `3` | 默认最多返回的检索片段数量 |
@@ -17,6 +18,7 @@
 临时设置环境变量：
 
 ```powershell
+$env:BACKEND_API_BASE_URL="http://127.0.0.1:8000"
 $env:LLM_MODEL="qwen3.6:latest"
 $env:EMBEDDING_MODEL="bge-m3:latest"
 $env:DEFAULT_TOP_K="3"

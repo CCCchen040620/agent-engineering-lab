@@ -10,6 +10,7 @@ requires-python = ">=3.13,<3.14"
 dependencies = [
     "jieba>=0.42,<1",
     "python-multipart",
+    "requests",
     "streamlit",
 ]
 

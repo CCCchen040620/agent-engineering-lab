@@ -2,6 +2,7 @@ import importlib
 
 import backend.config as config
 from backend.config import (
+    BACKEND_API_BASE_URL,
     DEFAULT_MIN_SCORE,
     DEFAULT_TOP_K,
     EMBEDDING_MODEL,
@@ -12,6 +13,7 @@ from backend.config import (
 
 def test_default_config_values():
     assert OLLAMA_BASE_URL == "http://localhost:11434"
+    assert BACKEND_API_BASE_URL == "http://127.0.0.1:8000"
     assert LLM_MODEL == "qwen3.6:latest"
     assert EMBEDDING_MODEL == "bge-m3:latest"
     assert DEFAULT_TOP_K == 3
@@ -20,6 +22,7 @@ def test_default_config_values():
 
 def test_config_can_read_environment_variables(monkeypatch):
     monkeypatch.setenv("OLLAMA_BASE_URL", "http://localhost:9999")
+    monkeypatch.setenv("BACKEND_API_BASE_URL", "http://localhost:8888")
     monkeypatch.setenv("LLM_MODEL", "test-llm")
     monkeypatch.setenv("EMBEDDING_MODEL", "test-embedding")
     monkeypatch.setenv("DEFAULT_TOP_K", "5")
@@ -28,12 +31,14 @@ def test_config_can_read_environment_variables(monkeypatch):
     reloaded_config = importlib.reload(config)
 
     assert reloaded_config.OLLAMA_BASE_URL == "http://localhost:9999"
+    assert reloaded_config.BACKEND_API_BASE_URL == "http://localhost:8888"
     assert reloaded_config.LLM_MODEL == "test-llm"
     assert reloaded_config.EMBEDDING_MODEL == "test-embedding"
     assert reloaded_config.DEFAULT_TOP_K == 5
     assert reloaded_config.DEFAULT_MIN_SCORE == 0.8
 
     monkeypatch.delenv("OLLAMA_BASE_URL")
+    monkeypatch.delenv("BACKEND_API_BASE_URL")
     monkeypatch.delenv("LLM_MODEL")
     monkeypatch.delenv("EMBEDDING_MODEL")
     monkeypatch.delenv("DEFAULT_TOP_K")
