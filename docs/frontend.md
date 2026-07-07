@@ -26,6 +26,8 @@ ollama list
   - `Simple Agent 问答`：调用 `POST /api/v1/agent/chat`
 - Simple Agent 会先判断用户意图，再选择工具：
   - 文档列表类问题会调用 `list_documents_tool`
+  - 读取文档类问题会调用 `find_document_by_title_tool` 和 `read_document_chunks_tool`
+  - 如果读取文档类问题缺少文档标题，会调用 `ask_clarification_tool` 进行澄清
   - 普通业务问题会调用 `search_knowledge_base_tool`，再回答或拒答
 - Simple Agent 模式会展示 `steps`，用于观察 Agent 的意图判断、工具选择、搜索、回答或拒答过程。
   - `tool`：本步骤调用的工具
@@ -33,6 +35,7 @@ ollama list
   - `observation`：工具执行后的观察结果
   - `next_action`：Agent 决定的下一步动作
 - 可以在 Simple Agent 模式下尝试提问：“知识库里有哪些文档？”
+- 也可以尝试：“查看员工手册的片段” 或 “查看这份文档的片段”
 - 点击示例问题快速体验
 - 选择检索模式：
   - `vector`：使用 jieba 分词、词频向量和余弦相似度检索

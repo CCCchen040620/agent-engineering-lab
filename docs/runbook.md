@@ -103,6 +103,22 @@ POST /api/v1/agent/chat
 }
 ```
 
+也可以测试读取文档类问题：
+
+```json
+{
+  "question": "查看员工手册的片段"
+}
+```
+
+如果问题缺少文档标题，Agent 会要求用户补充信息：
+
+```json
+{
+  "question": "查看这份文档的片段"
+}
+```
+
 该接口会返回：
 
 - Agent 最终回答
@@ -114,6 +130,8 @@ POST /api/v1/agent/chat
 
 - 先调用 `decide_agent_intent` 判断用户意图
 - 文档列表类问题调用 `list_documents_tool`
+- 读取文档类问题调用 `find_document_by_title_tool` 和 `read_document_chunks_tool`
+- 读取文档类问题缺少标题时调用 `ask_clarification_tool`
 - 普通业务问题调用 `search_knowledge_base_tool`
 - 根据检索结果继续调用 `answer_with_context_tool` 或 `refuse_answer_tool`
 

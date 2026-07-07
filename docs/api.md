@@ -249,10 +249,12 @@ POST /api/v1/db/chat?mode=vector&top_k=2
 
 1. 判断用户意图
 2. 如果是文档列表类问题，则调用 `list_documents_tool`
-3. 如果是普通问答，则调用 `search_knowledge_base_tool`
-4. 如果普通问答检索到片段，则调用 `answer_with_context_tool`
-5. 如果普通问答没有检索到片段，则调用 `refuse_answer_tool`
-6. 返回回答、引用来源和执行步骤
+3. 如果是读取文档类问题，则提取文档标题并调用 `find_document_by_title_tool` 和 `read_document_chunks_tool`
+4. 如果读取文档类问题缺少文档标题，则调用 `ask_clarification_tool`
+5. 如果是普通问答，则调用 `search_knowledge_base_tool`
+6. 如果普通问答检索到片段，则调用 `answer_with_context_tool`
+7. 如果普通问答没有检索到片段，则调用 `refuse_answer_tool`
+8. 返回回答、引用来源和执行步骤
 
 请求示例：
 
@@ -267,6 +269,22 @@ POST /api/v1/db/chat?mode=vector&top_k=2
 ```json
 {
   "question": "知识库里有哪些文档？"
+}
+```
+
+读取文档类请求示例：
+
+```json
+{
+  "question": "查看员工手册的片段"
+}
+```
+
+缺少文档标题时的请求示例：
+
+```json
+{
+  "question": "查看这份文档的片段"
 }
 ```
 
@@ -372,13 +390,131 @@ POST /api/v1/agent/chat?mode=keyword&top_k=3
 }
 ```
 
+读取文档类返回示例：
+
+```json
+{
+  "question": "查看员工手册的片段",
+  "keyword": "员工手册",
+  "answer": "员工手册 的片段如下：\n[1] 员工每天需要完成 8 小时工作。\n[2] 新员工需要完成安全培训。",
+  "citations": [
+    {
+      "title": "员工手册",
+      "text": "员工每天需要完成 8 小时工作。",
+      "path": "sqlite://1"
+    },
+    {
+      "title": "员工手册",
+      "text": "新员工需要完成安全培训。",
+      "path": "sqlite://1"
+    }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "tool": "decide_agent_intent",
+      "input": {
+        "question": "查看员工手册的片段"
+      },
+      "observation": {
+        "intent": "read_document"
+      },
+      "next_action": "extract_document_title"
+    },
+    {
+      "step": 2,
+      "tool": "extract_document_title",
+      "input": {
+        "question": "查看员工手册的片段"
+      },
+      "observation": {
+        "document_title": "员工手册"
+      },
+      "next_action": "find_document_by_title"
+    },
+    {
+      "step": 3,
+      "tool": "find_document_by_title_tool",
+      "input": {
+        "title": "员工手册"
+      },
+      "observation": {
+        "found": true,
+        "document_id": 1
+      },
+      "next_action": "read_document_chunks"
+    },
+    {
+      "step": 4,
+      "tool": "read_document_chunks_tool",
+      "input": {
+        "document_id": 1
+      },
+      "observation": {
+        "chunk_count": 2
+      },
+      "next_action": "finish"
+    }
+  ]
+}
+```
+
+缺少文档标题时的返回示例：
+
+```json
+{
+  "question": "查看这份文档的片段",
+  "keyword": "文档标题",
+  "answer": "请补充文档标题。",
+  "citations": [],
+  "steps": [
+    {
+      "step": 1,
+      "tool": "decide_agent_intent",
+      "input": {
+        "question": "查看这份文档的片段"
+      },
+      "observation": {
+        "intent": "read_document"
+      },
+      "next_action": "extract_document_title"
+    },
+    {
+      "step": 2,
+      "tool": "extract_document_title",
+      "input": {
+        "question": "查看这份文档的片段"
+      },
+      "observation": {
+        "document_title": "",
+        "missing_field": "文档标题"
+      },
+      "next_action": "ask_clarification"
+    },
+    {
+      "step": 3,
+      "tool": "ask_clarification_tool",
+      "input": {
+        "missing_field": "文档标题"
+      },
+      "observation": {
+        "answer": "请补充文档标题。"
+      },
+      "next_action": "finish"
+    }
+  ]
+}
+```
+
 说明：
 
 - 这是项目中的第一版 Agent 流程。
-- 当前支持两类意图：`list_documents` 和 `answer_question`。
+- 当前支持三类意图：`list_documents`、`read_document` 和 `answer_question`。
 - 当前还没有使用 LangGraph，而是用普通 Python 函数手写决策流程。
 - `steps` 字段用于展示 Agent 的执行过程，包括工具名、工具输入、观察结果和下一步动作。
 - 当前支持的文档列表类问法包括：“知识库里有哪些文档？”、“请列出文档”、“查看文档列表”。
+- 当前支持的读取文档类问法包括：“查看员工手册的片段”、“读取请假制度的内容”、“员工手册有哪些内容”。
+- 当读取文档类问题缺少明确文档标题时，Agent 会调用 `ask_clarification_tool` 进行澄清。
 - 后续可以把这个流程迁移到 LangGraph 状态图。
 
 ## 反馈接口
