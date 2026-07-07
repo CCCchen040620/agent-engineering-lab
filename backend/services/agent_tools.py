@@ -36,6 +36,26 @@ def list_documents_tool(database_path: str = SQLITE_DATABASE_PATH) -> dict:
     }
 
 
+def find_document_by_title_tool(
+    title: str,
+    database_path: str = SQLITE_DATABASE_PATH,
+) -> dict:
+    """根据文档标题查找文档。"""
+    documents_result = list_documents_tool(database_path)
+
+    for document in documents_result["documents"]:
+        if document["title"] == title:
+            return {
+                "found": True,
+                "document": document,
+            }
+
+    return {
+        "found": False,
+        "document": None,
+    }
+
+
 def read_document_chunks_tool(
     document_id: int,
     database_path: str = SQLITE_DATABASE_PATH,

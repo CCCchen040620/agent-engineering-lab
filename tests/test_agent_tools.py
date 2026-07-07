@@ -1,5 +1,6 @@
 from backend.services.agent_tools import (
     list_documents_tool,
+    find_document_by_title_tool,
     read_document_chunks_tool,
     search_knowledge_base_tool,
     answer_with_context_tool,
@@ -206,3 +207,54 @@ def test_refuse_answer_tool():
     assert result["question"] == "公司有没有股票期权？"
     assert result["answer"] == "知识库中没有找到相关资料，暂时无法回答。"
     assert result["citations"] == []
+
+
+def test_find_document_by_title_tool(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+
+    insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=12,
+        is_indexed=True,
+    )
+
+    connection.close()
+
+    result = find_document_by_title_tool(
+        title="员工手册",
+        database_path=str(database_path),
+    )
+
+    assert result["found"] == True
+    assert result["document"]["title"] == "员工手册"
+    assert result["document"]["file_type"] == "md"
+
+
+def test_find_document_by_title_tool_returns_not_found(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+
+    insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=12,
+        is_indexed=True,
+    )
+
+    connection.close()
+
+    result = find_document_by_title_tool(
+        title="不存在的文档",
+        database_path=str(database_path),
+    )
+
+    assert result["found"] == False
+    assert result["document"] is None
