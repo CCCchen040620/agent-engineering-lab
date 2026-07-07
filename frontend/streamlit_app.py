@@ -2,6 +2,7 @@ import streamlit as st
 
 from backend.config import BACKEND_API_BASE_URL
 from frontend.api_client import (
+    chat_with_agent_api,
     chat_with_llm_api,
     create_document_with_content_api,
     submit_feedback_api,
@@ -50,6 +51,12 @@ def save_document_with_content(
 
 with st.sidebar:
     st.header("检索设置")
+
+    chat_engine = st.radio(
+        "问答引擎",
+        ["普通 RAG 问答", "Simple Agent 问答"],
+        index=0,
+    )
 
     mode = st.radio(
         "检索模式",
@@ -154,18 +161,28 @@ if st.button("提问"):
         st.warning("请输入问题后再提问。")
     else:
         with st.spinner("正在检索知识库并调用本地 Qwen 生成回答..."):
-            response, error_message = chat_with_llm_api(
-                base_url=BACKEND_API_BASE_URL,
-                question=question.strip(),
-                top_k=top_k,
-                mode=mode,
-                min_score=min_score,
-            )
+            if chat_engine == "Simple Agent 问答":
+                response, error_message = chat_with_agent_api(
+                    base_url=BACKEND_API_BASE_URL,
+                    question=question.strip(),
+                    top_k=top_k,
+                    mode=mode,
+                    min_score=min_score,
+                )
+            else:
+                response, error_message = chat_with_llm_api(
+                    base_url=BACKEND_API_BASE_URL,
+                    question=question.strip(),
+                    top_k=top_k,
+                    mode=mode,
+                    min_score=min_score,
+                )
 
         if error_message is not None:
             st.error(error_message)
         else:
             history_item = response.copy()
+            history_item["engine"] = chat_engine
             history_item["feedback"] = None
             history_item["feedback_id"] = None
             st.session_state["chat_history"].append(history_item)
@@ -184,6 +201,27 @@ if st.button("提问"):
             st.write(response["answer"])
 
             st.caption(f"检索关键词：{response['keyword']}")
+            st.caption(f"问答引擎：{chat_engine}")
+
+            if "steps" in response:
+                st.subheader("Agent 执行步骤")
+
+                for step_index, step in enumerate(response["steps"], start=1):
+                    step_description = f"[{step_index}] {step['name']} - {step['status']}"
+
+                    if "result_count" in step:
+                        step_description = (
+                            step_description
+                            + f" | 命中数量：{step['result_count']}"
+                        )
+
+                    if "action" in step:
+                        step_description = (
+                            step_description
+                            + f" | 动作：{step['action']}"
+                        )
+
+                    st.markdown(f"- {step_description}")
 
             st.subheader("引用来源")
 
@@ -204,8 +242,22 @@ if st.session_state["chat_history"] != []:
         with st.expander(item["question"]):
             st.write(item["answer"])
             st.caption(
-                f"关键词：{item['keyword']} | 引用数量：{len(item['citations'])}"
+                f"引擎：{item.get('engine', '普通 RAG 问答')} | 关键词：{item['keyword']} | 引用数量：{len(item['citations'])}"
             )
+
+            if "steps" in item:
+                st.markdown("Agent 执行步骤：")
+
+                for step_index, step in enumerate(item["steps"], start=1):
+                    step_text = f"{step_index}. {step['name']} - {step['status']}"
+
+                    if "result_count" in step:
+                        step_text = step_text + f" | 命中数量：{step['result_count']}"
+
+                    if "action" in step:
+                        step_text = step_text + f" | 动作：{step['action']}"
+
+                    st.markdown(f"- {step_text}")
 
             feedback_columns = st.columns(2)
 

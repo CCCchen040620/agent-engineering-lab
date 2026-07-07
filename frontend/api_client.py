@@ -31,6 +31,34 @@ def chat_with_llm_api(
     return None, get_error_detail(response)
 
 
+def chat_with_agent_api(
+    base_url: str,
+    question: str,
+    top_k: int,
+    mode: str,
+    min_score: float,
+) -> tuple[dict | None, str | None]:
+    """Ask the FastAPI Simple Agent endpoint and return data or an error."""
+    try:
+        response = requests.post(
+            base_url + "/api/v1/agent/chat",
+            params={
+                "top_k": top_k,
+                "mode": mode,
+                "min_score": min_score,
+            },
+            json={"question": question},
+            timeout=300,
+        )
+    except requests.RequestException:
+        return None, "后端服务暂时不可用，请确认 FastAPI 已启动。"
+
+    if response.status_code == 200:
+        return response.json(), None
+
+    return None, get_error_detail(response)
+
+
 def submit_feedback_api(
     base_url: str,
     question: str,

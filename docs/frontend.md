@@ -21,6 +21,10 @@ ollama list
 
 - 输入企业知识库问题
 - 提问时会调用 FastAPI 后端接口 `POST /api/v1/db/chat/llm`，由后端完成检索、组装提示词和调用本地大模型。
+- 可切换问答引擎：
+  - `普通 RAG 问答`：调用 `POST /api/v1/db/chat/llm`
+  - `Simple Agent 问答`：调用 `POST /api/v1/agent/chat`
+- Simple Agent 模式会展示 `steps`，用于观察 Agent 的搜索、判断和回答/拒答过程。
 - 点击示例问题快速体验
 - 选择检索模式：
   - `vector`：使用 jieba 分词、词频向量和余弦相似度检索
