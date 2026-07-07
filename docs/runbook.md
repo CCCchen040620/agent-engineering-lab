@@ -11,10 +11,51 @@ pytest
 当前稳定状态：
 
 ```text
-217 passed
+236 passed
 ```
 
-## 2. 启动 FastAPI 后端
+## 2. 推荐启动脚本
+
+项目提供了 PowerShell 启动脚本，建议优先使用脚本，减少手动输入长命令。
+
+启动 FastAPI 后端：
+
+```powershell
+.\scripts\start_backend.ps1
+```
+
+如果 PowerShell 提示不允许运行脚本，可以使用临时执行方式：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start_backend.ps1
+```
+
+启动 Streamlit 用户问答页：
+
+```powershell
+.\scripts\start_frontend.ps1
+```
+
+启动文档管理页：
+
+```powershell
+.\scripts\start_admin_documents.ps1
+```
+
+启动反馈管理页：
+
+```powershell
+.\scripts\start_admin_feedback.ps1
+```
+
+推荐顺序：
+
+1. 先确认 Ollama 已启动。
+2. 启动 FastAPI 后端。
+3. 另开一个 PowerShell 窗口启动 Streamlit 用户页面。
+4. 需要管理数据时，再启动文档管理页或反馈管理页。
+
+## 3. 启动 FastAPI 后端
 
 ```powershell
 python -m uvicorn backend.main:app --reload
@@ -32,7 +73,7 @@ http://127.0.0.1:8000/docs
 http://127.0.0.1:8000/health
 ```
 
-## 3. 启动 Streamlit 用户问答页
+## 4. 启动 Streamlit 用户问答页
 
 ```powershell
 python -m streamlit run frontend/streamlit_app.py
@@ -45,7 +86,7 @@ python -m streamlit run frontend/streamlit_app.py
 - 查看引用来源
 - 提交回答反馈
 
-## 4. 启动反馈管理页
+## 5. 启动反馈管理页
 
 ```powershell
 python -m streamlit run frontend/admin_feedback.py
@@ -57,7 +98,7 @@ python -m streamlit run frontend/admin_feedback.py
 - 查看有帮助 / 没帮助数量
 - 查看反馈列表
 
-## 5. 启动文档管理页
+## 6. 启动文档管理页
 
 ```powershell
 python -m streamlit run frontend/admin_documents.py
@@ -70,7 +111,7 @@ python -m streamlit run frontend/admin_documents.py
 - 查看 embedding 索引状态
 - 补齐缺失 embeddings
 
-## 6. 检查本地 Ollama 模型
+## 7. 检查本地 Ollama 模型
 
 ```powershell
 ollama list
@@ -83,7 +124,7 @@ qwen3.6:latest  用于生成回答
 bge-m3:latest   用于生成 embeddings
 ```
 
-## 7. 补齐历史 chunk embeddings
+## 8. 补齐历史 chunk embeddings
 
 ```powershell
 python -m week08.backfill_chunk_embeddings
@@ -98,7 +139,7 @@ python -m week08.backfill_chunk_embeddings
 
 该脚本可以重复运行。
 
-## 8. 运行 LLM RAG 评测
+## 9. 运行 LLM RAG 评测
 
 默认配置：
 
@@ -118,7 +159,7 @@ python -m week07.evaluate_llm_rag embedding 0.8
 docs/evaluations/llm-rag-run.md
 ```
 
-## 9. 比较检索模式
+## 10. 比较检索模式
 
 默认问题：
 
@@ -139,7 +180,7 @@ python -m week08.compare_retrieval_modes "员工可以远程办公吗？" 0.8
 - `embedding`
 - `precomputed_embedding`
 
-## 10. 配置环境变量
+## 11. 配置环境变量
 
 配置说明见：
 

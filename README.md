@@ -44,4 +44,54 @@ py -3.13 week01/hello_agent.py
 - [师生协作方式](MENTORING.md)
 - [当前 API 文档](docs/api.md)
 
-当前状态：**第 3 阶段 / 第 6-8 周 / 第 1 课**
+当前状态：**已完成 FastAPI、SQLite、RAG、Ollama、Streamlit 的基础闭环，正在进行工程化整理**
+
+## 当前项目快速运行
+
+现在项目已经具备 FastAPI 后端、Streamlit 前端、SQLite 知识库、本地 Ollama 大模型和 embedding 检索能力。
+
+推荐启动顺序：
+
+1. 确认 Ollama 已启动，并且本地模型可用。
+
+   ```powershell
+   ollama list
+   ```
+
+   当前项目默认使用：
+
+   - `qwen3.6:latest`：用于生成回答
+   - `bge-m3:latest`：用于生成 embeddings
+
+2. 启动 FastAPI 后端。
+
+   ```powershell
+   .\scripts\start_backend.ps1
+   ```
+
+   接口文档地址：
+
+   ```text
+   http://127.0.0.1:8000/docs
+   ```
+
+3. 另开一个 PowerShell 窗口，启动 Streamlit 用户页面。
+
+   ```powershell
+   .\scripts\start_frontend.ps1
+   ```
+
+4. 如需查看管理页面，可以再启动：
+
+   ```powershell
+   .\scripts\start_admin_documents.ps1
+   .\scripts\start_admin_feedback.ps1
+   ```
+
+5. 运行测试：
+
+   ```powershell
+   pytest
+   ```
+
+更多运行和排错说明见 [项目运行手册](docs/runbook.md)。
