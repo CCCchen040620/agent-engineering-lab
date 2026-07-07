@@ -96,19 +96,28 @@ with st.sidebar:
         type=["txt"],
     )
 
+    upload_error = False
+
     if uploaded_file is not None:
-        uploaded_text = uploaded_file.read().decode("utf-8")
-        document_content = uploaded_text
+        try:
+            uploaded_text = uploaded_file.read().decode("utf-8")
+            document_content = uploaded_text
 
-        if document_title.strip() == "":
-            document_title = uploaded_file.name.rsplit(".", 1)[0]
+            if document_title.strip() == "":
+                document_title = uploaded_file.name.rsplit(".", 1)[0]
 
-        document_file_type = "txt"
+            document_file_type = "txt"
 
-        st.info(f"已读取上传文件：{uploaded_file.name}")
+            st.info(f"已读取上传文件：{uploaded_file.name}")
+        except UnicodeDecodeError:
+            upload_error = True
+            document_content = ""
+            st.error("文件读取失败，请上传 UTF-8 编码的 txt 文件。")
 
     if st.button("新增并索引"):
-        if document_title.strip() == "" or document_content.strip() == "":
+        if upload_error:
+            st.warning("当前上传文件读取失败，不能新增文档。")
+        elif document_title.strip() == "" or document_content.strip() == "":
             st.warning("文档标题和正文不能为空。")
         else:
             with st.spinner("正在新增文档、切分 chunks 并生成 embeddings..."):
