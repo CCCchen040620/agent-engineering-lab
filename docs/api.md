@@ -289,14 +289,30 @@ POST /api/v1/agent/chat?mode=keyword&top_k=3
   ],
   "steps": [
     {
-      "name": "search_knowledge_base",
-      "status": "completed",
-      "result_count": 1
+      "step": 1,
+      "tool": "search_knowledge_base_tool",
+      "input": {
+        "question": "新员工什么时候完成安全培训？",
+        "mode": "keyword",
+        "top_k": 3,
+        "min_score": 0.3
+      },
+      "observation": {
+        "keyword": "安全培训",
+        "result_count": 1
+      },
+      "next_action": "answer_with_context"
     },
     {
-      "name": "answer_or_refuse",
-      "status": "completed",
-      "action": "answer_with_context"
+      "step": 2,
+      "tool": "answer_with_context_tool",
+      "input": {
+        "snippet_count": 1
+      },
+      "observation": {
+        "citation_count": 1
+      },
+      "next_action": "finish"
     }
   ]
 }
@@ -306,7 +322,7 @@ POST /api/v1/agent/chat?mode=keyword&top_k=3
 
 - 这是项目中的第一版 Agent 流程。
 - 当前还没有使用 LangGraph，而是用普通 Python 函数手写决策流程。
-- `steps` 字段用于展示 Agent 的执行过程。
+- `steps` 字段用于展示 Agent 的执行过程，包括工具名、工具输入、观察结果和下一步动作。
 - 后续可以把这个流程迁移到 LangGraph 状态图。
 
 ## 反馈接口
