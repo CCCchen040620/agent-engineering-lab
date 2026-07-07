@@ -153,3 +153,15 @@ def refuse_answer_tool(question: str) -> dict:
         "answer": REFUSAL_ANSWER,
         "citations": [],
     }
+
+
+def ask_clarification_tool(
+    question: str,
+    missing_field: str,
+) -> dict:
+    """当用户问题缺少必要信息时，向用户追问。"""
+    return {
+        "question": question,
+        "answer": f"请补充{missing_field}。",
+        "citations": [],
+    }

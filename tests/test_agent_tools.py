@@ -1,4 +1,5 @@
 from backend.services.agent_tools import (
+    ask_clarification_tool,
     list_documents_tool,
     find_document_by_title_tool,
     read_document_chunks_tool,
@@ -206,6 +207,17 @@ def test_refuse_answer_tool():
 
     assert result["question"] == "公司有没有股票期权？"
     assert result["answer"] == "知识库中没有找到相关资料，暂时无法回答。"
+    assert result["citations"] == []
+
+
+def test_ask_clarification_tool():
+    result = ask_clarification_tool(
+        question="帮我查看这份文档的片段",
+        missing_field="文档标题",
+    )
+
+    assert result["question"] == "帮我查看这份文档的片段"
+    assert result["answer"] == "请补充文档标题。"
     assert result["citations"] == []
 
 
