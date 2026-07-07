@@ -95,6 +95,14 @@ POST /api/v1/agent/chat
 }
 ```
 
+也可以测试文档列表类问题：
+
+```json
+{
+  "question": "知识库里有哪些文档？"
+}
+```
+
 该接口会返回：
 
 - Agent 最终回答
@@ -102,7 +110,12 @@ POST /api/v1/agent/chat
 - 检索关键词
 - Agent 执行步骤 `steps`
 
-`steps` 字段用于观察 Agent 的执行过程，例如先搜索知识库，再决定基于上下文回答或拒答。
+`steps` 字段用于观察 Agent 的执行过程，例如：
+
+- 先调用 `decide_agent_intent` 判断用户意图
+- 文档列表类问题调用 `list_documents_tool`
+- 普通业务问题调用 `search_knowledge_base_tool`
+- 根据检索结果继续调用 `answer_with_context_tool` 或 `refuse_answer_tool`
 
 ## 5. 启动 Streamlit 用户问答页
 

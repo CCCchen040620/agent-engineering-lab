@@ -247,17 +247,26 @@ POST /api/v1/db/chat?mode=vector&top_k=2
 
 该接口会执行：
 
-1. 搜索知识库
-2. 判断是否找到相关片段
-3. 如果有片段，则基于上下文生成回答
-4. 如果没有片段，则明确拒答
-5. 返回回答、引用来源和执行步骤
+1. 判断用户意图
+2. 如果是文档列表类问题，则调用 `list_documents_tool`
+3. 如果是普通问答，则调用 `search_knowledge_base_tool`
+4. 如果普通问答检索到片段，则调用 `answer_with_context_tool`
+5. 如果普通问答没有检索到片段，则调用 `refuse_answer_tool`
+6. 返回回答、引用来源和执行步骤
 
 请求示例：
 
 ```json
 {
   "question": "新员工什么时候完成安全培训？"
+}
+```
+
+文档列表类请求示例：
+
+```json
+{
+  "question": "知识库里有哪些文档？"
 }
 ```
 
@@ -290,6 +299,17 @@ POST /api/v1/agent/chat?mode=keyword&top_k=3
   "steps": [
     {
       "step": 1,
+      "tool": "decide_agent_intent",
+      "input": {
+        "question": "新员工什么时候完成安全培训？"
+      },
+      "observation": {
+        "intent": "answer_question"
+      },
+      "next_action": "search_knowledge_base"
+    },
+    {
+      "step": 2,
       "tool": "search_knowledge_base_tool",
       "input": {
         "question": "新员工什么时候完成安全培训？",
@@ -304,7 +324,7 @@ POST /api/v1/agent/chat?mode=keyword&top_k=3
       "next_action": "answer_with_context"
     },
     {
-      "step": 2,
+      "step": 3,
       "tool": "answer_with_context_tool",
       "input": {
         "snippet_count": 1
@@ -318,11 +338,47 @@ POST /api/v1/agent/chat?mode=keyword&top_k=3
 }
 ```
 
+文档列表类返回示例：
+
+```json
+{
+  "question": "知识库里有哪些文档？",
+  "keyword": "文档列表",
+  "answer": "知识库中有这些文档：员工手册、请假制度",
+  "citations": [],
+  "steps": [
+    {
+      "step": 1,
+      "tool": "decide_agent_intent",
+      "input": {
+        "question": "知识库里有哪些文档？"
+      },
+      "observation": {
+        "intent": "list_documents"
+      },
+      "next_action": "list_documents"
+    },
+    {
+      "step": 2,
+      "tool": "list_documents_tool",
+      "input": {},
+      "observation": {
+        "document_count": 2,
+        "document_titles": ["员工手册", "请假制度"]
+      },
+      "next_action": "finish"
+    }
+  ]
+}
+```
+
 说明：
 
 - 这是项目中的第一版 Agent 流程。
+- 当前支持两类意图：`list_documents` 和 `answer_question`。
 - 当前还没有使用 LangGraph，而是用普通 Python 函数手写决策流程。
 - `steps` 字段用于展示 Agent 的执行过程，包括工具名、工具输入、观察结果和下一步动作。
+- 当前支持的文档列表类问法包括：“知识库里有哪些文档？”、“请列出文档”、“查看文档列表”。
 - 后续可以把这个流程迁移到 LangGraph 状态图。
 
 ## 反馈接口

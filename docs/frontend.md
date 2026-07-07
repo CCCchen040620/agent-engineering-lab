@@ -24,11 +24,15 @@ ollama list
 - 可切换问答引擎：
   - `普通 RAG 问答`：调用 `POST /api/v1/db/chat/llm`
   - `Simple Agent 问答`：调用 `POST /api/v1/agent/chat`
-- Simple Agent 模式会展示 `steps`，用于观察 Agent 的搜索、判断和回答/拒答过程。
+- Simple Agent 会先判断用户意图，再选择工具：
+  - 文档列表类问题会调用 `list_documents_tool`
+  - 普通业务问题会调用 `search_knowledge_base_tool`，再回答或拒答
+- Simple Agent 模式会展示 `steps`，用于观察 Agent 的意图判断、工具选择、搜索、回答或拒答过程。
   - `tool`：本步骤调用的工具
   - `input`：工具输入
   - `observation`：工具执行后的观察结果
   - `next_action`：Agent 决定的下一步动作
+- 可以在 Simple Agent 模式下尝试提问：“知识库里有哪些文档？”
 - 点击示例问题快速体验
 - 选择检索模式：
   - `vector`：使用 jieba 分词、词频向量和余弦相似度检索
