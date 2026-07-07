@@ -1,6 +1,10 @@
 """Agent tools for the knowledge base."""
 
+from typing import Callable
+
 from backend.config import DEFAULT_MIN_SCORE, DEFAULT_TOP_K
+from backend.services.ollama_service import generate_with_ollama
+from backend.services.prompt_service import build_rag_prompt
 from backend.services.sqlite_llm_qa_service import search_sqlite_snippets
 from backend.services.sqlite_document_repository import (
     create_chunks_table,
@@ -11,6 +15,9 @@ from backend.services.sqlite_document_repository import (
     list_documents_from_db_filtered,
 )
 from week04.settings import SQLITE_DATABASE_PATH
+
+REFUSAL_ANSWER = "知识库中没有找到相关资料，暂时无法回答。"
+MODEL_UNAVAILABLE_ANSWER = "本地模型暂时不可用，请稍后再试。"
 
 
 def list_documents_tool(database_path: str = SQLITE_DATABASE_PATH) -> dict:
@@ -82,4 +89,42 @@ def search_knowledge_base_tool(
         "keyword": keyword,
         "snippets": snippets,
         "count": len(snippets),
+    }
+
+
+def answer_with_context_tool(
+    question: str,
+    snippets: list[dict],
+    generator: Callable[[str], str] = generate_with_ollama,
+) -> dict:
+    """根据检索到的上下文片段生成回答。"""
+    if snippets == []:
+        return {
+            "question": question,
+            "answer": REFUSAL_ANSWER,
+            "citations": [],
+        }
+
+    prompt = build_rag_prompt(question, snippets)
+
+    try:
+        answer = generator(prompt).strip()
+    except Exception:
+        answer = MODEL_UNAVAILABLE_ANSWER
+
+    citations = []
+
+    for snippet in snippets:
+        citations.append(
+            {
+                "title": snippet["title"],
+                "text": snippet["text"],
+                "path": snippet["path"],
+            }
+        )
+
+    return {
+        "question": question,
+        "answer": answer,
+        "citations": citations,
     }
