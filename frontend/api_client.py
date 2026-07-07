@@ -31,6 +31,32 @@ def chat_with_llm_api(
     return None, get_error_detail(response)
 
 
+def submit_feedback_api(
+    base_url: str,
+    question: str,
+    answer: str,
+    rating: str,
+) -> tuple[dict | None, str | None]:
+    """Submit answer feedback through the FastAPI feedback endpoint."""
+    try:
+        response = requests.post(
+            base_url + "/api/v1/feedback",
+            json={
+                "question": question,
+                "answer": answer,
+                "rating": rating,
+            },
+            timeout=30,
+        )
+    except requests.RequestException:
+        return None, "后端服务暂时不可用，请确认 FastAPI 已启动。"
+
+    if response.status_code == 201:
+        return response.json(), None
+
+    return None, get_error_detail(response)
+
+
 def get_error_detail(response) -> str:
     """Read FastAPI error detail from a response."""
     try:

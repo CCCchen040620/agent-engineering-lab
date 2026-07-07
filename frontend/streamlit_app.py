@@ -6,11 +6,7 @@ from backend.services.document_indexing_service import (
     create_document_with_chunks_and_embeddings,
 )
 from backend.services.sqlite_document_repository import create_connection
-from backend.services.sqlite_feedback_repository import (
-    create_feedback_table,
-    insert_feedback_to_db,
-)
-from frontend.api_client import chat_with_llm_api
+from frontend.api_client import chat_with_llm_api, submit_feedback_api
 from week04.settings import SQLITE_DATABASE_PATH
 
 
@@ -27,21 +23,17 @@ if "chat_history" not in st.session_state:
     st.session_state["chat_history"] = []
 
 
-def save_feedback(question: str, answer: str, rating: str) -> dict:
-    connection = create_connection(SQLITE_DATABASE_PATH)
-
-    create_feedback_table(connection)
-
-    feedback = insert_feedback_to_db(
-        connection,
+def save_feedback(
+    question: str,
+    answer: str,
+    rating: str,
+) -> tuple[dict | None, str | None]:
+    return submit_feedback_api(
+        base_url=BACKEND_API_BASE_URL,
         question=question,
         answer=answer,
         rating=rating,
     )
-
-    connection.close()
-
-    return feedback
 
 
 def save_document_with_content(title: str, file_type: str, content: str) -> dict | None:
@@ -260,25 +252,37 @@ if st.session_state["chat_history"] != []:
                 "👍 有帮助",
                 key=f"helpful_{index}",
             ):
-                feedback = save_feedback(
+                feedback, error_message = save_feedback(
                     question=item["question"],
                     answer=item["answer"],
                     rating="helpful",
                 )
-                st.session_state["chat_history"][index]["feedback"] = "有帮助"
-                st.session_state["chat_history"][index]["feedback_id"] = feedback["id"]
+
+                if error_message is not None:
+                    st.error(error_message)
+                else:
+                    st.session_state["chat_history"][index]["feedback"] = "有帮助"
+                    st.session_state["chat_history"][index]["feedback_id"] = feedback[
+                        "id"
+                    ]
 
             if feedback_columns[1].button(
                 "👎 没帮助",
                 key=f"not_helpful_{index}",
             ):
-                feedback = save_feedback(
+                feedback, error_message = save_feedback(
                     question=item["question"],
                     answer=item["answer"],
                     rating="not_helpful",
                 )
-                st.session_state["chat_history"][index]["feedback"] = "没帮助"
-                st.session_state["chat_history"][index]["feedback_id"] = feedback["id"]
+
+                if error_message is not None:
+                    st.error(error_message)
+                else:
+                    st.session_state["chat_history"][index]["feedback"] = "没帮助"
+                    st.session_state["chat_history"][index]["feedback_id"] = feedback[
+                        "id"
+                    ]
 
             if item["feedback"] is not None:
                 st.caption(
