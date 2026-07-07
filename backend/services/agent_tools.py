@@ -1,5 +1,7 @@
 """Agent tools for the knowledge base."""
 
+from backend.config import DEFAULT_MIN_SCORE, DEFAULT_TOP_K
+from backend.services.sqlite_llm_qa_service import search_sqlite_snippets
 from backend.services.sqlite_document_repository import (
     create_chunks_table,
     create_connection,
@@ -56,4 +58,28 @@ def read_document_chunks_tool(
         "found": True,
         "document": document,
         "chunks": chunks,
+    }
+
+
+def search_knowledge_base_tool(
+    question: str,
+    database_path: str = SQLITE_DATABASE_PATH,
+    top_k: int = DEFAULT_TOP_K,
+    mode: str = "keyword",
+    min_score: float = DEFAULT_MIN_SCORE,
+) -> dict:
+    """根据用户问题搜索知识库片段。"""
+    keyword, snippets = search_sqlite_snippets(
+        question=question,
+        database_path=database_path,
+        top_k=top_k,
+        mode=mode,
+        min_score=min_score,
+    )
+
+    return {
+        "question": question,
+        "keyword": keyword,
+        "snippets": snippets,
+        "count": len(snippets),
     }
