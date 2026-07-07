@@ -37,5 +37,7 @@ def get_info():
             "precomputed_embedding_retrieval",
             "chunk_embedding_backfill",
             "document_embedding_status",
+            "simple_agent_chat",
+            "agent_tool_workflow",
         ],
     }

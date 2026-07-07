@@ -38,3 +38,5 @@ def test_info_endpoint():
     assert "precomputed_embedding_retrieval" in data["features"]
     assert "chunk_embedding_backfill" in data["features"]
     assert "document_embedding_status" in data["features"]
+    assert "simple_agent_chat" in data["features"]
+    assert "agent_tool_workflow" in data["features"]
