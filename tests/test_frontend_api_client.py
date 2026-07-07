@@ -4,6 +4,7 @@ from frontend.api_client import (
     chat_with_llm_api,
     create_document_with_content_api,
     submit_feedback_api,
+    upload_text_document_api,
 )
 
 
@@ -237,6 +238,116 @@ def test_create_document_with_content_api_handles_network_failure(monkeypatch):
         title="远程办公制度",
         file_type="md",
         content="员工每周可以申请一天远程办公。",
+    )
+
+    assert data is None
+    assert error_message == "后端服务暂时不可用，请确认 FastAPI 已启动。"
+
+
+def test_upload_text_document_api_posts_file(monkeypatch):
+    captured = {}
+
+    def fake_post(url, data, files, timeout):
+        captured["url"] = url
+        captured["data"] = data
+        captured["files"] = files
+        captured["timeout"] = timeout
+
+        return FakeResponse(
+            201,
+            {
+                "id": 1,
+                "title": "访客制度",
+                "file_type": "txt",
+                "chunk_count": 2,
+                "is_indexed": True,
+            },
+        )
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    data, error_message = upload_text_document_api(
+        base_url="http://127.0.0.1:8000",
+        file_name="visitor_policy.txt",
+        content=b"hello",
+        title="访客制度",
+    )
+
+    assert error_message is None
+    assert data["title"] == "访客制度"
+    assert data["file_type"] == "txt"
+
+    assert captured["url"] == "http://127.0.0.1:8000/api/v1/db/documents/upload-text"
+    assert captured["data"] == {"title": "访客制度"}
+    assert captured["files"] == {
+        "file": (
+            "visitor_policy.txt",
+            b"hello",
+            "text/plain",
+        )
+    }
+    assert captured["timeout"] == 300
+
+
+def test_upload_text_document_api_omits_empty_title(monkeypatch):
+    captured = {}
+
+    def fake_post(url, data, files, timeout):
+        captured["data"] = data
+
+        return FakeResponse(
+            201,
+            {
+                "id": 1,
+                "title": "visitor_policy",
+                "file_type": "txt",
+                "chunk_count": 1,
+                "is_indexed": True,
+            },
+        )
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    data, error_message = upload_text_document_api(
+        base_url="http://127.0.0.1:8000",
+        file_name="visitor_policy.txt",
+        content=b"hello",
+        title="",
+    )
+
+    assert error_message is None
+    assert data["title"] == "visitor_policy"
+    assert captured["data"] == {}
+
+
+def test_upload_text_document_api_returns_backend_error(monkeypatch):
+    def fake_post(url, data, files, timeout):
+        return FakeResponse(409, {"detail": "文档已存在。"})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    data, error_message = upload_text_document_api(
+        base_url="http://127.0.0.1:8000",
+        file_name="visitor_policy.txt",
+        content=b"hello",
+        title="访客制度",
+    )
+
+    assert data is None
+    assert error_message == "文档已存在。"
+
+
+def test_upload_text_document_api_handles_network_failure(monkeypatch):
+    def fake_post(url, data, files, timeout):
+        raise requests.RequestException
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    data, error_message = upload_text_document_api(
+        base_url="http://127.0.0.1:8000",
+        file_name="visitor_policy.txt",
+        content=b"hello",
+        title="访客制度",
     )
 
     assert data is None

@@ -83,6 +83,40 @@ def create_document_with_content_api(
     return None, get_error_detail(response)
 
 
+def upload_text_document_api(
+    base_url: str,
+    file_name: str,
+    content: bytes,
+    title: str,
+) -> tuple[dict | None, str | None]:
+    """Upload and index a txt document through the FastAPI upload endpoint."""
+    data = {}
+
+    if title != "":
+        data["title"] = title
+
+    try:
+        response = requests.post(
+            base_url + "/api/v1/db/documents/upload-text",
+            data=data,
+            files={
+                "file": (
+                    file_name,
+                    content,
+                    "text/plain",
+                )
+            },
+            timeout=300,
+        )
+    except requests.RequestException:
+        return None, "后端服务暂时不可用，请确认 FastAPI 已启动。"
+
+    if response.status_code == 201:
+        return response.json(), None
+
+    return None, get_error_detail(response)
+
+
 def get_error_detail(response) -> str:
     """Read FastAPI error detail from a response."""
     try:

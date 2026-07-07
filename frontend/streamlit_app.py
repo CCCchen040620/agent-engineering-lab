@@ -1,4 +1,3 @@
-import requests
 import streamlit as st
 
 from backend.config import BACKEND_API_BASE_URL
@@ -6,6 +5,7 @@ from frontend.api_client import (
     chat_with_llm_api,
     create_document_with_content_api,
     submit_feedback_api,
+    upload_text_document_api,
 )
 
 
@@ -46,43 +46,6 @@ def save_document_with_content(
         file_type=file_type,
         content=content,
     )
-
-
-def upload_text_document_to_api(
-    file_name: str,
-    content: bytes,
-    title: str,
-) -> tuple[dict | None, str | None]:
-    data = {}
-
-    if title != "":
-        data["title"] = title
-
-    try:
-        response = requests.post(
-            BACKEND_API_BASE_URL + "/api/v1/db/documents/upload-text",
-            data=data,
-            files={
-                "file": (
-                    file_name,
-                    content,
-                    "text/plain",
-                )
-            },
-            timeout=300,
-        )
-    except requests.RequestException:
-        return None, "后端服务暂时不可用，请确认 FastAPI 已启动。"
-
-    if response.status_code == 201:
-        return response.json(), None
-
-    try:
-        detail = response.json()["detail"]
-    except Exception:
-        detail = "上传失败，请稍后再试。"
-
-    return None, detail
 
 
 with st.sidebar:
@@ -135,7 +98,8 @@ with st.sidebar:
     if st.button("新增并索引"):
         if uploaded_file is not None:
             with st.spinner("正在通过后端上传 txt 文档并生成 embeddings..."):
-                document, error_message = upload_text_document_to_api(
+                document, error_message = upload_text_document_api(
+                    base_url=BACKEND_API_BASE_URL,
                     file_name=uploaded_file.name,
                     content=uploaded_file.getvalue(),
                     title=document_title.strip(),
