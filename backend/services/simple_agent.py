@@ -204,6 +204,7 @@ def run_simple_agent(
                         },
                         "observation": {
                             "found": False,
+                            "match_type": document_result["match_type"],
                         },
                         "next_action": "ask_clarification",
                     },
@@ -285,6 +286,7 @@ def run_simple_agent(
                     "observation": {
                         "found": True,
                         "document_id": document["id"],
+                        "match_type": document_result["match_type"],
                     },
                     "next_action": "read_document_chunks",
                 },

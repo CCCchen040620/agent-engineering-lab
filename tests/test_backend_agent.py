@@ -172,6 +172,7 @@ def test_agent_chat_endpoint_reads_document_chunks(tmp_path):
 
     assert data["steps"][2]["tool"] == "find_document_by_title_tool"
     assert data["steps"][2]["observation"]["found"] == True
+    assert data["steps"][2]["observation"]["match_type"] == "exact"
 
     assert data["steps"][3]["tool"] == "read_document_chunks_tool"
     assert data["steps"][3]["observation"]["chunk_count"] == 2

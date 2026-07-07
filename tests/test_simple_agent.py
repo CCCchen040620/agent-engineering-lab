@@ -203,6 +203,7 @@ def test_run_simple_agent_reads_document_chunks(tmp_path):
 
     assert result["steps"][2]["tool"] == "find_document_by_title_tool"
     assert result["steps"][2]["observation"]["found"] == True
+    assert result["steps"][2]["observation"]["match_type"] == "exact"
 
     assert result["steps"][3]["tool"] == "read_document_chunks_tool"
     assert result["steps"][3]["observation"]["chunk_count"] == 2
@@ -221,3 +222,67 @@ def test_run_simple_agent_asks_clarification_when_document_title_is_missing(tmp_
     assert result["citations"] == []
     assert result["steps"][0]["observation"]["intent"] == "read_document"
     assert result["steps"][2]["tool"] == "ask_clarification_tool"
+
+
+def test_run_simple_agent_reads_document_chunks_with_partial_title(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=1,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="员工每天需要完成 8 小时工作。",
+    )
+
+    connection.close()
+
+    result = run_simple_agent(
+        question="查看手册的片段",
+        database_path=str(database_path),
+    )
+
+    assert result["keyword"] == "手册"
+    assert "员工每天需要完成 8 小时工作。" in result["answer"]
+    assert result["steps"][2]["tool"] == "find_document_by_title_tool"
+    assert result["steps"][2]["observation"]["found"] == True
+    assert result["steps"][2]["observation"]["match_type"] == "contains"
+
+
+def test_run_simple_agent_asks_clarification_when_document_is_not_found(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+
+    insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=1,
+        is_indexed=True,
+    )
+
+    connection.close()
+
+    result = run_simple_agent(
+        question="查看不存在文档的片段",
+        database_path=str(database_path),
+    )
+
+    assert result["keyword"] == "不存在文档"
+    assert result["answer"] == "请补充正确的文档标题。"
+    assert result["steps"][2]["tool"] == "find_document_by_title_tool"
+    assert result["steps"][2]["observation"]["found"] == False
+    assert result["steps"][2]["observation"]["match_type"] is None
+    assert result["steps"][3]["tool"] == "ask_clarification_tool"
