@@ -3,6 +3,7 @@ from backend.services.agent_tools import (
     read_document_chunks_tool,
     search_knowledge_base_tool,
     answer_with_context_tool,
+    refuse_answer_tool,
 )
 from backend.services.sqlite_document_repository import (
     create_chunks_table,
@@ -197,3 +198,11 @@ def test_answer_with_context_tool_handles_generator_error():
 
     assert result["answer"] == "本地模型暂时不可用，请稍后再试。"
     assert len(result["citations"]) == 1
+
+
+def test_refuse_answer_tool():
+    result = refuse_answer_tool("公司有没有股票期权？")
+
+    assert result["question"] == "公司有没有股票期权？"
+    assert result["answer"] == "知识库中没有找到相关资料，暂时无法回答。"
+    assert result["citations"] == []

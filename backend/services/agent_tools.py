@@ -99,11 +99,7 @@ def answer_with_context_tool(
 ) -> dict:
     """根据检索到的上下文片段生成回答。"""
     if snippets == []:
-        return {
-            "question": question,
-            "answer": REFUSAL_ANSWER,
-            "citations": [],
-        }
+        return refuse_answer_tool(question)
 
     prompt = build_rag_prompt(question, snippets)
 
@@ -127,4 +123,13 @@ def answer_with_context_tool(
         "question": question,
         "answer": answer,
         "citations": citations,
+    }
+
+
+def refuse_answer_tool(question: str) -> dict:
+    """在没有可靠依据时拒答。"""
+    return {
+        "question": question,
+        "answer": REFUSAL_ANSWER,
+        "citations": [],
     }
