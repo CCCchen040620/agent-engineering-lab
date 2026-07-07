@@ -296,7 +296,7 @@ POST /api/v1/db/chat?mode=vector&top_k=2
 
 ### POST /api/v1/db/documents/with-content
 
-新增 SQLite 文档，并根据正文内容自动切分 chunks。
+新增 SQLite 文档，根据正文内容自动切分 chunks，并为 chunks 生成 embeddings。
 
 请求示例：
 
@@ -327,7 +327,8 @@ POST /api/v1/db/chat?mode=vector&top_k=2
 - 空片段会被自动过滤。
 - 超过最大长度的片段会继续按固定长度切分。
 - `chunk_count` 由系统根据切分结果自动计算。
-- `is_indexed` 根据是否成功生成 chunks 自动设置。
+- `is_indexed` 根据是否成功生成 chunks 和 embeddings 自动设置。
+- 新增时会调用 Ollama embedding 模型，默认使用 `bge-m3:latest`。
 - 新增后可以立即通过 `/api/v1/db/chat/llm` 检索和问答。
 
 错误返回：

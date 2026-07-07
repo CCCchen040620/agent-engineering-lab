@@ -2,7 +2,6 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from backend.config import DEFAULT_MIN_SCORE, DEFAULT_TOP_K
 from backend.services.document_indexing_service import (
-    create_document_with_chunks,
     create_document_with_chunks_and_embeddings,
     split_text_into_chunks,
 )
@@ -93,7 +92,7 @@ def create_db_document_with_content(
 
     connection = create_connection(database_path)
 
-    document = create_document_with_chunks(
+    document = create_document_with_chunks_and_embeddings(
         connection,
         title=request.title,
         file_type=request.file_type,

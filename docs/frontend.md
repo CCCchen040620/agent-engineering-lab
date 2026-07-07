@@ -43,6 +43,7 @@ ollama list
   - 👍 有帮助
   - 👎 没帮助
 - 在侧边栏新增知识文档
+- 手动填写标题和正文新增知识文档时，会调用 FastAPI 接口 `POST /api/v1/db/documents/with-content`。
 - 根据文档正文自动切分 chunks
 - 新增文档后可立即参与 RAG 问答:
   - 新增知识文档时，系统会自动切分 chunks，并使用 Ollama `bge-m3` 为 chunks 生成 embeddings，以便 `precomputed_embedding` 模式检索。

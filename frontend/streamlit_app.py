@@ -2,12 +2,11 @@ import requests
 import streamlit as st
 
 from backend.config import BACKEND_API_BASE_URL
-from backend.services.document_indexing_service import (
-    create_document_with_chunks_and_embeddings,
+from frontend.api_client import (
+    chat_with_llm_api,
+    create_document_with_content_api,
+    submit_feedback_api,
 )
-from backend.services.sqlite_document_repository import create_connection
-from frontend.api_client import chat_with_llm_api, submit_feedback_api
-from week04.settings import SQLITE_DATABASE_PATH
 
 
 st.set_page_config(
@@ -36,19 +35,17 @@ def save_feedback(
     )
 
 
-def save_document_with_content(title: str, file_type: str, content: str) -> dict | None:
-    connection = create_connection(SQLITE_DATABASE_PATH)
-
-    document = create_document_with_chunks_and_embeddings(
-        connection,
+def save_document_with_content(
+    title: str,
+    file_type: str,
+    content: str,
+) -> tuple[dict | None, str | None]:
+    return create_document_with_content_api(
+        base_url=BACKEND_API_BASE_URL,
         title=title,
         file_type=file_type,
         content=content,
     )
-
-    connection.close()
-
-    return document
 
 
 def upload_text_document_to_api(
@@ -154,14 +151,14 @@ with st.sidebar:
             st.warning("文档标题和正文不能为空。")
         else:
             with st.spinner("正在新增文档、切分 chunks 并生成 embeddings..."):
-                document = save_document_with_content(
+                document, error_message = save_document_with_content(
                     title=document_title.strip(),
                     file_type=document_file_type,
                     content=document_content.strip(),
                 )
 
-            if document is None:
-                st.error("文档标题已存在，无法重复新增。")
+            if error_message is not None:
+                st.error(error_message)
             else:
                 st.success(
                     f"已新增文档：{document['title']}，切分片段数：{document['chunk_count']}"
