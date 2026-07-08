@@ -58,3 +58,12 @@ class Chunk(BaseModel):
     id: int
     document_id: int
     text: str = Field(min_length=1)
+
+
+class ConversationCreateRequest(BaseModel):
+    title: str = Field(min_length=1)
+
+
+class MessageCreateRequest(BaseModel):
+    role: str = Field(min_length=1)
+    content: str = Field(min_length=1)
