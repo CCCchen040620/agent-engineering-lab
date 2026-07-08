@@ -231,7 +231,11 @@ python -m streamlit run frontend/streamlit_app.py
 
 - 新增知识文档
 - RAG 问答
+- Simple Agent 问答
+- LangGraph Agent 问答
+- 保存 LangGraph Agent 本轮问答到会话
 - 查看引用来源
+- 查看 Agent 执行步骤
 - 提交回答反馈
 
 ## 6. 启动反馈管理页
@@ -609,7 +613,58 @@ GET /api/v1/conversations/1/messages
 
 预期可以看到刚才保存的 user 和 assistant 消息。
 
-### 15.4 会话不存在时
+### 15.4 在 Streamlit 页面中保存 LangGraph Agent 问答
+
+这个流程用于验收前端页面是否正确接入带会话存储的 LangGraph Agent。
+
+前置条件：
+
+1. FastAPI 后端已启动。
+2. Streamlit 用户问答页已启动。
+3. 已经通过 `POST /api/v1/conversations` 创建会话，并拿到 `id`。
+
+页面操作：
+
+1. 在侧边栏选择 `LangGraph Agent 问答`。
+2. 勾选 `保存 LangGraph Agent 问答到会话`。
+3. 在 `conversation_id` 输入框里填写刚才创建的会话 ID。
+4. 输入问题，例如：
+
+```text
+公司有没有股票期权？
+```
+
+预期页面显示：
+
+```text
+已保存到会话：1
+本轮保存消息数：2
+```
+
+然后再调用：
+
+```text
+GET /api/v1/conversations/1/messages
+```
+
+预期可以看到两条新消息：
+
+- `role=user`
+- `role=assistant`
+
+如果填写的 `conversation_id` 不存在，前端会显示后端返回的错误信息：
+
+```text
+会话不存在。
+```
+
+说明：
+
+- 这个页面功能只是把本轮问答保存下来。
+- 当前还没有把历史消息重新传给 Agent 做多轮推理。
+- 所以它属于“长期消息记录”的第一步，还不是完整的长期记忆 Agent。
+
+### 15.5 会话不存在时
 
 如果请求：
 

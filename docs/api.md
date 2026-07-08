@@ -808,6 +808,8 @@ POST /api/v1/langgraph-agent/conversations/1/chat?mode=keyword&top_k=3
 - 它不会替换 `/api/v1/langgraph-agent/chat`。
 - `/api/v1/langgraph-agent/chat` 是无会话版本。
 - `/api/v1/langgraph-agent/conversations/{conversation_id}/chat` 会把本轮 user/assistant 消息保存到 SQLite。
+- Streamlit 用户问答页在选择 `LangGraph Agent 问答` 并勾选 `保存 LangGraph Agent 问答到会话` 时，会调用该接口。
+- 返回中的 `saved_messages` 会被前端用于显示本轮实际保存了几条消息。
 - 当前接口还没有把历史消息重新喂给 Agent 做多轮推理。
 - 它和 Memory Demo API 不同：Memory Demo 使用 `InMemorySaver`，重启会丢；该接口把消息写入 SQLite，重启后消息仍然存在。
 
