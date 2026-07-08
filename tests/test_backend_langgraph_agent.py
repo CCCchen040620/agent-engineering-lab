@@ -91,3 +91,89 @@ def test_langgraph_agent_chat_endpoint_refuses_without_context(tmp_path):
     assert data["steps"][2]["tool"] == "validate_context_node"
     assert data["steps"][2]["observation"]["has_valid_context"] is False
     assert data["steps"][3]["tool"] == "refuse_answer_tool"
+
+
+def test_langgraph_agent_chat_endpoint_reads_document_chunks(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=2,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="员工每天需要完成 8 小时工作。",
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="新员工需要完成安全培训。",
+    )
+
+    connection.close()
+
+    app.dependency_overrides[get_database_path] = lambda: str(database_path)
+
+    response = client.post(
+        "/api/v1/langgraph-agent/chat",
+        json={"question": "查看员工手册的片段"},
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["intent"] == "read_document"
+    assert data["keyword"] == "员工手册"
+    assert data["document_title"] == "员工手册"
+    assert "员工每天需要完成 8 小时工作。" in data["answer"]
+    assert "新员工需要完成安全培训。" in data["answer"]
+    assert len(data["citations"]) == 2
+
+    assert data["steps"][0]["tool"] == "decide_agent_intent"
+    assert data["steps"][1]["tool"] == "extract_document_title"
+    assert data["steps"][2]["tool"] == "find_document_by_title_tool"
+    assert data["steps"][2]["observation"]["found"] is True
+    assert data["steps"][3]["tool"] == "read_document_chunks_tool"
+
+
+def test_langgraph_agent_chat_endpoint_asks_clarification_when_title_missing(
+    tmp_path,
+):
+    database_path = tmp_path / "test.db"
+
+    app.dependency_overrides[get_database_path] = lambda: str(database_path)
+
+    response = client.post(
+        "/api/v1/langgraph-agent/chat",
+        json={"question": "查看这份文档的片段"},
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["intent"] == "read_document"
+    assert data["keyword"] == "文档标题"
+    assert data["document_title"] == ""
+    assert data["citations"] == []
+    assert "文档标题" in data["answer"]
+
+    assert data["steps"][0]["tool"] == "decide_agent_intent"
+    assert data["steps"][1]["tool"] == "extract_document_title"
+    assert data["steps"][1]["next_action"] == "ask_clarification_node"
+    assert data["steps"][2]["tool"] == "ask_clarification_tool"
