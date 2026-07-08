@@ -11,7 +11,7 @@ pytest
 当前稳定状态：
 
 ```text
-236 passed
+281 passed, 1 warning
 ```
 
 ## 2. 推荐启动脚本
@@ -87,6 +87,39 @@ http://127.0.0.1:8000/docs
 POST /api/v1/agent/chat
 ```
 
+该接口是第一版手写 Simple Agent，当前支持：
+
+- 文档列表
+- 读取指定文档片段
+- 知识库问答
+- 无证据拒答
+- 缺少文档标题时澄清
+
+项目也提供了 LangGraph 版本 Agent 接口：
+
+```text
+POST /api/v1/langgraph-agent/chat
+```
+
+该接口用于安全迁移和对照测试。它当前支持：
+
+- 文档列表
+- 知识库问答
+- 无证据拒答
+
+目前读取指定文档片段仍然使用：
+
+```text
+POST /api/v1/agent/chat
+```
+
+两个接口的区别：
+
+| 接口 | 内部实现 | 当前用途 |
+|---|---|---|
+| `/api/v1/agent/chat` | 普通 Python 手写流程 | 稳定版 Simple Agent |
+| `/api/v1/langgraph-agent/chat` | LangGraph 状态图 | 新版 Agent 编排验证 |
+
 请求示例：
 
 ```json
@@ -134,6 +167,15 @@ POST /api/v1/agent/chat
 - 读取文档类问题缺少标题时调用 `ask_clarification_tool`
 - 普通业务问题调用 `search_knowledge_base_tool`
 - 根据检索结果继续调用 `answer_with_context_tool` 或 `refuse_answer_tool`
+
+LangGraph Agent 的执行步骤也会放在 `steps` 字段中。区别是它的流程由 LangGraph 的节点和条件边管理：
+
+- `decide_intent_node` 判断意图
+- `list_documents_node` 处理文档列表问题
+- `search_knowledge_node` 检索知识库
+- `route_by_context` 根据是否有检索结果分流
+- `answer_node` 有证据时回答
+- `refuse_node` 无证据时拒答
 
 ## 5. 启动 Streamlit 用户问答页
 

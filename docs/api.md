@@ -522,6 +522,128 @@ POST /api/v1/agent/chat?mode=keyword&top_k=3
 - 当读取文档类问题缺少明确文档标题时，Agent 会调用 `ask_clarification_tool` 进行澄清。
 - 后续可以把这个流程迁移到 LangGraph 状态图。
 
+### POST /api/v1/langgraph-agent/chat
+
+运行 LangGraph 版本的 Agent 流程。
+
+这是项目中用于对照和迁移的新接口，不会替换原来的 `/api/v1/agent/chat`。
+
+当前该接口会执行：
+
+1. 使用 `decide_agent_intent` 判断用户意图
+2. 如果是文档列表类问题，则调用 `list_documents_tool`
+3. 如果是普通问答，则调用 `search_knowledge_base_tool`
+4. 如果检索到片段，则调用 `answer_with_context_tool`
+5. 如果没有检索到片段，则调用 `refuse_answer_tool`
+6. 返回回答、引用来源和 LangGraph 执行步骤
+
+请求示例：
+
+```json
+{
+  "question": "新员工什么时候完成安全培训？"
+}
+```
+
+可选查询参数：
+
+- `top_k`：最多使用几个检索片段，默认 `3`，范围 `1-5`
+- `mode`：检索模式，默认 `keyword`
+- `min_score`：最低相似度分数，默认读取项目配置
+
+示例：
+
+```text
+POST /api/v1/langgraph-agent/chat?mode=keyword&top_k=3
+```
+
+返回示例：
+
+```json
+{
+  "question": "新员工什么时候完成安全培训？",
+  "intent": "answer_question",
+  "keyword": "安全培训",
+  "answer": "新员工需要在入职后 30 天内完成安全培训。",
+  "citations": [
+    {
+      "title": "员工手册",
+      "text": "新员工入职后需要在 30 天内完成安全培训。",
+      "path": "sqlite://1"
+    }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "tool": "decide_agent_intent",
+      "input": {
+        "question": "新员工什么时候完成安全培训？"
+      },
+      "observation": {
+        "intent": "answer_question"
+      },
+      "next_action": "route_by_intent"
+    },
+    {
+      "step": 2,
+      "tool": "search_knowledge_base_tool",
+      "input": {
+        "question": "新员工什么时候完成安全培训？",
+        "top_k": 3,
+        "mode": "keyword",
+        "min_score": 0.3
+      },
+      "observation": {
+        "keyword": "安全培训",
+        "result_count": 1
+      },
+      "next_action": "answer_node"
+    },
+    {
+      "step": 3,
+      "tool": "answer_with_context_tool",
+      "input": {
+        "question": "新员工什么时候完成安全培训？",
+        "snippet_count": 1
+      },
+      "observation": {
+        "citation_count": 1
+      },
+      "next_action": "finish"
+    }
+  ]
+}
+```
+
+文档列表类请求示例：
+
+```json
+{
+  "question": "知识库里有哪些文档？"
+}
+```
+
+该类问题会走：
+
+```text
+decide_intent_node -> list_documents_node -> END
+```
+
+普通问答类问题会走：
+
+```text
+decide_intent_node -> search_knowledge_node -> answer_node/refuse_node -> END
+```
+
+说明：
+
+- 这是项目中的 LangGraph 版本 Agent 流程。
+- 当前支持 `list_documents` 和 `answer_question` 两类主要路线。
+- 当前暂未支持 `read_document` 路线；读取指定文档仍然使用 `/api/v1/agent/chat`。
+- 该接口复用了真实 Agent Tools，包括 `list_documents_tool`、`search_knowledge_base_tool`、`answer_with_context_tool` 和 `refuse_answer_tool`。
+- 与手写 Simple Agent 相比，该接口使用 LangGraph 的 `StateGraph`、`add_node`、`add_edge` 和 `add_conditional_edges` 管理流程。
+- 保留旧接口是为了安全迁移和对比测试，避免一次性替换造成回归风险。
+
 ## 反馈接口
 
 ### POST /api/v1/feedback
