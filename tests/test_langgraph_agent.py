@@ -159,3 +159,105 @@ def test_run_langgraph_agent_refuses_when_snippets_do_not_contain_keyword(tmp_pa
     assert result["steps"][2]["tool"] == "validate_context_node"
     assert result["steps"][2]["observation"]["has_valid_context"] is False
     assert result["steps"][3]["tool"] == "refuse_answer_tool"
+
+
+def test_run_langgraph_agent_reads_document_chunks(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=2,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="员工每天需要完成 8 小时工作。",
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="新员工需要完成安全培训。",
+    )
+
+    connection.close()
+
+    result = run_langgraph_agent(
+        question="查看员工手册的片段",
+        database_path=str(database_path),
+    )
+
+    assert result["intent"] == "read_document"
+    assert result["keyword"] == "员工手册"
+    assert result["document_title"] == "员工手册"
+    assert "员工每天需要完成 8 小时工作。" in result["answer"]
+    assert "新员工需要完成安全培训。" in result["answer"]
+    assert len(result["citations"]) == 2
+
+    assert result["steps"][0]["tool"] == "decide_agent_intent"
+    assert result["steps"][0]["observation"]["intent"] == "read_document"
+    assert result["steps"][1]["tool"] == "extract_document_title"
+    assert result["steps"][2]["tool"] == "find_document_by_title_tool"
+    assert result["steps"][2]["observation"]["found"] is True
+    assert result["steps"][3]["tool"] == "read_document_chunks_tool"
+
+
+def test_run_langgraph_agent_asks_clarification_when_document_title_is_missing(tmp_path):
+    database_path = tmp_path / "test.db"
+
+    result = run_langgraph_agent(
+        question="查看这份文档的片段",
+        database_path=str(database_path),
+    )
+
+    assert result["intent"] == "read_document"
+    assert result["keyword"] == "文档标题"
+    assert result["document_title"] == ""
+    assert result["citations"] == []
+    assert "文档标题" in result["answer"]
+
+    assert result["steps"][0]["tool"] == "decide_agent_intent"
+    assert result["steps"][1]["tool"] == "extract_document_title"
+    assert result["steps"][1]["next_action"] == "ask_clarification_node"
+    assert result["steps"][2]["tool"] == "ask_clarification_tool"
+
+
+def test_run_langgraph_agent_asks_clarification_when_document_is_not_found(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+
+    insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=1,
+        is_indexed=True,
+    )
+
+    connection.close()
+
+    result = run_langgraph_agent(
+        question="查看不存在文档的片段",
+        database_path=str(database_path),
+    )
+
+    assert result["intent"] == "read_document"
+    assert result["keyword"] == "不存在文档"
+    assert result["citations"] == []
+    assert "正确的文档标题" in result["answer"]
+
+    assert result["steps"][0]["tool"] == "decide_agent_intent"
+    assert result["steps"][1]["tool"] == "extract_document_title"
+    assert result["steps"][2]["tool"] == "find_document_by_title_tool"
+    assert result["steps"][2]["observation"]["found"] is False
+    assert result["steps"][3]["tool"] == "ask_clarification_tool"

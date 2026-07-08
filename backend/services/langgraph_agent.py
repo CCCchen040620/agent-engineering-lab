@@ -4,11 +4,14 @@ from langgraph.graph import END, START, StateGraph
 
 from backend.services.agent_tools import (
     answer_with_context_tool,
+    ask_clarification_tool,
+    find_document_by_title_tool,
     list_documents_tool,
+    read_document_chunks_tool,
     refuse_answer_tool,
     search_knowledge_base_tool,
 )
-from backend.services.simple_agent import decide_agent_intent
+from backend.services.simple_agent import decide_agent_intent, extract_document_title
 from week04.settings import SQLITE_DATABASE_PATH
 
 
@@ -18,6 +21,10 @@ class LangGraphAgentState(TypedDict):
     keyword: str
     snippets: list[dict]
     has_valid_context: bool
+    document_title: str
+    document: dict | None
+    document_match_type: str | None
+    missing_field: str
     answer: str | None
     citations: list[dict]
     steps: list[dict]
@@ -48,9 +55,16 @@ def decide_intent_node(state: LangGraphAgentState) -> dict:
 
 def route_by_intent(
     state: LangGraphAgentState,
-) -> Literal["list_documents_node", "search_knowledge_node"]:
+) -> Literal[
+    "list_documents_node",
+    "extract_document_title_node",
+    "search_knowledge_node",
+]:
     if state["intent"] == "list_documents":
         return "list_documents_node"
+
+    if state["intent"] == "read_document":
+        return "extract_document_title_node"
 
     return "search_knowledge_node"
 
@@ -80,6 +94,196 @@ def list_documents_node(state: LangGraphAgentState) -> dict:
                 "input": {},
                 "observation": {
                     "document_count": tool_result["count"],
+                },
+                "next_action": "finish",
+            }
+        ],
+    }
+
+
+def extract_document_title_node(state: LangGraphAgentState) -> dict:
+    document_title = extract_document_title(state["question"])
+
+    if document_title == "":
+        missing_field = "文档标题"
+        next_action = "ask_clarification_node"
+    else:
+        missing_field = ""
+        next_action = "find_document_node"
+
+    return {
+        "keyword": document_title if document_title != "" else "文档标题",
+        "document_title": document_title,
+        "missing_field": missing_field,
+        "steps": state["steps"]
+        + [
+            {
+                "step": len(state["steps"]) + 1,
+                "tool": "extract_document_title",
+                "input": {
+                    "question": state["question"],
+                },
+                "observation": {
+                    "document_title": document_title,
+                    "missing_field": missing_field,
+                },
+                "next_action": next_action,
+            }
+        ],
+    }
+
+
+def route_by_document_title(
+    state: LangGraphAgentState,
+) -> Literal["find_document_node", "ask_clarification_node"]:
+    if state["document_title"] == "":
+        return "ask_clarification_node"
+
+    return "find_document_node"
+
+
+def find_document_node(state: LangGraphAgentState) -> dict:
+    document_result = find_document_by_title_tool(
+        title=state["document_title"],
+        database_path=state["database_path"],
+    )
+
+    found = document_result["found"]
+
+    if found:
+        next_action = "read_document_chunks_node"
+        missing_field = ""
+    else:
+        next_action = "ask_correct_title_node"
+        missing_field = "正确的文档标题"
+
+    return {
+        "document": document_result["document"],
+        "document_match_type": document_result["match_type"],
+        "missing_field": missing_field,
+        "steps": state["steps"]
+        + [
+            {
+                "step": len(state["steps"]) + 1,
+                "tool": "find_document_by_title_tool",
+                "input": {
+                    "title": state["document_title"],
+                },
+                "observation": {
+                    "found": found,
+                    "document_id": (
+                        document_result["document"]["id"] if found else None
+                    ),
+                    "match_type": document_result["match_type"],
+                },
+                "next_action": next_action,
+            }
+        ],
+    }
+
+
+def route_by_document_found(
+    state: LangGraphAgentState,
+) -> Literal["read_document_chunks_node", "ask_correct_title_node"]:
+    if state["document"] is None:
+        return "ask_correct_title_node"
+
+    return "read_document_chunks_node"
+
+
+def ask_clarification_node(state: LangGraphAgentState) -> dict:
+    tool_result = ask_clarification_tool(
+        question=state["question"],
+        missing_field=state["missing_field"],
+    )
+
+    return {
+        "answer": tool_result["answer"],
+        "citations": [],
+        "steps": state["steps"]
+        + [
+            {
+                "step": len(state["steps"]) + 1,
+                "tool": "ask_clarification_tool",
+                "input": {
+                    "missing_field": state["missing_field"],
+                },
+                "observation": {
+                    "answer": tool_result["answer"],
+                },
+                "next_action": "finish",
+            }
+        ],
+    }
+
+
+def ask_correct_title_node(state: LangGraphAgentState) -> dict:
+    tool_result = ask_clarification_tool(
+        question=state["question"],
+        missing_field=state["missing_field"],
+    )
+
+    return {
+        "answer": tool_result["answer"],
+        "citations": [],
+        "steps": state["steps"]
+        + [
+            {
+                "step": len(state["steps"]) + 1,
+                "tool": "ask_clarification_tool",
+                "input": {
+                    "missing_field": state["missing_field"],
+                },
+                "observation": {
+                    "answer": tool_result["answer"],
+                },
+                "next_action": "finish",
+            }
+        ],
+    }
+
+
+def read_document_chunks_node(state: LangGraphAgentState) -> dict:
+    document = state["document"]
+
+    chunks_result = read_document_chunks_tool(
+        document_id=document["id"],
+        database_path=state["database_path"],
+    )
+
+    chunks = chunks_result["chunks"]
+
+    chunk_lines = []
+
+    for index, chunk in enumerate(chunks, start=1):
+        chunk_lines.append(f"[{index}] {chunk['text']}")
+
+    answer = document["title"] + " 的片段如下：\n" + "\n".join(chunk_lines)
+
+    citations = []
+
+    for chunk in chunks:
+        citations.append(
+            {
+                "title": document["title"],
+                "text": chunk["text"],
+                "path": "sqlite://" + str(document["id"]),
+            }
+        )
+
+    return {
+        "answer": answer,
+        "citations": citations,
+        "steps": state["steps"]
+        + [
+            {
+                "step": len(state["steps"]) + 1,
+                "tool": "read_document_chunks_tool",
+                "input": {
+                    "document_id": document["id"],
+                },
+                "observation": {
+                    "chunk_count": len(chunks),
                 },
                 "next_action": "finish",
             }
@@ -239,6 +443,11 @@ def build_langgraph_agent():
     graph_builder.add_node("validate_context_node", validate_context_node)
     graph_builder.add_node("answer_node", answer_node)
     graph_builder.add_node("refuse_node", refuse_node)
+    graph_builder.add_node("extract_document_title_node", extract_document_title_node)
+    graph_builder.add_node("find_document_node", find_document_node)
+    graph_builder.add_node("ask_clarification_node", ask_clarification_node)
+    graph_builder.add_node("ask_correct_title_node", ask_correct_title_node)
+    graph_builder.add_node("read_document_chunks_node", read_document_chunks_node)
 
     graph_builder.add_edge(START, "decide_intent_node")
 
@@ -247,11 +456,34 @@ def build_langgraph_agent():
         route_by_intent,
         [
             "list_documents_node",
+            "extract_document_title_node",
             "search_knowledge_node",
         ],
     )
 
     graph_builder.add_edge("list_documents_node", END)
+
+    graph_builder.add_conditional_edges(
+        "extract_document_title_node",
+        route_by_document_title,
+        [
+            "find_document_node",
+            "ask_clarification_node",
+        ],
+    )
+
+    graph_builder.add_conditional_edges(
+        "find_document_node",
+        route_by_document_found,
+        [
+            "read_document_chunks_node",
+            "ask_correct_title_node",
+        ],
+    )
+
+    graph_builder.add_edge("ask_clarification_node", END)
+    graph_builder.add_edge("ask_correct_title_node", END)
+    graph_builder.add_edge("read_document_chunks_node", END)
 
     graph_builder.add_edge("search_knowledge_node", "validate_context_node")
 
@@ -286,6 +518,10 @@ def run_langgraph_agent(
         "keyword": "",
         "snippets": [],
         "has_valid_context": False,
+        "document_title": "",
+        "document": None,
+        "document_match_type": None,
+        "missing_field": "",
         "answer": None,
         "citations": [],
         "steps": [],
