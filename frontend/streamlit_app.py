@@ -3,6 +3,7 @@ import streamlit as st
 from backend.config import BACKEND_API_BASE_URL
 from frontend.api_client import (
     chat_with_agent_api,
+    chat_with_langgraph_agent_api,
     chat_with_llm_api,
     create_document_with_content_api,
     submit_feedback_api,
@@ -49,12 +50,43 @@ def save_document_with_content(
     )
 
 
+def format_agent_step(step_index: int, step: dict) -> str:
+    tool_name = step.get("tool", step.get("name", "unknown_step"))
+    next_action = step.get("next_action", step.get("action", ""))
+    observation = step.get("observation", {})
+
+    step_description = f"[{step_index}] {tool_name}"
+
+    if next_action != "":
+        step_description = step_description + f" -> {next_action}"
+
+    if "result_count" in observation:
+        step_description = (
+            step_description
+            + f" | 命中数量：{observation['result_count']}"
+        )
+
+    if "document_count" in observation:
+        step_description = (
+            step_description
+            + f" | 文档数量：{observation['document_count']}"
+        )
+
+    if "citation_count" in observation:
+        step_description = (
+            step_description
+            + f" | 引用数量：{observation['citation_count']}"
+        )
+
+    return step_description
+
+
 with st.sidebar:
     st.header("检索设置")
 
     chat_engine = st.radio(
         "问答引擎",
-        ["普通 RAG 问答", "Simple Agent 问答"],
+        ["普通 RAG 问答", "Simple Agent 问答", "LangGraph Agent 问答"],
         index=0,
     )
 
@@ -169,6 +201,14 @@ if st.button("提问"):
                     mode=mode,
                     min_score=min_score,
                 )
+            elif chat_engine == "LangGraph Agent 问答":
+                response, error_message = chat_with_langgraph_agent_api(
+                    base_url=BACKEND_API_BASE_URL,
+                    question=question.strip(),
+                    top_k=top_k,
+                    mode=mode,
+                    min_score=min_score,
+                )
             else:
                 response, error_message = chat_with_llm_api(
                     base_url=BACKEND_API_BASE_URL,
@@ -207,21 +247,7 @@ if st.button("提问"):
                 st.subheader("Agent 执行步骤")
 
                 for step_index, step in enumerate(response["steps"], start=1):
-                    step_description = f"[{step_index}] {step['name']} - {step['status']}"
-
-                    if "result_count" in step:
-                        step_description = (
-                            step_description
-                            + f" | 命中数量：{step['result_count']}"
-                        )
-
-                    if "action" in step:
-                        step_description = (
-                            step_description
-                            + f" | 动作：{step['action']}"
-                        )
-
-                    st.markdown(f"- {step_description}")
+                    st.markdown(f"- {format_agent_step(step_index, step)}")
 
             st.subheader("引用来源")
 
@@ -248,16 +274,8 @@ if st.session_state["chat_history"] != []:
             if "steps" in item:
                 st.markdown("Agent 执行步骤：")
 
-                for step_index, step in enumerate(item["steps"], start=1):
-                    step_text = f"{step_index}. {step['name']} - {step['status']}"
-
-                    if "result_count" in step:
-                        step_text = step_text + f" | 命中数量：{step['result_count']}"
-
-                    if "action" in step:
-                        step_text = step_text + f" | 动作：{step['action']}"
-
-                    st.markdown(f"- {step_text}")
+            for step_index, step in enumerate(item["steps"], start=1):
+                st.markdown(f"- {format_agent_step(step_index, step)}")
 
             feedback_columns = st.columns(2)
 
