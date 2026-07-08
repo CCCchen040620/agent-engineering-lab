@@ -86,7 +86,37 @@ def chat_with_langgraph_agent_api(
 
     return None, get_error_detail(response)
 
+
+def chat_with_langgraph_agent_conversation_api(
+    base_url: str,
+    conversation_id: int,
+    question: str,
+    top_k: int,
+    mode: str,
+    min_score: float,
+) -> tuple[dict | None, str | None]:
+    """Ask the LangGraph Agent endpoint and save messages to a conversation."""
+    try:
+        response = requests.post(
+            base_url
+            + f"/api/v1/langgraph-agent/conversations/{conversation_id}/chat",
+            params={
+                "top_k": top_k,
+                "mode": mode,
+                "min_score": min_score,
+            },
+            json={"question": question},
+            timeout=300,
+        )
+    except requests.RequestException:
+        return None, "后端服务暂时不可用，请确认 FastAPI 已启动。"
+
+    if response.status_code == 200:
+        return response.json(), None
+
+    return None, get_error_detail(response)
     
+     
 def submit_feedback_api(
     base_url: str,
     question: str,

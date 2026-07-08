@@ -4,6 +4,7 @@ from backend.config import BACKEND_API_BASE_URL
 from frontend.api_client import (
     chat_with_agent_api,
     chat_with_langgraph_agent_api,
+    chat_with_langgraph_agent_conversation_api,
     chat_with_llm_api,
     create_document_with_content_api,
     submit_feedback_api,
@@ -111,6 +112,21 @@ with st.sidebar:
         step=0.05,
     )
 
+    st.divider()
+    st.header("会话保存")
+
+    save_to_conversation = st.checkbox(
+        "保存 LangGraph Agent 问答到会话",
+        value=False,
+    )
+
+    conversation_id = st.number_input(
+        "conversation_id",
+        min_value=1,
+        value=1,
+        step=1,
+    )
+
     if st.button("清空对话历史"):
         st.session_state["chat_history"] = []
 
@@ -202,13 +218,23 @@ if st.button("提问"):
                     min_score=min_score,
                 )
             elif chat_engine == "LangGraph Agent 问答":
-                response, error_message = chat_with_langgraph_agent_api(
-                    base_url=BACKEND_API_BASE_URL,
-                    question=question.strip(),
-                    top_k=top_k,
-                    mode=mode,
-                    min_score=min_score,
-                )
+                if save_to_conversation:
+                    response, error_message = chat_with_langgraph_agent_conversation_api(
+                        base_url=BACKEND_API_BASE_URL,
+                        conversation_id=int(conversation_id),
+                        question=question.strip(),
+                        top_k=top_k,
+                        mode=mode,
+                        min_score=min_score,
+                    )
+                else:
+                    response, error_message = chat_with_langgraph_agent_api(
+                        base_url=BACKEND_API_BASE_URL,
+                        question=question.strip(),
+                        top_k=top_k,
+                        mode=mode,
+                        min_score=min_score,
+                    )
             else:
                 response, error_message = chat_with_llm_api(
                     base_url=BACKEND_API_BASE_URL,
@@ -243,6 +269,12 @@ if st.button("提问"):
             st.caption(f"检索关键词：{response['keyword']}")
             st.caption(f"问答引擎：{chat_engine}")
 
+            if "conversation_id" in response:
+                st.caption(f"已保存到会话：{response['conversation_id']}")
+
+            if "saved_messages" in response:
+                st.caption(f"本轮保存消息数：{len(response['saved_messages'])}")
+
             if "steps" in response:
                 st.subheader("Agent 执行步骤")
 
@@ -267,9 +299,16 @@ if st.session_state["chat_history"] != []:
     ):
         with st.expander(item["question"]):
             st.write(item["answer"])
-            st.caption(
-                f"引擎：{item.get('engine', '普通 RAG 问答')} | 关键词：{item['keyword']} | 引用数量：{len(item['citations'])}"
+            caption_text = (
+                f"引擎：{item.get('engine', '普通 RAG 问答')} "
+                f"| 关键词：{item['keyword']} "
+                f"| 引用数量：{len(item['citations'])}"
             )
+
+            if "conversation_id" in item:
+                caption_text = caption_text + f" | 会话：{item['conversation_id']}"
+
+            st.caption(caption_text)
 
             if "steps" in item:
                 st.markdown("Agent 执行步骤：")
