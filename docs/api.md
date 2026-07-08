@@ -741,6 +741,76 @@ decide_intent_node -> search_knowledge_node -> validate_context_node -> answer_n
 - 与手写 Simple Agent 相比，该接口使用 LangGraph 的 `StateGraph`、`add_node`、`add_edge` 和 `add_conditional_edges` 管理流程。
 - 保留旧接口是为了安全迁移和对比测试，避免一次性替换造成回归风险。
 
+### POST /api/v1/langgraph-agent/conversations/{conversation_id}/chat
+
+运行带会话存储的 LangGraph Agent 聊天接口。
+
+该接口会：
+
+1. 检查 conversation 是否存在
+2. 调用 LangGraph Agent
+3. 将用户问题保存为 `user` 消息
+4. 将 Agent 回答保存为 `assistant` 消息
+5. 返回 Agent 结果和本次保存的消息
+
+请求示例：
+
+```text
+POST /api/v1/langgraph-agent/conversations/1/chat?mode=keyword&top_k=3
+```
+
+请求体：
+
+```json
+{
+  "question": "公司有没有股票期权？"
+}
+```
+
+成功返回示例：
+
+```json
+{
+  "question": "公司有没有股票期权？",
+  "intent": "answer_question",
+  "keyword": "股票期权",
+  "answer": "知识库中没有找到相关资料，暂时无法回答。",
+  "citations": [],
+  "conversation_id": 1,
+  "saved_messages": [
+    {
+      "id": 1,
+      "conversation_id": 1,
+      "role": "user",
+      "content": "公司有没有股票期权？"
+    },
+    {
+      "id": 2,
+      "conversation_id": 1,
+      "role": "assistant",
+      "content": "知识库中没有找到相关资料，暂时无法回答。"
+    }
+  ]
+}
+```
+
+如果会话不存在，返回：
+
+```json
+{
+  "detail": "会话不存在。"
+}
+```
+
+说明：
+
+- 该接口是带长期消息存储的 LangGraph Agent 实验接口。
+- 它不会替换 `/api/v1/langgraph-agent/chat`。
+- `/api/v1/langgraph-agent/chat` 是无会话版本。
+- `/api/v1/langgraph-agent/conversations/{conversation_id}/chat` 会把本轮 user/assistant 消息保存到 SQLite。
+- 当前接口还没有把历史消息重新喂给 Agent 做多轮推理。
+- 它和 Memory Demo API 不同：Memory Demo 使用 `InMemorySaver`，重启会丢；该接口把消息写入 SQLite，重启后消息仍然存在。
+
 ### POST /api/v1/memory-demo/chat
 
 运行 LangGraph memory/checkpoint 教学接口。

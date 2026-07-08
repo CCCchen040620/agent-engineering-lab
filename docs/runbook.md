@@ -543,7 +543,99 @@ thread_id
 
 这样数据库中的长期会话历史和 LangGraph 的运行时 memory 就可以对齐。
 
-## 15. 后端旧进程排查
+## 15. 测试带会话存储的 LangGraph Agent
+
+该接口用于把 LangGraph Agent 的本轮问答结果保存到 SQLite messages 表。
+
+它不是 Memory Demo API。
+
+区别：
+
+| 接口 | 作用 | 是否重启后保留 |
+|---|---|---|
+| `/api/v1/memory-demo/chat?thread_id=...` | 演示 `InMemorySaver` 短期记忆 | 否 |
+| `/api/v1/langgraph-agent/conversations/{conversation_id}/chat` | 调用真实 LangGraph Agent，并保存 user/assistant 消息 | 是 |
+
+### 15.1 先创建会话
+
+```text
+POST /api/v1/conversations
+```
+
+请求：
+
+```json
+{
+  "title": "LangGraph 会话测试"
+}
+```
+
+记下返回的：
+
+```text
+id
+```
+
+### 15.2 调用带会话存储的 LangGraph Agent
+
+假设会话 ID 是 `1`：
+
+```text
+POST /api/v1/langgraph-agent/conversations/1/chat
+```
+
+请求：
+
+```json
+{
+  "question": "公司有没有股票期权？"
+}
+```
+
+预期结果：
+
+- 返回 LangGraph Agent 的回答
+- 返回 `conversation_id`
+- 返回 `saved_messages`
+- `saved_messages` 中应该有两条：
+  - `role=user`
+  - `role=assistant`
+
+### 15.3 查看消息是否入库
+
+```text
+GET /api/v1/conversations/1/messages
+```
+
+预期可以看到刚才保存的 user 和 assistant 消息。
+
+### 15.4 会话不存在时
+
+如果请求：
+
+```text
+POST /api/v1/langgraph-agent/conversations/999/chat
+```
+
+预期返回：
+
+```text
+404
+```
+
+原因：
+
+```text
+不能把消息写入不存在的会话。
+```
+
+注意：
+
+- 当前接口只是把本轮问答写入 SQLite。
+- 它还没有把历史消息重新传给 Agent 参与多轮推理。
+- 后续可以让 `conversation_id` 同时作为 LangGraph 的 `thread_id`，再结合历史 messages 实现正式多轮对话。
+
+## 16. 后端旧进程排查
 
 在 Windows 上使用 `uvicorn --reload` 时，偶尔会出现旧的父子进程没有完全退出，导致代码已经修改，但 API 仍然返回旧逻辑。
 
