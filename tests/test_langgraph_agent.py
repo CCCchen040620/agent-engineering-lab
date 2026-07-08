@@ -91,8 +91,12 @@ def test_run_langgraph_agent_answers_with_context(tmp_path):
     assert result["steps"][0]["tool"] == "decide_agent_intent"
     assert result["steps"][1]["tool"] == "search_knowledge_base_tool"
     assert result["steps"][1]["observation"]["result_count"] == 1
-    assert result["steps"][1]["next_action"] == "answer_node"
-    assert result["steps"][2]["tool"] == "answer_with_context_tool"
+    assert result["steps"][1]["next_action"] == "validate_context"
+    assert result["steps"][3]["tool"] == "answer_with_context_tool"
+    assert result["has_valid_context"] is True
+    assert result["steps"][2]["tool"] == "validate_context_node"
+    assert result["steps"][2]["observation"]["has_valid_context"] is True
+    assert result["steps"][3]["tool"] == "answer_with_context_tool"
 
 
 def test_run_langgraph_agent_refuses_without_context(tmp_path):
@@ -111,5 +115,47 @@ def test_run_langgraph_agent_refuses_without_context(tmp_path):
     assert result["steps"][0]["tool"] == "decide_agent_intent"
     assert result["steps"][1]["tool"] == "search_knowledge_base_tool"
     assert result["steps"][1]["observation"]["result_count"] == 0
-    assert result["steps"][1]["next_action"] == "refuse_node"
-    assert result["steps"][2]["tool"] == "refuse_answer_tool"
+    assert result["steps"][1]["next_action"] == "validate_context"
+    assert result["has_valid_context"] is False
+    assert result["steps"][2]["tool"] == "validate_context_node"
+    assert result["steps"][2]["observation"]["has_valid_context"] is False
+    assert result["steps"][3]["tool"] == "refuse_answer_tool"
+
+
+def test_run_langgraph_agent_refuses_when_snippets_do_not_contain_keyword(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=1,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="员工每天需要完成 8 小时工作。",
+    )
+
+    connection.close()
+
+    result = run_langgraph_agent(
+        question="公司有没有股票期权？",
+        database_path=str(database_path),
+        mode="vector",
+        min_score=0.0,
+    )
+
+    assert result["keyword"] == "股票期权"
+    assert len(result["snippets"]) > 0
+    assert result["has_valid_context"] is False
+    assert result["citations"] == []
+    assert result["steps"][2]["tool"] == "validate_context_node"
+    assert result["steps"][2]["observation"]["has_valid_context"] is False
+    assert result["steps"][3]["tool"] == "refuse_answer_tool"

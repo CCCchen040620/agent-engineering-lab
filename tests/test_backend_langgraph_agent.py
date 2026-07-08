@@ -62,7 +62,9 @@ def test_langgraph_agent_chat_endpoint_answers_with_context(tmp_path):
     assert len(data["citations"]) == 1
     assert data["steps"][0]["tool"] == "decide_agent_intent"
     assert data["steps"][1]["tool"] == "search_knowledge_base_tool"
-    assert data["steps"][2]["tool"] == "answer_with_context_tool"
+    assert data["steps"][2]["tool"] == "validate_context_node"
+    assert data["steps"][2]["observation"]["has_valid_context"] is True
+    assert data["steps"][3]["tool"] == "answer_with_context_tool"
 
 
 def test_langgraph_agent_chat_endpoint_refuses_without_context(tmp_path):
@@ -86,4 +88,6 @@ def test_langgraph_agent_chat_endpoint_refuses_without_context(tmp_path):
     assert data["citations"] == []
     assert data["steps"][0]["tool"] == "decide_agent_intent"
     assert data["steps"][1]["tool"] == "search_knowledge_base_tool"
-    assert data["steps"][2]["tool"] == "refuse_answer_tool"
+    assert data["steps"][2]["tool"] == "validate_context_node"
+    assert data["steps"][2]["observation"]["has_valid_context"] is False
+    assert data["steps"][3]["tool"] == "refuse_answer_tool"

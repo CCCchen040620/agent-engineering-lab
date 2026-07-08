@@ -17,6 +17,7 @@ class LangGraphAgentState(TypedDict):
     intent: str | None
     keyword: str
     snippets: list[dict]
+    has_valid_context: bool
     answer: str | None
     citations: list[dict]
     steps: list[dict]
@@ -97,10 +98,7 @@ def search_knowledge_node(state: LangGraphAgentState) -> dict:
 
     snippets = tool_result["snippets"]
 
-    if snippets:
-        next_action = "answer_node"
-    else:
-        next_action = "refuse_node"
+    next_action = "validate_context"
 
     return {
         "keyword": tool_result["keyword"],
@@ -126,10 +124,55 @@ def search_knowledge_node(state: LangGraphAgentState) -> dict:
     }
 
 
+def is_context_valid(keyword: str, snippets: list[dict]) -> bool:
+    if snippets == []:
+        return False
+
+    if keyword == "":
+        return True
+
+    for snippet in snippets:
+        if keyword in snippet["text"]:
+            return True
+
+    return False
+
+
+def validate_context_node(state: LangGraphAgentState) -> dict:
+    has_valid_context = is_context_valid(
+        keyword=state["keyword"],
+        snippets=state["snippets"],
+    )
+
+    if has_valid_context:
+        next_action = "answer_node"
+    else:
+        next_action = "refuse_node"
+
+    return {
+        "has_valid_context": has_valid_context,
+        "steps": state["steps"]
+        + [
+            {
+                "step": len(state["steps"]) + 1,
+                "tool": "validate_context_node",
+                "input": {
+                    "keyword": state["keyword"],
+                    "snippet_count": len(state["snippets"]),
+                },
+                "observation": {
+                    "has_valid_context": has_valid_context,
+                },
+                "next_action": next_action,
+            }
+        ],
+    }
+
+
 def route_by_context(
     state: LangGraphAgentState,
 ) -> Literal["answer_node", "refuse_node"]:
-    if state["snippets"]:
+    if state["has_valid_context"]:
         return "answer_node"
 
     return "refuse_node"
@@ -193,6 +236,7 @@ def build_langgraph_agent():
     graph_builder.add_node("decide_intent_node", decide_intent_node)
     graph_builder.add_node("list_documents_node", list_documents_node)
     graph_builder.add_node("search_knowledge_node", search_knowledge_node)
+    graph_builder.add_node("validate_context_node", validate_context_node)
     graph_builder.add_node("answer_node", answer_node)
     graph_builder.add_node("refuse_node", refuse_node)
 
@@ -209,8 +253,10 @@ def build_langgraph_agent():
 
     graph_builder.add_edge("list_documents_node", END)
 
+    graph_builder.add_edge("search_knowledge_node", "validate_context_node")
+
     graph_builder.add_conditional_edges(
-        "search_knowledge_node",
+        "validate_context_node",
         route_by_context,
         [
             "answer_node",
@@ -239,6 +285,7 @@ def run_langgraph_agent(
         "intent": None,
         "keyword": "",
         "snippets": [],
+        "has_valid_context": False,
         "answer": None,
         "citations": [],
         "steps": [],
