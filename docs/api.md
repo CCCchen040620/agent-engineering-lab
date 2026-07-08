@@ -533,9 +533,10 @@ POST /api/v1/agent/chat?mode=keyword&top_k=3
 1. 使用 `decide_agent_intent` 判断用户意图
 2. 如果是文档列表类问题，则调用 `list_documents_tool`
 3. 如果是普通问答，则调用 `search_knowledge_base_tool`
-4. 如果检索到片段，则调用 `answer_with_context_tool`
-5. 如果没有检索到片段，则调用 `refuse_answer_tool`
-6. 返回回答、引用来源和 LangGraph 执行步骤
+4. 调用 `validate_context_node` 判断检索片段是否真的包含有效上下文
+5. 如果上下文有效，则调用 `answer_with_context_tool`
+6. 如果上下文无效，则调用 `refuse_answer_tool`
+7. 返回回答、引用来源和 LangGraph 执行步骤
 
 请求示例：
 
@@ -597,10 +598,22 @@ POST /api/v1/langgraph-agent/chat?mode=keyword&top_k=3
         "keyword": "安全培训",
         "result_count": 1
       },
-      "next_action": "answer_node"
+      "next_action": "validate_context"
     },
     {
       "step": 3,
+      "tool": "validate_context_node",
+      "input": {
+        "keyword": "安全培训",
+        "snippet_count": 1
+      },
+      "observation": {
+        "has_valid_context": true
+      },
+      "next_action": "answer_node"
+    },
+    {
+      "step": 4,
       "tool": "answer_with_context_tool",
       "input": {
         "question": "新员工什么时候完成安全培训？",
@@ -632,7 +645,7 @@ decide_intent_node -> list_documents_node -> END
 普通问答类问题会走：
 
 ```text
-decide_intent_node -> search_knowledge_node -> answer_node/refuse_node -> END
+decide_intent_node -> search_knowledge_node -> validate_context_node -> answer_node/refuse_node -> END
 ```
 
 说明：
@@ -641,6 +654,8 @@ decide_intent_node -> search_knowledge_node -> answer_node/refuse_node -> END
 - 当前支持 `list_documents` 和 `answer_question` 两类主要路线。
 - 当前暂未支持 `read_document` 路线；读取指定文档仍然使用 `/api/v1/agent/chat`。
 - 该接口复用了真实 Agent Tools，包括 `list_documents_tool`、`search_knowledge_base_tool`、`answer_with_context_tool` 和 `refuse_answer_tool`。
+- `validate_context_node` 用于降低“embedding 检索命中了无关片段也强行回答”的风险。
+- 当前上下文校验规则比较保守：关键词需要出现在至少一个检索片段文本中，后续可以升级为更稳健的语义相关性判断。
 - 与手写 Simple Agent 相比，该接口使用 LangGraph 的 `StateGraph`、`add_node`、`add_edge` 和 `add_conditional_edges` 管理流程。
 - 保留旧接口是为了安全迁移和对比测试，避免一次性替换造成回归风险。
 
