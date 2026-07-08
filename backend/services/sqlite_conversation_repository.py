@@ -1,0 +1,109 @@
+import sqlite3
+
+
+def create_conversations_table(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS conversations (
+            id INTEGER PRIMARY KEY,
+            title TEXT NOT NULL
+        )
+        """
+    )
+
+    connection.commit()
+
+
+def create_messages_table(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY,
+            conversation_id INTEGER NOT NULL,
+            role TEXT NOT NULL,
+            content TEXT NOT NULL,
+            FOREIGN KEY (conversation_id) REFERENCES conversations(id)
+        )
+        """
+    )
+
+    connection.commit()
+
+
+def create_conversation(
+    connection: sqlite3.Connection,
+    title: str,
+) -> dict:
+    cursor = connection.execute(
+        """
+        INSERT INTO conversations (title)
+        VALUES (?)
+        """,
+        (title,),
+    )
+
+    connection.commit()
+
+    conversation_id = cursor.lastrowid
+
+    return {
+        "id": conversation_id,
+        "title": title,
+    }
+
+
+def add_message(
+    connection: sqlite3.Connection,
+    conversation_id: int,
+    role: str,
+    content: str,
+) -> dict:
+    cursor = connection.execute(
+        """
+        INSERT INTO messages (conversation_id, role, content)
+        VALUES (?, ?, ?)
+        """,
+        (conversation_id, role, content),
+    )
+
+    connection.commit()
+
+    message_id = cursor.lastrowid
+
+    return {
+        "id": message_id,
+        "conversation_id": conversation_id,
+        "role": role,
+        "content": content,
+    }
+
+
+def list_messages_by_conversation(
+    connection: sqlite3.Connection,
+    conversation_id: int,
+) -> list[dict]:
+    cursor = connection.execute(
+        """
+        SELECT id, conversation_id, role, content
+        FROM messages
+        WHERE conversation_id = ?
+        ORDER BY id
+        """,
+        (conversation_id,),
+    )
+
+    rows = cursor.fetchall()
+
+    messages = []
+
+    for row in rows:
+        messages.append(
+            {
+                "id": row[0],
+                "conversation_id": row[1],
+                "role": row[2],
+                "content": row[3],
+            }
+        )
+
+    return messages
