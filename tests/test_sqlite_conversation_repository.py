@@ -4,6 +4,8 @@ from backend.services.sqlite_conversation_repository import (
     create_conversation,
     create_conversations_table,
     create_messages_table,
+    find_conversation_by_id,
+    list_conversations,
     list_messages_by_conversation,
 )
 
@@ -102,5 +104,58 @@ def test_list_messages_returns_empty_list_when_conversation_has_no_messages():
     )
 
     assert messages == []
+
+    connection.close()
+
+
+def test_list_conversations():
+    connection = create_connection(":memory:")
+
+    create_conversations_table(connection)
+
+    create_conversation(connection, "第一次对话")
+    create_conversation(connection, "第二次对话")
+
+    conversations = list_conversations(connection)
+
+    assert conversations == [
+        {
+            "id": 1,
+            "title": "第一次对话",
+        },
+        {
+            "id": 2,
+            "title": "第二次对话",
+        },
+    ]
+
+    connection.close()
+
+
+def test_find_conversation_by_id():
+    connection = create_connection(":memory:")
+
+    create_conversations_table(connection)
+
+    create_conversation(connection, "第一次对话")
+
+    conversation = find_conversation_by_id(connection, 1)
+
+    assert conversation == {
+        "id": 1,
+        "title": "第一次对话",
+    }
+
+    connection.close()
+
+
+def test_find_conversation_by_id_returns_none_when_not_found():
+    connection = create_connection(":memory:")
+
+    create_conversations_table(connection)
+
+    conversation = find_conversation_by_id(connection, 999)
+
+    assert conversation is None
 
     connection.close()

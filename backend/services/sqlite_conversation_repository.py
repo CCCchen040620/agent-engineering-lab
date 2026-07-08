@@ -52,6 +52,54 @@ def create_conversation(
     }
 
 
+def list_conversations(connection: sqlite3.Connection) -> list[dict]:
+    cursor = connection.execute(
+        """
+        SELECT id, title
+        FROM conversations
+        ORDER BY id
+        """
+    )
+
+    rows = cursor.fetchall()
+
+    conversations = []
+
+    for row in rows:
+        conversations.append(
+            {
+                "id": row[0],
+                "title": row[1],
+            }
+        )
+
+    return conversations
+
+
+def find_conversation_by_id(
+    connection: sqlite3.Connection,
+    conversation_id: int,
+) -> dict | None:
+    cursor = connection.execute(
+        """
+        SELECT id, title
+        FROM conversations
+        WHERE id = ?
+        """,
+        (conversation_id,),
+    )
+
+    row = cursor.fetchone()
+
+    if row is None:
+        return None
+
+    return {
+        "id": row[0],
+        "title": row[1],
+    }
+
+    
 def add_message(
     connection: sqlite3.Connection,
     conversation_id: int,
