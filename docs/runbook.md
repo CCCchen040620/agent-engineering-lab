@@ -343,7 +343,70 @@ $env:DEFAULT_MIN_SCORE="0.8"
 python -m streamlit run frontend/streamlit_app.py
 ```
 
-## 13. 后端旧进程排查
+## 13. 测试 LangGraph Memory Demo API
+
+启动 FastAPI 后端后，可以在 `/docs` 中测试：
+
+```text
+POST /api/v1/memory-demo/chat?thread_id=chen
+```
+
+第一次请求：
+
+```json
+{
+  "question": "我叫陈晨"
+}
+```
+
+预期回答：
+
+```text
+我记住了，你叫陈晨。
+```
+
+第二次仍然使用同一个 `thread_id=chen`：
+
+```json
+{
+  "question": "我叫什么？"
+}
+```
+
+预期回答：
+
+```text
+你叫陈晨。
+```
+
+如果换成：
+
+```text
+thread_id=other
+```
+
+再问：
+
+```json
+{
+  "question": "我叫什么？"
+}
+```
+
+预期回答：
+
+```text
+我还不知道你的名字。
+```
+
+说明：
+
+- `thread_id` 相当于会话 ID。
+- 当前 demo 使用 `InMemorySaver`，只保存在内存中。
+- 后端进程重启后，记忆会消失。
+- 这个接口用于理解 LangGraph checkpoint，不是正式长期记忆方案。
+
+## 14. 后端旧进程排查
 
 在 Windows 上使用 `uvicorn --reload` 时，偶尔会出现旧的父子进程没有完全退出，导致代码已经修改，但 API 仍然返回旧逻辑。
 

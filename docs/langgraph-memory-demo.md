@@ -286,7 +286,109 @@ Message
 
 结合起来。
 
-## 10. 当前阶段理解
+## 10. FastAPI Memory Demo API
+
+当前项目新增了一个教学接口：
+
+```text
+POST /api/v1/memory-demo/chat?thread_id=chen
+```
+
+对应文件：
+
+```text
+backend/services/langgraph_memory_service.py
+backend/routers/memory_demo.py
+tests/test_backend_memory_demo.py
+```
+
+这个接口把 memory demo 从命令行练习推进到了 FastAPI 调用。
+
+### 10.1 为什么 Graph 要在模块级创建
+
+service 文件中使用：
+
+```python
+memory_graph = build_memory_graph()
+```
+
+原因是：
+
+```text
+Graph 和 InMemorySaver 必须在同一个后端进程中复用。
+```
+
+如果每次请求都重新：
+
+```python
+build_memory_graph()
+```
+
+就会创建新的 `InMemorySaver`。
+
+这样即使 `thread_id` 一样，也无法读取上一轮保存的状态。
+
+### 10.2 为什么 `thread_id` 放在 query parameter
+
+接口形式是：
+
+```text
+POST /api/v1/memory-demo/chat?thread_id=chen
+```
+
+请求体是：
+
+```json
+{
+  "question": "我叫什么？"
+}
+```
+
+这样划分比较清楚：
+
+```text
+query parameter：控制这条消息属于哪个会话
+request body：用户真正输入的内容
+```
+
+所以 `thread_id` 不是问题正文的一部分，而是会话标识。
+
+### 10.3 API 层测试覆盖了什么
+
+测试文件：
+
+```text
+tests/test_backend_memory_demo.py
+```
+
+覆盖：
+
+- 同一个 `thread_id` 能记住名字
+- 不同 `thread_id` 不共享记忆
+- 没传 `thread_id` 时返回 `422`
+
+这说明 memory demo 已经从函数级验证，扩展到了 API 级验证。
+
+### 10.4 这个 API 的局限
+
+当前 Memory Demo API 仍然只是教学接口。
+
+它还没有：
+
+- 接入正式企业知识库 Agent
+- 写入 SQLite
+- 支持长期记忆
+- 支持多用户权限隔离
+- 支持多进程共享记忆
+- 接入 Streamlit 会话管理
+
+它的价值是帮助我理解：
+
+```text
+FastAPI 请求如何通过 thread_id 调用同一个 LangGraph memory graph。
+```
+
+## 11. 当前阶段理解
 
 我现在理解：
 
@@ -300,7 +402,7 @@ Message
 
 它只是帮助我理解 LangGraph memory 的最小机制。
 
-## 11. 下一步方向
+## 12. 下一步方向
 
 下一步可以继续学习：
 

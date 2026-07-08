@@ -741,6 +741,97 @@ decide_intent_node -> search_knowledge_node -> validate_context_node -> answer_n
 - 与手写 Simple Agent 相比，该接口使用 LangGraph 的 `StateGraph`、`add_node`、`add_edge` 和 `add_conditional_edges` 管理流程。
 - 保留旧接口是为了安全迁移和对比测试，避免一次性替换造成回归风险。
 
+### POST /api/v1/memory-demo/chat
+
+运行 LangGraph memory/checkpoint 教学接口。
+
+该接口用于演示：
+
+```text
+同一个 thread_id 可以接上之前的 State。
+不同 thread_id 之间互相隔离。
+```
+
+请求示例：
+
+```text
+POST /api/v1/memory-demo/chat?thread_id=chen
+```
+
+请求体：
+
+```json
+{
+  "question": "我叫陈晨"
+}
+```
+
+返回示例：
+
+```json
+{
+  "messages": ["我叫陈晨"],
+  "remembered_name": "陈晨",
+  "answer": "我记住了，你叫陈晨。",
+  "steps": ["remember_name: 我叫陈晨"]
+}
+```
+
+再次使用同一个 `thread_id` 请求：
+
+```json
+{
+  "question": "我叫什么？"
+}
+```
+
+返回示例：
+
+```json
+{
+  "messages": ["我叫陈晨", "我叫什么？"],
+  "remembered_name": "陈晨",
+  "answer": "你叫陈晨。",
+  "steps": [
+    "remember_name: 我叫陈晨",
+    "recall_name: 我叫什么？"
+  ]
+}
+```
+
+如果换成另一个 `thread_id`：
+
+```text
+POST /api/v1/memory-demo/chat?thread_id=other
+```
+
+再问：
+
+```json
+{
+  "question": "我叫什么？"
+}
+```
+
+会返回：
+
+```json
+{
+  "messages": ["我叫什么？"],
+  "remembered_name": null,
+  "answer": "我还不知道你的名字。",
+  "steps": ["missing_memory: 我叫什么？"]
+}
+```
+
+说明：
+
+- `thread_id` 相当于会话 ID。
+- 该接口使用 `InMemorySaver`，只适合本地学习和演示。
+- 后端进程重启后，内存中的记忆会消失。
+- 当前接口不是正式企业知识库 Agent 的长期记忆方案。
+- 正式项目后续可以结合 `Conversation`、`Message` 和数据库持久化实现长期会话记忆。
+
 ## 反馈接口
 
 ### POST /api/v1/feedback
