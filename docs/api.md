@@ -832,6 +832,142 @@ POST /api/v1/memory-demo/chat?thread_id=other
 - 当前接口不是正式企业知识库 Agent 的长期记忆方案。
 - 正式项目后续可以结合 `Conversation`、`Message` 和数据库持久化实现长期会话记忆。
 
+## Conversation 接口
+
+Conversation 接口用于保存会话和消息。
+
+当前它还没有直接接入正式 Agent，而是先提供数据库层面的会话存储能力，为后续 LangGraph memory 和长期对话历史做准备。
+
+### POST /api/v1/conversations
+
+创建一个新会话。
+
+请求示例：
+
+```json
+{
+  "title": "第一次对话"
+}
+```
+
+成功返回：
+
+```json
+{
+  "id": 1,
+  "title": "第一次对话"
+}
+```
+
+说明：
+
+- `title` 不能为空。
+- 返回的 `id` 后续可以作为会话 ID 使用。
+- 未来可以把 `conversation_id` 转成 LangGraph 的 `thread_id`。
+
+### GET /api/v1/conversations
+
+查看会话列表。
+
+返回示例：
+
+```json
+[
+  {
+    "id": 1,
+    "title": "第一次对话"
+  },
+  {
+    "id": 2,
+    "title": "第二次对话"
+  }
+]
+```
+
+说明：
+
+- 该接口适合前端展示历史会话列表。
+
+### POST /api/v1/conversations/{conversation_id}/messages
+
+向某个会话新增一条消息。
+
+请求示例：
+
+```text
+POST /api/v1/conversations/1/messages
+```
+
+请求体：
+
+```json
+{
+  "role": "user",
+  "content": "我叫陈晨"
+}
+```
+
+成功返回：
+
+```json
+{
+  "id": 1,
+  "conversation_id": 1,
+  "role": "user",
+  "content": "我叫陈晨"
+}
+```
+
+说明：
+
+- `role` 可以表示消息角色，例如 `user` 或 `assistant`。
+- `content` 是消息正文。
+- 新增消息前会先检查 conversation 是否存在。
+- 如果 conversation 不存在，返回 `404`。
+
+错误示例：
+
+```json
+{
+  "detail": "会话不存在。"
+}
+```
+
+### GET /api/v1/conversations/{conversation_id}/messages
+
+查看某个会话下的消息列表。
+
+请求示例：
+
+```text
+GET /api/v1/conversations/1/messages
+```
+
+返回示例：
+
+```json
+[
+  {
+    "id": 1,
+    "conversation_id": 1,
+    "role": "user",
+    "content": "我叫陈晨"
+  },
+  {
+    "id": 2,
+    "conversation_id": 1,
+    "role": "assistant",
+    "content": "我记住了，你叫陈晨。"
+  }
+]
+```
+
+说明：
+
+- 一个 conversation 可以有多条 messages。
+- `conversation_id` 用来建立 conversation 和 messages 的一对多关系。
+- 如果 conversation 不存在，返回 `404`。
+
 ## 反馈接口
 
 ### POST /api/v1/feedback

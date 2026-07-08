@@ -406,7 +406,144 @@ thread_id=other
 - 后端进程重启后，记忆会消失。
 - 这个接口用于理解 LangGraph checkpoint，不是正式长期记忆方案。
 
-## 14. 后端旧进程排查
+## 14. 测试 Conversation API
+
+Conversation API 用于保存会话和消息，是后续正式接入 LangGraph memory 的数据库基础。
+
+启动 FastAPI 后端后，可以在 `/docs` 中测试。
+
+### 14.1 创建会话
+
+接口：
+
+```text
+POST /api/v1/conversations
+```
+
+请求：
+
+```json
+{
+  "title": "第一次对话"
+}
+```
+
+预期返回：
+
+```json
+{
+  "id": 1,
+  "title": "第一次对话"
+}
+```
+
+### 14.2 查看会话列表
+
+接口：
+
+```text
+GET /api/v1/conversations
+```
+
+预期返回会话列表：
+
+```json
+[
+  {
+    "id": 1,
+    "title": "第一次对话"
+  }
+]
+```
+
+### 14.3 给会话新增消息
+
+接口：
+
+```text
+POST /api/v1/conversations/1/messages
+```
+
+请求：
+
+```json
+{
+  "role": "user",
+  "content": "我叫陈晨"
+}
+```
+
+也可以新增 assistant 消息：
+
+```json
+{
+  "role": "assistant",
+  "content": "我记住了，你叫陈晨。"
+}
+```
+
+### 14.4 查看会话消息
+
+接口：
+
+```text
+GET /api/v1/conversations/1/messages
+```
+
+预期返回：
+
+```json
+[
+  {
+    "id": 1,
+    "conversation_id": 1,
+    "role": "user",
+    "content": "我叫陈晨"
+  },
+  {
+    "id": 2,
+    "conversation_id": 1,
+    "role": "assistant",
+    "content": "我记住了，你叫陈晨。"
+  }
+]
+```
+
+### 14.5 找不到会话时
+
+如果请求：
+
+```text
+GET /api/v1/conversations/999/messages
+```
+
+预期返回：
+
+```text
+404
+```
+
+原因：
+
+```text
+找不到会话是一种可预期的业务结果，不是系统崩溃。
+```
+
+后续可以把：
+
+```text
+conversation_id
+```
+
+作为 LangGraph 的：
+
+```text
+thread_id
+```
+
+这样数据库中的长期会话历史和 LangGraph 的运行时 memory 就可以对齐。
+
+## 15. 后端旧进程排查
 
 在 Windows 上使用 `uvicorn --reload` 时，偶尔会出现旧的父子进程没有完全退出，导致代码已经修改，但 API 仍然返回旧逻辑。
 
