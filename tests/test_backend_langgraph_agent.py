@@ -177,3 +177,62 @@ def test_langgraph_agent_chat_endpoint_asks_clarification_when_title_missing(
     assert data["steps"][1]["tool"] == "extract_document_title"
     assert data["steps"][1]["next_action"] == "ask_clarification_node"
     assert data["steps"][2]["tool"] == "ask_clarification_tool"
+
+
+def test_langgraph_agent_conversation_chat_saves_messages(tmp_path):
+    database_path = tmp_path / "test.db"
+
+    app.dependency_overrides[get_database_path] = lambda: str(database_path)
+    app.dependency_overrides[get_langgraph_agent_generator] = (
+        lambda: lambda prompt: "新员工需要在入职后 30 天内完成安全培训。"
+    )
+
+    conversation_response = client.post(
+        "/api/v1/conversations",
+        json={"title": "第一次对话"},
+    )
+
+    conversation_id = conversation_response.json()["id"]
+
+    response = client.post(
+        f"/api/v1/langgraph-agent/conversations/{conversation_id}/chat",
+        json={"question": "公司有没有股票期权？"},
+    )
+
+    messages_response = client.get(
+        f"/api/v1/conversations/{conversation_id}/messages"
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert messages_response.status_code == 200
+
+    data = response.json()
+    messages = messages_response.json()
+
+    assert data["conversation_id"] == conversation_id
+    assert len(data["saved_messages"]) == 2
+
+    assert messages[0]["role"] == "user"
+    assert messages[0]["content"] == "公司有没有股票期权？"
+    assert messages[1]["role"] == "assistant"
+    assert messages[1]["content"] == data["answer"]
+
+
+def test_langgraph_agent_conversation_chat_returns_404_when_conversation_not_found(
+    tmp_path,
+):
+    database_path = tmp_path / "test.db"
+
+    app.dependency_overrides[get_database_path] = lambda: str(database_path)
+
+    response = client.post(
+        "/api/v1/langgraph-agent/conversations/999/chat",
+        json={"question": "公司有没有股票期权？"},
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "会话不存在。"
