@@ -532,11 +532,13 @@ POST /api/v1/agent/chat?mode=keyword&top_k=3
 
 1. 使用 `decide_agent_intent` 判断用户意图
 2. 如果是文档列表类问题，则调用 `list_documents_tool`
-3. 如果是普通问答，则调用 `search_knowledge_base_tool`
-4. 调用 `validate_context_node` 判断检索片段是否真的包含有效上下文
-5. 如果上下文有效，则调用 `answer_with_context_tool`
-6. 如果上下文无效，则调用 `refuse_answer_tool`
-7. 返回回答、引用来源和 LangGraph 执行步骤
+3. 如果是读取文档类问题，则调用 `extract_document_title`、`find_document_by_title_tool` 和 `read_document_chunks_tool`
+4. 如果读取文档类问题缺少文档标题，或找不到文档，则调用 `ask_clarification_tool`
+5. 如果是普通问答，则调用 `search_knowledge_base_tool`
+6. 调用 `validate_context_node` 判断检索片段是否真的包含有效上下文
+7. 如果上下文有效，则调用 `answer_with_context_tool`
+8. 如果上下文无效，则调用 `refuse_answer_tool`
+9. 返回回答、引用来源和 LangGraph 执行步骤
 
 请求示例：
 
@@ -642,6 +644,87 @@ POST /api/v1/langgraph-agent/chat?mode=keyword&top_k=3
 decide_intent_node -> list_documents_node -> END
 ```
 
+读取文档类请求示例：
+
+```json
+{
+  "question": "查看员工手册的片段"
+}
+```
+
+该类问题会走：
+
+```text
+decide_intent_node -> extract_document_title_node -> find_document_node -> read_document_chunks_node -> END
+```
+
+读取文档类返回示例：
+
+```json
+{
+  "question": "查看员工手册的片段",
+  "intent": "read_document",
+  "keyword": "员工手册",
+  "document_title": "员工手册",
+  "answer": "员工手册 的片段如下：\n[1] 员工每天需要完成 8 小时工作。\n[2] 新员工入职后需要在 30 天内完成安全培训。",
+  "citations": [
+    {
+      "title": "员工手册",
+      "text": "员工每天需要完成 8 小时工作。",
+      "path": "sqlite://1"
+    },
+    {
+      "title": "员工手册",
+      "text": "新员工入职后需要在 30 天内完成安全培训。",
+      "path": "sqlite://1"
+    }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "tool": "decide_agent_intent",
+      "observation": {
+        "intent": "read_document"
+      },
+      "next_action": "route_by_intent"
+    },
+    {
+      "step": 2,
+      "tool": "extract_document_title",
+      "observation": {
+        "document_title": "员工手册",
+        "missing_field": ""
+      },
+      "next_action": "find_document_node"
+    },
+    {
+      "step": 3,
+      "tool": "find_document_by_title_tool",
+      "observation": {
+        "found": true,
+        "document_id": 1,
+        "match_type": "exact"
+      },
+      "next_action": "read_document_chunks_node"
+    },
+    {
+      "step": 4,
+      "tool": "read_document_chunks_tool",
+      "observation": {
+        "chunk_count": 2
+      },
+      "next_action": "finish"
+    }
+  ]
+}
+```
+
+如果读取文档类问题缺少标题，则会走：
+
+```text
+decide_intent_node -> extract_document_title_node -> ask_clarification_node -> END
+```
+
 普通问答类问题会走：
 
 ```text
@@ -651,9 +734,8 @@ decide_intent_node -> search_knowledge_node -> validate_context_node -> answer_n
 说明：
 
 - 这是项目中的 LangGraph 版本 Agent 流程。
-- 当前支持 `list_documents` 和 `answer_question` 两类主要路线。
-- 当前暂未支持 `read_document` 路线；读取指定文档仍然使用 `/api/v1/agent/chat`。
-- 该接口复用了真实 Agent Tools，包括 `list_documents_tool`、`search_knowledge_base_tool`、`answer_with_context_tool` 和 `refuse_answer_tool`。
+- 当前支持三类主要路线：`list_documents`、`read_document` 和 `answer_question`。
+- 该接口复用了真实 Agent Tools，包括 `list_documents_tool`、`find_document_by_title_tool`、`read_document_chunks_tool`、`search_knowledge_base_tool`、`answer_with_context_tool` 和 `refuse_answer_tool`。
 - `validate_context_node` 用于降低“embedding 检索命中了无关片段也强行回答”的风险。
 - 当前上下文校验规则比较保守：关键词需要出现在至少一个检索片段文本中，后续可以升级为更稳健的语义相关性判断。
 - 与手写 Simple Agent 相比，该接口使用 LangGraph 的 `StateGraph`、`add_node`、`add_edge` 和 `add_conditional_edges` 管理流程。
