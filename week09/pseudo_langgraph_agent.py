@@ -4,6 +4,7 @@ from typing import TypedDict
 class AgentState(TypedDict):
     question: str
     intent: str | None
+    has_context: bool
     answer: str | None
     steps: list[str]
 
@@ -12,6 +13,7 @@ def create_initial_state(question: str) -> AgentState:
     return {
         "question": question,
         "intent": None,
+        "has_context": False,
         "answer": None,
         "steps": [],
     }
@@ -57,8 +59,18 @@ def read_document_node(state: AgentState) -> AgentState:
 
 
 def answer_question_node(state: AgentState) -> AgentState:
-    state["steps"].append("知识库问答")
-    state["answer"] = "这是根据知识库生成的回答"
+    question = state["question"]
+
+    if "股票期权" in question:
+        state["has_context"] = False
+        state["steps"].append("未找到知识库证据")
+        state["answer"] = "知识库中没有找到相关资料，暂时无法回答。"
+    else:
+        state["has_context"] = True
+        state["steps"].append("找到知识库证据")
+        state["steps"].append("知识库问答")
+        state["answer"] = "这是根据知识库生成的回答"
+
     return state
 
 
