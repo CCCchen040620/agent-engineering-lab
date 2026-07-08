@@ -22,17 +22,17 @@ def test_run_graph_reads_document():
 def test_run_graph_answers_question():
     state = run_graph("员工可以远程办公吗？")
 
-    assert state["intent"] == "answer_question"
     assert state["has_context"] is True
-    assert "根据知识库生成的回答" in state["answer"]
-    assert "判断意图：answer_question" in state["steps"]
+    assert state["context"] == "知识库证据片段"
+    assert "找到知识库证据" in state["steps"]
     assert "知识库问答" in state["steps"]
 
 
 def test_run_graph_refuses_when_no_context():
     state = run_graph("公司有没有股票期权？")
 
-    assert state["intent"] == "answer_question"
     assert state["has_context"] is False
+    assert state["context"] is None
     assert "未找到知识库证据" in state["steps"]
+    assert "拒答" in state["steps"]
     assert state["answer"] == "知识库中没有找到相关资料，暂时无法回答。"

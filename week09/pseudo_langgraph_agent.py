@@ -5,6 +5,7 @@ class AgentState(TypedDict):
     question: str
     intent: str | None
     has_context: bool
+    context: str | None
     answer: str | None
     steps: list[str]
 
@@ -14,6 +15,7 @@ def create_initial_state(question: str) -> AgentState:
         "question": question,
         "intent": None,
         "has_context": False,
+        "context": None,
         "answer": None,
         "steps": [],
     }
@@ -58,19 +60,37 @@ def read_document_node(state: AgentState) -> AgentState:
     return state
 
 
-def answer_question_node(state: AgentState) -> AgentState:
+def search_context_node(state: AgentState) -> AgentState:
     question = state["question"]
 
     if "股票期权" in question:
         state["has_context"] = False
+        state["context"] = None
         state["steps"].append("未找到知识库证据")
-        state["answer"] = "知识库中没有找到相关资料，暂时无法回答。"
     else:
         state["has_context"] = True
+        state["context"] = "知识库证据片段"
         state["steps"].append("找到知识库证据")
-        state["steps"].append("知识库问答")
-        state["answer"] = "这是根据知识库生成的回答"
 
+    return state
+
+
+def route_by_context(state: AgentState) -> str:
+    if state["has_context"]:
+        return "answer_node"
+
+    return "refuse_node"
+
+
+def answer_node(state: AgentState) -> AgentState:
+    state["steps"].append("知识库问答")
+    state["answer"] = "这是根据知识库生成的回答"
+    return state
+
+
+def refuse_node(state: AgentState) -> AgentState:
+    state["steps"].append("拒答")
+    state["answer"] = "知识库中没有找到相关资料，暂时无法回答。"
     return state
 
 
@@ -86,6 +106,12 @@ def run_graph(question: str) -> AgentState:
     elif next_node == "read_document_node":
         state = read_document_node(state)
     else:
-        state = answer_question_node(state)
+        state = search_context_node(state)
+        context_next_node = route_by_context(state)
+
+        if context_next_node == "answer_node":
+            state = answer_node(state)
+        else:
+            state = refuse_node(state)
 
     return state
