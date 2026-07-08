@@ -97,3 +97,39 @@ steps
 我仍然需要自己定义 State、写 Node、写 Route 函数。
 LangGraph 主要替代的是手写流程调度代码。
 伪 Graph 帮我理解了底层逻辑，真实 LangGraph 则把这种逻辑框架化。
+
+第二层条件分流:
+
+第一层条件分流从 `decide_intent_node` 开始，根据 `intent` 选择路线。
+
+第二层条件分流从 `search_context_node` 开始，根据 `has_context` 选择路线。
+
+```text
+search_context_node
+  ↓
+route_by_context
+  ├── answer_node
+  └── refuse_node
+
+context 和 has_context 的区别:
+context 保存证据内容。
+has_context 表示是否找到了证据，是布尔值。
+例如：
+{
+    "has_context": True,
+    "context": "知识库证据片段"
+}
+表示找到证据。
+
+{
+    "has_context": False,
+    "context": None
+}
+表示没有找到证据。
+
+当前结束节点:
+当前真正连到 END 的节点有 4 个：
+list_documents_node
+read_document_node
+answer_node
+refuse_node
