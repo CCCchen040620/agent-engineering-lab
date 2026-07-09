@@ -1,7 +1,7 @@
-from backend.services.langgraph_agent import (
+from backend.services.conversation_context_service import (
     infer_document_title_from_messages,
-    run_langgraph_agent,
 )
+from backend.services.langgraph_agent import run_langgraph_agent
 from backend.services.sqlite_document_repository import (
     create_chunks_table,
     create_connection,
@@ -87,7 +87,7 @@ def test_infer_document_title_from_messages_uses_latest_user_document():
 
     assert result == "请假制度"
 
-    
+
 def test_run_langgraph_agent_lists_documents(tmp_path):
     database_path = tmp_path / "test.db"
     connection = create_connection(str(database_path))
