@@ -804,13 +804,18 @@ POST /api/v1/langgraph-agent/conversations/1/chat?mode=keyword&top_k=3
 
 说明：
 
-- 该接口是带长期消息存储的 LangGraph Agent 实验接口。
+- 该接口是带会话消息存储的 LangGraph Agent 实验接口。
 - 它不会替换 `/api/v1/langgraph-agent/chat`。
 - `/api/v1/langgraph-agent/chat` 是无会话版本。
 - `/api/v1/langgraph-agent/conversations/{conversation_id}/chat` 会把本轮 user/assistant 消息保存到 SQLite。
 - Streamlit 用户问答页在选择 `LangGraph Agent 问答` 并勾选 `保存 LangGraph Agent 问答到会话` 时，会调用该接口。
 - 返回中的 `saved_messages` 会被前端用于显示本轮实际保存了几条消息。
-- 当前接口还没有把历史消息重新喂给 Agent 做多轮推理。
+- 当前接口会读取该 `conversation_id` 下已有的 messages，并用于有限的上下文增强。
+- assistant 消息会在 `metadata` 中保存 `intent`、`keyword`、`citations` 和 `steps`。
+- 如果历史 assistant 消息里有引用文档，后续问题会尝试基于最近引用文档构造 `contextual_question`。
+- 当最近引用文档存在时，检索结果会优先过滤到该文档，减少无关引用混入。
+- 如果当前问题和历史上下文不相关，Agent 会拒答，避免被旧上下文带偏。
+- 这还不是完整长期记忆：当前没有做长期摘要、用户画像、跨会话记忆，也没有把全部历史内容交给模型自由推理。
 - 它和 Memory Demo API 不同：Memory Demo 使用 `InMemorySaver`，重启会丢；该接口把消息写入 SQLite，重启后消息仍然存在。
 
 ### POST /api/v1/memory-demo/chat

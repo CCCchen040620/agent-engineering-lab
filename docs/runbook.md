@@ -660,11 +660,69 @@ GET /api/v1/conversations/1/messages
 
 说明：
 
-- 这个页面功能只是把本轮问答保存下来。
-- 当前还没有把历史消息重新传给 Agent 做多轮推理。
-- 所以它属于“长期消息记录”的第一步，还不是完整的长期记忆 Agent。
+- 该页面会把本轮 user/assistant 消息保存到 SQLite。
+- 带会话存储的 LangGraph Agent 会读取同一 `conversation_id` 下的历史 messages，做有限的上下文增强。
+- 当前支持基于最近引用文档构造 `contextual_question`，例如把“每天需要工作多久？”改写为“员工手册 每天需要工作多久？”。
+- 当前会按最近引用文档过滤 snippets，减少无关引用混入。
+- 如果当前问题和历史上下文不相关，Agent 应该拒答，避免上下文污染。
+- 这还不是完整长期记忆：目前没有长期摘要、用户画像、跨会话记忆，也没有把全部历史内容交给模型自由推理。
 
-### 15.5 会话不存在时
+### 15.5 验收会话上下文检索增强
+
+该验收用于确认“历史消息能辅助后续检索，但不会污染无关问题”。
+
+前置条件：
+
+1. 创建一个新的 conversation。
+2. 调用带会话存储的 LangGraph Agent。
+3. 查询参数建议使用：
+
+```text
+mode=vector
+top_k=3
+min_score=0
+```
+
+第一轮问题：
+
+```json
+{
+  "question": "新员工什么时候完成安全培训？"
+}
+```
+
+预期：回答引用 `员工手册`。
+
+第二轮问题：
+
+```json
+{
+  "question": "每天需要工作多久？"
+}
+```
+
+预期：
+
+- 回答包含 `8 小时`
+- `steps` 中的 `search_knowledge_base_tool.input.contextual_question` 类似 `员工手册 每天需要工作多久？`
+- `context_document_title` 为 `员工手册`
+- `citations` 只保留 `员工手册` 相关片段
+
+第三轮问题：
+
+```json
+{
+  "question": "报销需要什么材料？"
+}
+```
+
+预期：
+
+- `has_valid_context` 为 `false`
+- `citations` 为空列表
+- 回答为拒答文案，不能强行使用 `员工手册` 回答报销问题
+
+### 15.6 会话不存在时
 
 如果请求：
 
@@ -686,9 +744,9 @@ POST /api/v1/langgraph-agent/conversations/999/chat
 
 注意：
 
-- 当前接口只是把本轮问答写入 SQLite。
-- 它还没有把历史消息重新传给 Agent 参与多轮推理。
-- 后续可以让 `conversation_id` 同时作为 LangGraph 的 `thread_id`，再结合历史 messages 实现正式多轮对话。
+- 当前接口已经会读取历史 messages 做有限上下文增强。
+- 它仍不是完整长期记忆方案。
+- 后续可以继续引入摘要记忆、历史压缩、用户偏好记忆，以及更完整的 LangGraph checkpoint 持久化。
 
 ## 16. 后端旧进程排查
 
