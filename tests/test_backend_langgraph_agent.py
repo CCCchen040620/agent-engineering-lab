@@ -410,3 +410,91 @@ def test_langgraph_agent_conversation_chat_uses_citation_metadata(tmp_path):
     assert data["document_title"] == "员工手册"
     assert data["steps"][1]["observation"]["source"] == "messages"
     assert "新员工入职后需要在 30 天内完成安全培训。" in data["answer"]
+
+
+def test_langgraph_agent_conversation_chat_uses_context_for_search(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=1,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="员工每天需要完成 8 小时工作。",
+    )
+
+    connection.close()
+
+    app.dependency_overrides[get_database_path] = lambda: str(database_path)
+    app.dependency_overrides[get_langgraph_agent_generator] = (
+        lambda: lambda prompt: "员工每天需要完成 8 小时工作。"
+    )
+
+    conversation_response = client.post(
+        "/api/v1/conversations",
+        json={"title": "上下文检索测试"},
+    )
+
+    conversation_id = conversation_response.json()["id"]
+
+    connection = create_connection(str(database_path))
+
+    create_conversations_table(connection)
+    create_messages_table(connection)
+
+    add_message(
+        connection,
+        conversation_id=conversation_id,
+        role="assistant",
+        content="新员工需要在入职后 30 天内完成安全培训。",
+        metadata={
+            "citations": [
+                {
+                    "title": "员工手册",
+                    "text": "新员工入职后需要在 30 天内完成安全培训。",
+                    "path": "sqlite://1",
+                }
+            ]
+        },
+    )
+
+    connection.close()
+
+    response = client.post(
+        f"/api/v1/langgraph-agent/conversations/{conversation_id}/chat",
+        json={"question": "每天需要工作多久？"},
+        params={"mode": "vector", "min_score": 0.0},
+    )
+
+    messages_response = client.get(
+        f"/api/v1/conversations/{conversation_id}/messages"
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert messages_response.status_code == 200
+
+    data = response.json()
+    messages = messages_response.json()
+
+    assert data["intent"] == "answer_question"
+    assert data["answer"] == "员工每天需要完成 8 小时工作。"
+    assert len(data["citations"]) == 1
+    assert data["citations"][0]["title"] == "员工手册"
+    assert data["steps"][1]["input"]["contextual_question"] == "员工手册 每天需要工作多久？"
+    assert data["steps"][1]["input"]["context_document_title"] == "员工手册"
+
+    assert messages[-1]["role"] == "assistant"
+    assert messages[-1]["content"] == data["answer"]
+    assert messages[-1]["metadata"]["citations"] == data["citations"]
