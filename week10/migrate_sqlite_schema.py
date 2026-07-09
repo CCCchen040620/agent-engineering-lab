@@ -1,5 +1,9 @@
 import sqlite3
 
+from backend.services.sqlite_conversation_repository import (
+    create_conversations_table,
+    create_messages_table,
+)
 from week04.settings import SQLITE_DATABASE_PATH
 
 
@@ -32,10 +36,16 @@ def migrate_messages_metadata_json(connection: sqlite3.Connection) -> None:
     connection.commit()
 
 
+def migrate_conversation_schema(connection: sqlite3.Connection) -> None:
+    create_conversations_table(connection)
+    create_messages_table(connection)
+    migrate_messages_metadata_json(connection)
+
+
 def main() -> None:
     connection = sqlite3.connect(SQLITE_DATABASE_PATH)
 
-    migrate_messages_metadata_json(connection)
+    migrate_conversation_schema(connection)
 
     connection.close()
 

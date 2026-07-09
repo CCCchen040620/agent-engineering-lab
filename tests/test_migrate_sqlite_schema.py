@@ -2,6 +2,7 @@ import sqlite3
 
 from week10.migrate_sqlite_schema import (
     column_exists,
+    migrate_conversation_schema,
     migrate_messages_metadata_json,
 )
 
@@ -79,5 +80,34 @@ def test_migrate_messages_metadata_json_can_run_twice():
     migrate_messages_metadata_json(connection)
 
     assert column_exists(connection, "messages", "metadata_json") is True
+
+    connection.close()
+
+
+def test_migrate_conversation_schema_creates_missing_tables():
+    connection = sqlite3.connect(":memory:")
+
+    migrate_conversation_schema(connection)
+
+    assert column_exists(connection, "messages", "metadata_json") is True
+
+    conversations_table = connection.execute(
+        """
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table' AND name = 'conversations'
+        """
+    ).fetchone()
+
+    messages_table = connection.execute(
+        """
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table' AND name = 'messages'
+        """
+    ).fetchone()
+
+    assert conversations_table is not None
+    assert messages_table is not None
 
     connection.close()
