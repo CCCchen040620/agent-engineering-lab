@@ -307,6 +307,25 @@ def read_document_chunks_node(state: LangGraphAgentState) -> dict:
     }
 
 
+def filter_snippets_by_context_document(
+    snippets: list[dict],
+    context_document_title: str,
+) -> list[dict]:
+    if context_document_title == "":
+        return snippets
+
+    context_snippets = []
+
+    for snippet in snippets:
+        if snippet["title"] == context_document_title:
+            context_snippets.append(snippet)
+
+    if context_snippets == []:
+        return snippets
+
+    return context_snippets
+
+
 def search_knowledge_node(state: LangGraphAgentState) -> dict:
     context_document_title = find_latest_cited_document_title(state["messages"])
 
@@ -323,7 +342,10 @@ def search_knowledge_node(state: LangGraphAgentState) -> dict:
         min_score=state["min_score"],
     )
 
-    snippets = tool_result["snippets"]
+    snippets = filter_snippets_by_context_document(
+    snippets=tool_result["snippets"],
+    context_document_title=context_document_title,
+    )
 
     next_action = "validate_context"
 
@@ -347,7 +369,7 @@ def search_knowledge_node(state: LangGraphAgentState) -> dict:
                 },
                 "observation": {
                     "keyword": tool_result["keyword"],
-                    "result_count": tool_result["count"],
+                    "result_count": len(snippets),
                 },
                 "next_action": next_action,
             }
