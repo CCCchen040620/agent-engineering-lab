@@ -15,13 +15,10 @@ from backend.services.conversation_context_service import (
     build_contextual_question,
     find_latest_cited_document_title,
     infer_document_title_from_messages,
+    is_contextual_context_valid,
 )
 from backend.services.simple_agent import decide_agent_intent, extract_document_title
 from week04.settings import SQLITE_DATABASE_PATH
-from week07.simple_vector_search import (
-    build_term_frequency,
-    cosine_similarity,
-)
 
 
 class LangGraphAgentState(TypedDict):
@@ -367,36 +364,6 @@ def is_context_valid(keyword: str, snippets: list[dict]) -> bool:
 
     for snippet in snippets:
         if keyword in snippet["text"]:
-            return True
-
-    return False
-
-
-def calculate_question_similarity(question: str, text: str) -> float:
-    question_vector = build_term_frequency(question)
-    text_vector = build_term_frequency(text)
-
-    return cosine_similarity(question_vector, text_vector)
-
-
-def is_contextual_context_valid(
-    question: str,
-    context_document_title: str,
-    snippets: list[dict],
-) -> bool:
-    if context_document_title == "":
-        return False
-
-    for snippet in snippets:
-        if snippet["title"] != context_document_title:
-            continue
-
-        question_similarity = calculate_question_similarity(
-            question=question,
-            text=snippet["text"],
-        )
-
-        if question_similarity >= 0.3:
             return True
 
     return False

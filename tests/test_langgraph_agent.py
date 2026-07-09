@@ -1,8 +1,8 @@
-from backend.services.langgraph_agent import (
+from backend.services.conversation_context_service import (
     calculate_question_similarity,
     is_contextual_context_valid,
-    run_langgraph_agent,
 )
+from backend.services.langgraph_agent import run_langgraph_agent
 from backend.services.sqlite_document_repository import (
     create_chunks_table,
     create_connection,
@@ -56,7 +56,7 @@ def test_is_contextual_context_valid_returns_false_for_unrelated_context():
 
     assert result is False
 
-    
+
 def test_run_langgraph_agent_lists_documents(tmp_path):
     database_path = tmp_path / "test.db"
     connection = create_connection(str(database_path))

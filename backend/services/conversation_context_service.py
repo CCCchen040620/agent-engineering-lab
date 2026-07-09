@@ -1,3 +1,9 @@
+from week07.simple_vector_search import (
+    build_term_frequency,
+    cosine_similarity,
+)
+
+
 def find_latest_cited_document_title(messages: list[dict]) -> str:
     for message in reversed(messages):
         metadata = message.get("metadata", {})
@@ -16,6 +22,36 @@ def build_contextual_question(question: str, messages: list[dict]) -> str:
         return question
 
     return latest_cited_document_title + " " + question
+
+
+def calculate_question_similarity(question: str, text: str) -> float:
+    question_vector = build_term_frequency(question)
+    text_vector = build_term_frequency(text)
+
+    return cosine_similarity(question_vector, text_vector)
+
+
+def is_contextual_context_valid(
+    question: str,
+    context_document_title: str,
+    snippets: list[dict],
+) -> bool:
+    if context_document_title == "":
+        return False
+
+    for snippet in snippets:
+        if snippet["title"] != context_document_title:
+            continue
+
+        question_similarity = calculate_question_similarity(
+            question=question,
+            text=snippet["text"],
+        )
+
+        if question_similarity >= 0.3:
+            return True
+
+    return False
 
     
 def infer_document_title_from_messages(messages: list[dict]) -> str:
