@@ -276,7 +276,29 @@ qwen3.6:latest  用于生成回答
 bge-m3:latest   用于生成 embeddings
 ```
 
-## 9. 补齐历史 chunk embeddings
+## 9. 迁移 SQLite schema
+
+当代码新增了数据库字段，而本地 `data/app.db` 是旧版本时，需要先运行迁移脚本。
+
+例如本项目新增 conversation message 的 `metadata_json` 字段后，旧数据库如果没有该字段，带会话存储的 LangGraph Agent 可能会在保存消息时报错。
+
+运行：
+
+```powershell
+python -m week10.migrate_sqlite_schema
+```
+
+该脚本会：
+
+- 创建缺失的 `conversations` 表
+- 创建缺失的 `messages` 表
+- 检查 `messages.metadata_json` 是否存在
+- 如果缺少 `metadata_json`，自动添加
+- 如果已经存在，直接跳过
+
+该脚本可以重复运行。
+
+## 10. 补齐历史 chunk embeddings
 
 ```powershell
 python -m week08.backfill_chunk_embeddings
@@ -291,7 +313,7 @@ python -m week08.backfill_chunk_embeddings
 
 该脚本可以重复运行。
 
-## 10. 运行 LLM RAG 评测
+## 11. 运行 LLM RAG 评测
 
 默认配置：
 
@@ -311,7 +333,7 @@ python -m week07.evaluate_llm_rag embedding 0.8
 docs/evaluations/llm-rag-run.md
 ```
 
-## 11. 比较检索模式
+## 12. 比较检索模式
 
 默认问题：
 
@@ -332,7 +354,7 @@ python -m week08.compare_retrieval_modes "员工可以远程办公吗？" 0.8
 - `embedding`
 - `precomputed_embedding`
 
-## 12. 配置环境变量
+## 13. 配置环境变量
 
 配置说明见：
 
@@ -347,7 +369,7 @@ $env:DEFAULT_MIN_SCORE="0.8"
 python -m streamlit run frontend/streamlit_app.py
 ```
 
-## 13. 测试 LangGraph Memory Demo API
+## 14. 测试 LangGraph Memory Demo API
 
 启动 FastAPI 后端后，可以在 `/docs` 中测试：
 
@@ -410,13 +432,13 @@ thread_id=other
 - 后端进程重启后，记忆会消失。
 - 这个接口用于理解 LangGraph checkpoint，不是正式长期记忆方案。
 
-## 14. 测试 Conversation API
+## 15. 测试 Conversation API
 
 Conversation API 用于保存会话和消息，是后续正式接入 LangGraph memory 的数据库基础。
 
 启动 FastAPI 后端后，可以在 `/docs` 中测试。
 
-### 14.1 创建会话
+### 15.1 创建会话
 
 接口：
 
@@ -441,7 +463,7 @@ POST /api/v1/conversations
 }
 ```
 
-### 14.2 查看会话列表
+### 15.2 查看会话列表
 
 接口：
 
@@ -460,7 +482,7 @@ GET /api/v1/conversations
 ]
 ```
 
-### 14.3 给会话新增消息
+### 15.3 给会话新增消息
 
 接口：
 
@@ -486,7 +508,7 @@ POST /api/v1/conversations/1/messages
 }
 ```
 
-### 14.4 查看会话消息
+### 15.4 查看会话消息
 
 接口：
 
@@ -513,7 +535,7 @@ GET /api/v1/conversations/1/messages
 ]
 ```
 
-### 14.5 找不到会话时
+### 15.5 找不到会话时
 
 如果请求：
 
@@ -547,7 +569,7 @@ thread_id
 
 这样数据库中的长期会话历史和 LangGraph 的运行时 memory 就可以对齐。
 
-## 15. 测试带会话存储的 LangGraph Agent
+## 16. 测试带会话存储的 LangGraph Agent
 
 该接口用于把 LangGraph Agent 的本轮问答结果保存到 SQLite messages 表。
 
@@ -560,7 +582,7 @@ thread_id
 | `/api/v1/memory-demo/chat?thread_id=...` | 演示 `InMemorySaver` 短期记忆 | 否 |
 | `/api/v1/langgraph-agent/conversations/{conversation_id}/chat` | 调用真实 LangGraph Agent，并保存 user/assistant 消息 | 是 |
 
-### 15.1 先创建会话
+### 16.1 先创建会话
 
 ```text
 POST /api/v1/conversations
@@ -580,7 +602,7 @@ POST /api/v1/conversations
 id
 ```
 
-### 15.2 调用带会话存储的 LangGraph Agent
+### 16.2 调用带会话存储的 LangGraph Agent
 
 假设会话 ID 是 `1`：
 
@@ -605,7 +627,7 @@ POST /api/v1/langgraph-agent/conversations/1/chat
   - `role=user`
   - `role=assistant`
 
-### 15.3 查看消息是否入库
+### 16.3 查看消息是否入库
 
 ```text
 GET /api/v1/conversations/1/messages
@@ -613,7 +635,7 @@ GET /api/v1/conversations/1/messages
 
 预期可以看到刚才保存的 user 和 assistant 消息。
 
-### 15.4 在 Streamlit 页面中保存 LangGraph Agent 问答
+### 16.4 在 Streamlit 页面中保存 LangGraph Agent 问答
 
 这个流程用于验收前端页面是否正确接入带会话存储的 LangGraph Agent。
 
@@ -667,7 +689,7 @@ GET /api/v1/conversations/1/messages
 - 如果当前问题和历史上下文不相关，Agent 应该拒答，避免上下文污染。
 - 这还不是完整长期记忆：目前没有长期摘要、用户画像、跨会话记忆，也没有把全部历史内容交给模型自由推理。
 
-### 15.5 验收会话上下文检索增强
+### 16.5 验收会话上下文检索增强
 
 该验收用于确认“历史消息能辅助后续检索，但不会污染无关问题”。
 
@@ -722,7 +744,7 @@ min_score=0
 - `citations` 为空列表
 - 回答为拒答文案，不能强行使用 `员工手册` 回答报销问题
 
-### 15.6 会话不存在时
+### 16.6 会话不存在时
 
 如果请求：
 
@@ -748,7 +770,7 @@ POST /api/v1/langgraph-agent/conversations/999/chat
 - 它仍不是完整长期记忆方案。
 - 后续可以继续引入摘要记忆、历史压缩、用户偏好记忆，以及更完整的 LangGraph checkpoint 持久化。
 
-## 16. 后端旧进程排查
+## 17. 后端旧进程排查
 
 在 Windows 上使用 `uvicorn --reload` 时，偶尔会出现旧的父子进程没有完全退出，导致代码已经修改，但 API 仍然返回旧逻辑。
 
