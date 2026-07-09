@@ -87,7 +87,7 @@ def test_migrate_messages_metadata_json_can_run_twice():
 def test_migrate_conversation_schema_creates_missing_tables():
     connection = sqlite3.connect(":memory:")
 
-    migrate_conversation_schema(connection)
+    result = migrate_conversation_schema(connection)
 
     assert column_exists(connection, "messages", "metadata_json") is True
 
@@ -109,5 +109,46 @@ def test_migrate_conversation_schema_creates_missing_tables():
 
     assert conversations_table is not None
     assert messages_table is not None
+    assert result == {
+        "conversations_table_ready": True,
+        "messages_table_ready": True,
+        "metadata_json_added": False,
+    }
+
+    connection.close()
+
+
+def test_migrate_conversation_schema_reports_metadata_json_added():
+    connection = sqlite3.connect(":memory:")
+
+    connection.execute(
+        """
+        CREATE TABLE conversations (
+            id INTEGER PRIMARY KEY,
+            title TEXT NOT NULL
+        )
+        """
+    )
+
+    connection.execute(
+        """
+        CREATE TABLE messages (
+            id INTEGER PRIMARY KEY,
+            conversation_id INTEGER NOT NULL,
+            role TEXT NOT NULL,
+            content TEXT NOT NULL
+        )
+        """
+    )
+
+    result = migrate_conversation_schema(connection)
+
+    assert result == {
+        "conversations_table_ready": True,
+        "messages_table_ready": True,
+        "metadata_json_added": True,
+    }
+
+    assert column_exists(connection, "messages", "metadata_json") is True
 
     connection.close()

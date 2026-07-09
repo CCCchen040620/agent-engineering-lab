@@ -22,9 +22,9 @@ def column_exists(
     return False
 
 
-def migrate_messages_metadata_json(connection: sqlite3.Connection) -> None:
+def migrate_messages_metadata_json(connection: sqlite3.Connection) -> bool:
     if column_exists(connection, "messages", "metadata_json"):
-        return
+        return False
 
     connection.execute(
         """
@@ -35,21 +35,31 @@ def migrate_messages_metadata_json(connection: sqlite3.Connection) -> None:
 
     connection.commit()
 
+    return True
 
-def migrate_conversation_schema(connection: sqlite3.Connection) -> None:
+
+def migrate_conversation_schema(connection: sqlite3.Connection) -> dict:
     create_conversations_table(connection)
     create_messages_table(connection)
-    migrate_messages_metadata_json(connection)
+
+    metadata_json_added = migrate_messages_metadata_json(connection)
+
+    return {
+        "conversations_table_ready": True,
+        "messages_table_ready": True,
+        "metadata_json_added": metadata_json_added,
+    }
 
 
 def main() -> None:
     connection = sqlite3.connect(SQLITE_DATABASE_PATH)
 
-    migrate_conversation_schema(connection)
+    result = migrate_conversation_schema(connection)
 
     connection.close()
 
     print("SQLite schema migration completed.")
+    print(result)
 
 
 if __name__ == "__main__":
