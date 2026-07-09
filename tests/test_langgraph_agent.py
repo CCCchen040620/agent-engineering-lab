@@ -285,6 +285,7 @@ def test_run_langgraph_agent_reads_document_chunks(tmp_path):
     assert result["steps"][0]["tool"] == "decide_agent_intent"
     assert result["steps"][0]["observation"]["intent"] == "read_document"
     assert result["steps"][1]["tool"] == "extract_document_title"
+    assert result["steps"][1]["observation"]["source"] == "question"
     assert result["steps"][2]["tool"] == "find_document_by_title_tool"
     assert result["steps"][2]["observation"]["found"] is True
     assert result["steps"][3]["tool"] == "read_document_chunks_tool"
@@ -306,6 +307,7 @@ def test_run_langgraph_agent_asks_clarification_when_document_title_is_missing(t
 
     assert result["steps"][0]["tool"] == "decide_agent_intent"
     assert result["steps"][1]["tool"] == "extract_document_title"
+    assert result["steps"][1]["observation"]["source"] == "none"
     assert result["steps"][1]["next_action"] == "ask_clarification_node"
     assert result["steps"][2]["tool"] == "ask_clarification_tool"
 
@@ -390,6 +392,7 @@ def test_run_langgraph_agent_uses_messages_to_infer_document_title(tmp_path):
 
     assert result["steps"][0]["tool"] == "decide_agent_intent"
     assert result["steps"][1]["tool"] == "extract_document_title"
+    assert result["steps"][1]["observation"]["source"] == "messages"
     assert result["steps"][1]["observation"]["document_title"] == "员工手册"
     assert result["steps"][2]["tool"] == "find_document_by_title_tool"
     assert result["steps"][3]["tool"] == "read_document_chunks_tool"

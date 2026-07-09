@@ -107,13 +107,16 @@ def list_documents_node(state: LangGraphAgentState) -> dict:
 
 def extract_document_title_node(state: LangGraphAgentState) -> dict:
     document_title = extract_document_title(state["question"])
+    source = "question"
 
     if document_title == "":
         document_title = infer_document_title_from_messages(state["messages"])
+        source = "messages"
 
     if document_title == "":
         missing_field = "文档标题"
         next_action = "ask_clarification_node"
+        source = "none"
     else:
         missing_field = ""
         next_action = "find_document_node"
@@ -133,6 +136,7 @@ def extract_document_title_node(state: LangGraphAgentState) -> dict:
                 "observation": {
                     "document_title": document_title,
                     "missing_field": missing_field,
+                    "source": source,
                 },
                 "next_action": next_action,
             }
