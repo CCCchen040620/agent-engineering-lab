@@ -433,6 +433,34 @@ def test_langgraph_agent_conversation_chat_uses_context_for_search(tmp_path):
         text="员工每天需要完成 8 小时工作。",
     )
 
+    overtime_document = insert_document_to_db(
+        connection,
+        title="加班制度",
+        file_type="md",
+        chunk_count=1,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=overtime_document["id"],
+        text="员工加班需要提前提交申请。",
+    )
+
+    device_document = insert_document_to_db(
+        connection,
+        title="设备借用制度",
+        file_type="md",
+        chunk_count=1,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=device_document["id"],
+        text="员工借用公司设备需要提交申请。",
+    )
+
     connection.close()
 
     app.dependency_overrides[get_database_path] = lambda: str(database_path)
