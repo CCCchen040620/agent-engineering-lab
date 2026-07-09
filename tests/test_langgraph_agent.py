@@ -1,4 +1,7 @@
-from backend.services.langgraph_agent import run_langgraph_agent
+from backend.services.langgraph_agent import (
+    infer_document_title_from_messages,
+    run_langgraph_agent,
+)
 from backend.services.sqlite_document_repository import (
     create_chunks_table,
     create_connection,
@@ -8,6 +11,53 @@ from backend.services.sqlite_document_repository import (
 )
 
 
+def test_infer_document_title_from_messages():
+    messages = [
+        {
+            "role": "assistant",
+            "content": "员工手册 的片段如下：\n[1] 员工每天需要完成 8 小时工作。",
+        }
+    ]
+
+    result = infer_document_title_from_messages(messages)
+
+    assert result == "员工手册"
+
+
+def test_infer_document_title_from_messages_uses_latest_document():
+    messages = [
+        {
+            "role": "assistant",
+            "content": "员工手册 的片段如下：\n[1] 员工每天需要完成 8 小时工作。",
+        },
+        {
+            "role": "assistant",
+            "content": "请假制度 的片段如下：\n[1] 员工请假需要提前申请。",
+        },
+    ]
+
+    result = infer_document_title_from_messages(messages)
+
+    assert result == "请假制度"
+
+
+def test_infer_document_title_from_messages_returns_empty_string_when_not_found():
+    messages = [
+        {
+            "role": "user",
+            "content": "公司有没有股票期权？",
+        },
+        {
+            "role": "assistant",
+            "content": "知识库中没有找到相关资料，暂时无法回答。",
+        },
+    ]
+
+    result = infer_document_title_from_messages(messages)
+
+    assert result == ""
+
+    
 def test_run_langgraph_agent_lists_documents(tmp_path):
     database_path = tmp_path / "test.db"
     connection = create_connection(str(database_path))
