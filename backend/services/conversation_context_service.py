@@ -1,12 +1,22 @@
-def infer_document_title_from_messages(messages: list[dict]) -> str:
+def find_latest_cited_document_title(messages: list[dict]) -> str:
     for message in reversed(messages):
-        content = message["content"]
-        
         metadata = message.get("metadata", {})
         citations = metadata.get("citations", [])
 
         if citations != []:
             return citations[0]["title"]
+
+    return ""
+
+
+def infer_document_title_from_messages(messages: list[dict]) -> str:
+    latest_cited_document_title = find_latest_cited_document_title(messages)
+
+    if latest_cited_document_title != "":
+        return latest_cited_document_title
+
+    for message in reversed(messages):
+        content = message["content"]
 
         answer_marker = " 的片段如下"
 

@@ -1,8 +1,67 @@
 from backend.services.conversation_context_service import (
+    find_latest_cited_document_title,
     infer_document_title_from_messages,
 )
 
 
+def test_find_latest_cited_document_title():
+    messages = [
+        {
+            "role": "assistant",
+            "content": "第一条回答",
+            "metadata": {
+                "citations": [
+                    {
+                        "title": "员工手册",
+                        "text": "员工每天需要完成 8 小时工作。",
+                        "path": "sqlite://1",
+                    }
+                ]
+            },
+        },
+        {
+            "role": "assistant",
+            "content": "第二条回答",
+            "metadata": {
+                "citations": [
+                    {
+                        "title": "请假制度",
+                        "text": "员工请假需要提前申请。",
+                        "path": "sqlite://2",
+                    }
+                ]
+            },
+        },
+    ]
+
+    result = find_latest_cited_document_title(messages)
+
+    assert result == "请假制度"
+
+
+def test_find_latest_cited_document_title_returns_empty_string_when_not_found():
+    messages = [
+        {
+            "role": "assistant",
+            "content": "知识库中没有找到相关资料，暂时无法回答。",
+            "metadata": {
+                "citations": []
+            },
+        },
+        {
+            "role": "user",
+            "content": "查看这份文档的片段",
+            "metadata": {
+                "question": "查看这份文档的片段"
+            },
+        },
+    ]
+
+    result = find_latest_cited_document_title(messages)
+
+    assert result == ""
+
+    
 def test_infer_document_title_from_messages():
     messages = [
         {
