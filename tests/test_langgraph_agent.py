@@ -1,4 +1,8 @@
-from backend.services.langgraph_agent import run_langgraph_agent
+from backend.services.langgraph_agent import (
+    calculate_question_similarity,
+    is_contextual_context_valid,
+    run_langgraph_agent,
+)
 from backend.services.sqlite_document_repository import (
     create_chunks_table,
     create_connection,
@@ -8,6 +12,51 @@ from backend.services.sqlite_document_repository import (
 )
 
 
+def test_calculate_question_similarity():
+    score = calculate_question_similarity(
+        question="每天需要工作多久？",
+        text="员工每天需要完成 8 小时工作。",
+    )
+
+    assert score >= 0.3
+
+
+def test_is_contextual_context_valid_returns_true_for_related_context():
+    snippets = [
+        {
+            "title": "员工手册",
+            "text": "员工每天需要完成 8 小时工作。",
+            "score": 0.8,
+        }
+    ]
+
+    result = is_contextual_context_valid(
+        question="每天需要工作多久？",
+        context_document_title="员工手册",
+        snippets=snippets,
+    )
+
+    assert result is True
+
+
+def test_is_contextual_context_valid_returns_false_for_unrelated_context():
+    snippets = [
+        {
+            "title": "员工手册",
+            "text": "员工每天需要完成 8 小时工作。",
+            "score": 0.8,
+        }
+    ]
+
+    result = is_contextual_context_valid(
+        question="报销需要什么材料？",
+        context_document_title="员工手册",
+        snippets=snippets,
+    )
+
+    assert result is False
+
+    
 def test_run_langgraph_agent_lists_documents(tmp_path):
     database_path = tmp_path / "test.db"
     connection = create_connection(str(database_path))
