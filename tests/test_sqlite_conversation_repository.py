@@ -159,3 +159,73 @@ def test_find_conversation_by_id_returns_none_when_not_found():
     assert conversation is None
 
     connection.close()
+
+
+def test_add_message_with_metadata():
+    connection = create_connection(":memory:")
+
+    create_conversations_table(connection)
+    create_messages_table(connection)
+
+    conversation = create_conversation(connection, "带元数据的对话")
+
+    metadata = {
+        "intent": "read_document",
+        "keyword": "员工手册",
+        "citations": [
+            {
+                "title": "员工手册",
+                "text": "新员工入职后需要在 30 天内完成安全培训。",
+                "path": "sqlite://1",
+            }
+        ],
+    }
+
+    message = add_message(
+        connection,
+        conversation_id=conversation["id"],
+        role="assistant",
+        content="员工手册 的片段如下：...",
+        metadata=metadata,
+    )
+
+    assert message["id"] == 1
+    assert message["conversation_id"] == conversation["id"]
+    assert message["role"] == "assistant"
+    assert message["content"] == "员工手册 的片段如下：..."
+    assert message["metadata"] == metadata
+
+    connection.close()
+
+
+def test_list_messages_returns_metadata():
+    connection = create_connection(":memory:")
+
+    create_conversations_table(connection)
+    create_messages_table(connection)
+
+    conversation = create_conversation(connection, "读取元数据的对话")
+
+    metadata = {
+        "intent": "answer_question",
+        "keyword": "安全培训",
+    }
+
+    add_message(
+        connection,
+        conversation_id=conversation["id"],
+        role="assistant",
+        content="新员工需要完成安全培训。",
+        metadata=metadata,
+    )
+
+    messages = list_messages_by_conversation(
+        connection,
+        conversation_id=conversation["id"],
+    )
+
+    assert len(messages) == 1
+    assert messages[0]["content"] == "新员工需要完成安全培训。"
+    assert messages[0]["metadata"] == metadata
+
+    connection.close()

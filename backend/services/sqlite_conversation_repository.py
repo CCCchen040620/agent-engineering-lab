@@ -1,3 +1,4 @@
+import json
 import sqlite3
 
 
@@ -22,6 +23,7 @@ def create_messages_table(connection: sqlite3.Connection) -> None:
             conversation_id INTEGER NOT NULL,
             role TEXT NOT NULL,
             content TEXT NOT NULL,
+            metadata_json TEXT NOT NULL DEFAULT '{}',
             FOREIGN KEY (conversation_id) REFERENCES conversations(id)
         )
         """
@@ -105,13 +107,19 @@ def add_message(
     conversation_id: int,
     role: str,
     content: str,
+    metadata: dict | None = None,
 ) -> dict:
+    if metadata is None:
+        metadata = {}
+
+    metadata_json = json.dumps(metadata, ensure_ascii=False)
+
     cursor = connection.execute(
         """
-        INSERT INTO messages (conversation_id, role, content)
-        VALUES (?, ?, ?)
+        INSERT INTO messages (conversation_id, role, content, metadata_json)
+        VALUES (?, ?, ?, ?)
         """,
-        (conversation_id, role, content),
+        (conversation_id, role, content, metadata_json),
     )
 
     connection.commit()
@@ -123,6 +131,7 @@ def add_message(
         "conversation_id": conversation_id,
         "role": role,
         "content": content,
+        "metadata": metadata,
     }
 
 
@@ -132,7 +141,7 @@ def list_messages_by_conversation(
 ) -> list[dict]:
     cursor = connection.execute(
         """
-        SELECT id, conversation_id, role, content
+        SELECT id, conversation_id, role, content, metadata_json
         FROM messages
         WHERE conversation_id = ?
         ORDER BY id
@@ -145,12 +154,15 @@ def list_messages_by_conversation(
     messages = []
 
     for row in rows:
+        metadata = json.loads(row[4])
+
         messages.append(
             {
                 "id": row[0],
                 "conversation_id": row[1],
                 "role": row[2],
                 "content": row[3],
+                "metadata": metadata,
             }
         )
 
