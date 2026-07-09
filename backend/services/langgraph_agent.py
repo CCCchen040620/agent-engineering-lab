@@ -12,6 +12,8 @@ from backend.services.agent_tools import (
     search_knowledge_base_tool,
 )
 from backend.services.conversation_context_service import (
+    build_contextual_question,
+    find_latest_cited_document_title,
     infer_document_title_from_messages,
 )
 from backend.services.simple_agent import decide_agent_intent, extract_document_title
@@ -23,6 +25,8 @@ class LangGraphAgentState(TypedDict):
     messages: list[dict]
     intent: str | None
     keyword: str
+    contextual_question: str
+    context_document_title: str
     snippets: list[dict]
     has_valid_context: bool
     document_title: str
@@ -303,8 +307,15 @@ def read_document_chunks_node(state: LangGraphAgentState) -> dict:
 
 
 def search_knowledge_node(state: LangGraphAgentState) -> dict:
-    tool_result = search_knowledge_base_tool(
+    context_document_title = find_latest_cited_document_title(state["messages"])
+
+    contextual_question = build_contextual_question(
         question=state["question"],
+        messages=state["messages"],
+    )
+
+    tool_result = search_knowledge_base_tool(
+        question=contextual_question,
         database_path=state["database_path"],
         top_k=state["top_k"],
         mode=state["mode"],
@@ -317,6 +328,8 @@ def search_knowledge_node(state: LangGraphAgentState) -> dict:
 
     return {
         "keyword": tool_result["keyword"],
+        "contextual_question": contextual_question,
+        "context_document_title": context_document_title,
         "snippets": snippets,
         "steps": state["steps"]
         + [
@@ -325,6 +338,8 @@ def search_knowledge_node(state: LangGraphAgentState) -> dict:
                 "tool": "search_knowledge_base_tool",
                 "input": {
                     "question": state["question"],
+                    "contextual_question": contextual_question,
+                    "context_document_title": context_document_title,
                     "top_k": state["top_k"],
                     "mode": state["mode"],
                     "min_score": state["min_score"],
@@ -353,11 +368,37 @@ def is_context_valid(keyword: str, snippets: list[dict]) -> bool:
     return False
 
 
+def is_contextual_context_valid(
+    context_document_title: str,
+    snippets: list[dict],
+) -> bool:
+    if context_document_title == "":
+        return False
+
+    for snippet in snippets:
+        if snippet["title"] != context_document_title:
+            continue
+
+        if "score" not in snippet:
+            return True
+
+        if snippet["score"] > 0:
+            return True
+
+    return False
+
+
 def validate_context_node(state: LangGraphAgentState) -> dict:
     has_valid_context = is_context_valid(
         keyword=state["keyword"],
         snippets=state["snippets"],
     )
+
+    if not has_valid_context:
+        has_valid_context = is_contextual_context_valid(
+            context_document_title=state["context_document_title"],
+            snippets=state["snippets"],
+        )
 
     if has_valid_context:
         next_action = "answer_node"
@@ -529,6 +570,8 @@ def run_langgraph_agent(
         "messages": messages if messages is not None else [],
         "intent": None,
         "keyword": "",
+        "contextual_question": question,
+        "context_document_title": "",
         "snippets": [],
         "has_valid_context": False,
         "document_title": "",
