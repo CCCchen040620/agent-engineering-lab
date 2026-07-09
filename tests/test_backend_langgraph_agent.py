@@ -318,6 +318,8 @@ def test_langgraph_agent_conversation_chat_uses_saved_messages(tmp_path):
 
     assert data["intent"] == "read_document"
     assert data["document_title"] == "员工手册"
+    assert data["steps"][1]["tool"] == "extract_document_title"
+    assert data["steps"][1]["observation"]["source"] == "messages"
     assert "新员工入职后需要在 30 天内完成安全培训。" in data["answer"]
     assert len(data["citations"]) == 1
 
