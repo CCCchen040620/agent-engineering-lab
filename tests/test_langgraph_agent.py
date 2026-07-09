@@ -261,3 +261,55 @@ def test_run_langgraph_agent_asks_clarification_when_document_is_not_found(tmp_p
     assert result["steps"][2]["tool"] == "find_document_by_title_tool"
     assert result["steps"][2]["observation"]["found"] is False
     assert result["steps"][3]["tool"] == "ask_clarification_tool"
+
+
+def test_run_langgraph_agent_uses_messages_to_infer_document_title(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=1,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="新员工入职后需要在 30 天内完成安全培训。",
+    )
+
+    connection.close()
+
+    messages = [
+        {
+            "role": "user",
+            "content": "查看员工手册的片段",
+        },
+        {
+            "role": "assistant",
+            "content": "员工手册 的片段如下：\n[1] 新员工入职后需要在 30 天内完成安全培训。",
+        },
+    ]
+
+    result = run_langgraph_agent(
+        question="查看这份文档的片段",
+        database_path=str(database_path),
+        messages=messages,
+    )
+
+    assert result["intent"] == "read_document"
+    assert result["document_title"] == "员工手册"
+    assert "新员工入职后需要在 30 天内完成安全培训。" in result["answer"]
+    assert len(result["citations"]) == 1
+
+    assert result["steps"][0]["tool"] == "decide_agent_intent"
+    assert result["steps"][1]["tool"] == "extract_document_title"
+    assert result["steps"][1]["observation"]["document_title"] == "员工手册"
+    assert result["steps"][2]["tool"] == "find_document_by_title_tool"
+    assert result["steps"][3]["tool"] == "read_document_chunks_tool"

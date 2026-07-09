@@ -17,6 +17,7 @@ from week04.settings import SQLITE_DATABASE_PATH
 
 class LangGraphAgentState(TypedDict):
     question: str
+    messages: list[dict]
     intent: str | None
     keyword: str
     snippets: list[dict]
@@ -51,6 +52,18 @@ def decide_intent_node(state: LangGraphAgentState) -> dict:
             }
         ],
     }
+
+
+def infer_document_title_from_messages(messages: list[dict]) -> str:
+    for message in reversed(messages):
+        content = message["content"]
+
+        marker = " 的片段如下"
+
+        if marker in content:
+            return content.split(marker)[0].strip()
+
+    return ""
 
 
 def route_by_intent(
@@ -103,6 +116,9 @@ def list_documents_node(state: LangGraphAgentState) -> dict:
 
 def extract_document_title_node(state: LangGraphAgentState) -> dict:
     document_title = extract_document_title(state["question"])
+
+    if document_title == "":
+        document_title = infer_document_title_from_messages(state["messages"])
 
     if document_title == "":
         missing_field = "文档标题"
@@ -509,11 +525,13 @@ def run_langgraph_agent(
     mode: str = "keyword",
     min_score: float = 0.0,
     generator: Callable[[str], str] = lambda prompt: "这是模型回答",
+    messages: list[dict] | None = None,
 ) -> LangGraphAgentState:
     graph = build_langgraph_agent()
 
     initial_state: LangGraphAgentState = {
         "question": question,
+        "messages": messages if messages is not None else [],
         "intent": None,
         "keyword": "",
         "snippets": [],
