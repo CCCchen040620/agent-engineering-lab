@@ -89,11 +89,19 @@ def langgraph_agent_conversation_chat(
         content=request.question,
     )
 
+    assistant_metadata = {
+        "intent": result["intent"],
+        "keyword": result["keyword"],
+        "citations": result["citations"],
+        "steps": result["steps"],
+    }
+
     assistant_message = add_message(
         connection,
         conversation_id=conversation_id,
         role="assistant",
         content=result["answer"],
+        metadata=assistant_metadata,
     )
 
     connection.close()

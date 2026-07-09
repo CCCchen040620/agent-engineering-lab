@@ -223,6 +223,10 @@ def test_langgraph_agent_conversation_chat_saves_messages(tmp_path):
     assert messages[0]["content"] == "公司有没有股票期权？"
     assert messages[1]["role"] == "assistant"
     assert messages[1]["content"] == data["answer"]
+    assert messages[1]["metadata"]["intent"] == data["intent"]
+    assert messages[1]["metadata"]["keyword"] == data["keyword"]
+    assert messages[1]["metadata"]["citations"] == data["citations"]
+    assert messages[1]["metadata"]["steps"] == data["steps"]
 
 
 def test_langgraph_agent_conversation_chat_returns_404_when_conversation_not_found(
