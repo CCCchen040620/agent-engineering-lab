@@ -109,7 +109,36 @@ def test_infer_document_title_from_messages_uses_metadata_citation():
 
     assert result == "员工手册"
 
-    
+
+def test_infer_document_title_from_messages_skips_empty_citations():
+    messages = [
+        {
+            "role": "assistant",
+            "content": "员工手册 的片段如下：\n[1] 新员工入职后需要在 30 天内完成安全培训。",
+            "metadata": {
+                "citations": [
+                    {
+                        "title": "员工手册",
+                        "text": "新员工入职后需要在 30 天内完成安全培训。",
+                        "path": "sqlite://1",
+                    }
+                ]
+            },
+        },
+        {
+            "role": "assistant",
+            "content": "知识库中没有找到相关资料，暂时无法回答。",
+            "metadata": {
+                "citations": []
+            },
+        },
+    ]
+
+    result = infer_document_title_from_messages(messages)
+
+    assert result == "员工手册"
+
+
 def test_run_langgraph_agent_lists_documents(tmp_path):
     database_path = tmp_path / "test.db"
     connection = create_connection(str(database_path))
