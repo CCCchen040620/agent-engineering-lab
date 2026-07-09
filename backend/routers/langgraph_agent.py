@@ -82,11 +82,16 @@ def langgraph_agent_conversation_chat(
         messages=messages,
     )
 
+    user_metadata = {
+        "question": request.question,
+    }
+
     user_message = add_message(
         connection,
         conversation_id=conversation_id,
         role="user",
         content=request.question,
+        metadata=user_metadata,
     )
 
     assistant_metadata = {

@@ -221,6 +221,7 @@ def test_langgraph_agent_conversation_chat_saves_messages(tmp_path):
 
     assert messages[0]["role"] == "user"
     assert messages[0]["content"] == "公司有没有股票期权？"
+    assert messages[0]["metadata"]["question"] == "公司有没有股票期权？"
     assert messages[1]["role"] == "assistant"
     assert messages[1]["content"] == data["answer"]
     assert messages[1]["metadata"]["intent"] == data["intent"]
