@@ -7,6 +7,7 @@ from backend.services.sqlite_conversation_repository import (
     create_conversations_table,
     create_messages_table,
     find_conversation_by_id,
+    list_messages_by_conversation,
 )
 from backend.config import DEFAULT_MIN_SCORE, DEFAULT_TOP_K
 from backend.routers.db_documents import get_database_path
@@ -66,6 +67,11 @@ def langgraph_agent_conversation_chat(
             detail="会话不存在。",
         )
 
+    messages = list_messages_by_conversation(
+        connection,
+        conversation_id=conversation_id,
+    )
+
     result = run_langgraph_agent(
         question=request.question,
         database_path=database_path,
@@ -73,6 +79,7 @@ def langgraph_agent_conversation_chat(
         mode=mode,
         min_score=min_score,
         generator=generator,
+        messages=messages,
     )
 
     user_message = add_message(

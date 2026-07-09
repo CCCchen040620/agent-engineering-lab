@@ -10,6 +10,11 @@ from backend.services.sqlite_document_repository import (
     insert_chunk_to_db,
     insert_document_to_db,
 )
+from backend.services.sqlite_conversation_repository import (
+    add_message,
+    create_conversations_table,
+    create_messages_table,
+)
 
 
 client = TestClient(app)
@@ -236,3 +241,90 @@ def test_langgraph_agent_conversation_chat_returns_404_when_conversation_not_fou
 
     assert response.status_code == 404
     assert response.json()["detail"] == "会话不存在。"
+
+
+def test_langgraph_agent_conversation_chat_uses_saved_messages(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=1,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="新员工入职后需要在 30 天内完成安全培训。",
+    )
+
+    connection.close()
+
+    app.dependency_overrides[get_database_path] = lambda: str(database_path)
+    app.dependency_overrides[get_langgraph_agent_generator] = (
+        lambda: lambda prompt: "这是模型回答"
+    )
+
+    conversation_response = client.post(
+        "/api/v1/conversations",
+        json={"title": "员工手册阅读会话"},
+    )
+
+    conversation_id = conversation_response.json()["id"]
+
+    connection = create_connection(str(database_path))
+
+    create_conversations_table(connection)
+    create_messages_table(connection)
+
+    add_message(
+        connection,
+        conversation_id=conversation_id,
+        role="user",
+        content="查看员工手册的片段",
+    )
+
+    add_message(
+        connection,
+        conversation_id=conversation_id,
+        role="assistant",
+        content="员工手册 的片段如下：\n[1] 新员工入职后需要在 30 天内完成安全培训。",
+    )
+
+    connection.close()
+
+    response = client.post(
+        f"/api/v1/langgraph-agent/conversations/{conversation_id}/chat",
+        json={"question": "查看这份文档的片段"},
+    )
+
+    messages_response = client.get(
+        f"/api/v1/conversations/{conversation_id}/messages"
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert messages_response.status_code == 200
+
+    data = response.json()
+    messages = messages_response.json()
+
+    assert data["intent"] == "read_document"
+    assert data["document_title"] == "员工手册"
+    assert "新员工入职后需要在 30 天内完成安全培训。" in data["answer"]
+    assert len(data["citations"]) == 1
+
+    assert len(messages) == 4
+    assert messages[0]["content"] == "查看员工手册的片段"
+    assert messages[1]["content"] == "员工手册 的片段如下：\n[1] 新员工入职后需要在 30 天内完成安全培训。"
+    assert messages[2]["role"] == "user"
+    assert messages[2]["content"] == "查看这份文档的片段"
+    assert messages[3]["role"] == "assistant"
+    assert messages[3]["content"] == data["answer"]
