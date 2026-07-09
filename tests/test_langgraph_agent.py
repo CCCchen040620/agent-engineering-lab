@@ -71,6 +71,23 @@ def test_infer_document_title_from_messages_uses_latest_user_question():
     assert result == "员工手册"
 
 
+def test_infer_document_title_from_messages_uses_latest_user_document():
+    messages = [
+        {
+            "role": "user",
+            "content": "查看员工手册的片段",
+        },
+        {
+            "role": "user",
+            "content": "查看请假制度的片段",
+        },
+    ]
+
+    result = infer_document_title_from_messages(messages)
+
+    assert result == "请假制度"
+
+    
 def test_run_langgraph_agent_lists_documents(tmp_path):
     database_path = tmp_path / "test.db"
     connection = create_connection(str(database_path))
