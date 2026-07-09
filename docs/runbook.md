@@ -11,7 +11,7 @@ pytest
 当前稳定状态：
 
 ```text
-282 passed, 1 warning
+337 passed, 1 warning
 ```
 
 ## 2. 推荐启动脚本
@@ -28,6 +28,11 @@ pytest
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\start_backend.ps1
+
+迁移 SQLite schema：
+
+```powershell
+.\scripts\migrate_sqlite.ps1
 ```
 
 启动 Streamlit 用户问答页：
@@ -51,9 +56,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\start_backend.ps1
 推荐顺序：
 
 1. 先确认 Ollama 已启动。
-2. 启动 FastAPI 后端。
-3. 另开一个 PowerShell 窗口启动 Streamlit 用户页面。
-4. 需要管理数据时，再启动文档管理页或反馈管理页。
+2. 运行 SQLite schema 迁移脚本。
+3. 启动 FastAPI 后端。
+4. 另开一个 PowerShell 窗口启动 Streamlit 用户页面。
+5. 需要管理数据时，再启动文档管理页或反馈管理页。
 
 ## 3. 启动 FastAPI 后端
 
