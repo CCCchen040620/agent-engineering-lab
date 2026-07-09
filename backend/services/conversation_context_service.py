@@ -1,6 +1,12 @@
 def infer_document_title_from_messages(messages: list[dict]) -> str:
     for message in reversed(messages):
         content = message["content"]
+        
+        metadata = message.get("metadata", {})
+        citations = metadata.get("citations", [])
+
+        if citations != []:
+            return citations[0]["title"]
 
         answer_marker = " 的片段如下"
 

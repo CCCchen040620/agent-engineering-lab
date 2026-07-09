@@ -88,6 +88,28 @@ def test_infer_document_title_from_messages_uses_latest_user_document():
     assert result == "请假制度"
 
 
+def test_infer_document_title_from_messages_uses_metadata_citation():
+    messages = [
+        {
+            "role": "assistant",
+            "content": "这里的文本格式不重要。",
+            "metadata": {
+                "citations": [
+                    {
+                        "title": "员工手册",
+                        "text": "新员工入职后需要在 30 天内完成安全培训。",
+                        "path": "sqlite://1",
+                    }
+                ]
+            },
+        }
+    ]
+
+    result = infer_document_title_from_messages(messages)
+
+    assert result == "员工手册"
+
+    
 def test_run_langgraph_agent_lists_documents(tmp_path):
     database_path = tmp_path / "test.db"
     connection = create_connection(str(database_path))
