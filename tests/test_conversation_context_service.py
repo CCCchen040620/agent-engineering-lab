@@ -1,4 +1,5 @@
 from backend.services.conversation_context_service import (
+    build_contextual_question,
     find_latest_cited_document_title,
     infer_document_title_from_messages,
 )
@@ -39,6 +40,50 @@ def test_find_latest_cited_document_title():
     assert result == "请假制度"
 
 
+def test_build_contextual_question_with_latest_cited_document():
+    messages = [
+        {
+            "role": "assistant",
+            "content": "新员工需要在入职后 30 天内完成安全培训。",
+            "metadata": {
+                "citations": [
+                    {
+                        "title": "员工手册",
+                        "text": "新员工入职后需要在 30 天内完成安全培训。",
+                        "path": "sqlite://1",
+                    }
+                ]
+            },
+        }
+    ]
+
+    result = build_contextual_question(
+        question="每天需要工作多久？",
+        messages=messages,
+    )
+
+    assert result == "员工手册 每天需要工作多久？"
+
+
+def test_build_contextual_question_returns_original_question_without_context():
+    messages = [
+        {
+            "role": "user",
+            "content": "公司有没有股票期权？",
+            "metadata": {
+                "question": "公司有没有股票期权？"
+            },
+        }
+    ]
+
+    result = build_contextual_question(
+        question="每天需要工作多久？",
+        messages=messages,
+    )
+
+    assert result == "每天需要工作多久？"
+
+    
 def test_find_latest_cited_document_title_returns_empty_string_when_not_found():
     messages = [
         {
@@ -61,7 +106,7 @@ def test_find_latest_cited_document_title_returns_empty_string_when_not_found():
 
     assert result == ""
 
-    
+
 def test_infer_document_title_from_messages():
     messages = [
         {

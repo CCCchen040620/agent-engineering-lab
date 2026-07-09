@@ -9,6 +9,15 @@ def find_latest_cited_document_title(messages: list[dict]) -> str:
     return ""
 
 
+def build_contextual_question(question: str, messages: list[dict]) -> str:
+    latest_cited_document_title = find_latest_cited_document_title(messages)
+
+    if latest_cited_document_title == "":
+        return question
+
+    return latest_cited_document_title + " " + question
+
+    
 def infer_document_title_from_messages(messages: list[dict]) -> str:
     latest_cited_document_title = find_latest_cited_document_title(messages)
 
