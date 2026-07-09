@@ -18,6 +18,10 @@ from backend.services.conversation_context_service import (
 )
 from backend.services.simple_agent import decide_agent_intent, extract_document_title
 from week04.settings import SQLITE_DATABASE_PATH
+from week07.simple_vector_search import (
+    build_term_frequency,
+    cosine_similarity,
+)
 
 
 class LangGraphAgentState(TypedDict):
@@ -368,7 +372,15 @@ def is_context_valid(keyword: str, snippets: list[dict]) -> bool:
     return False
 
 
+def calculate_question_similarity(question: str, text: str) -> float:
+    question_vector = build_term_frequency(question)
+    text_vector = build_term_frequency(text)
+
+    return cosine_similarity(question_vector, text_vector)
+
+
 def is_contextual_context_valid(
+    question: str,
     context_document_title: str,
     snippets: list[dict],
 ) -> bool:
@@ -379,10 +391,12 @@ def is_contextual_context_valid(
         if snippet["title"] != context_document_title:
             continue
 
-        if "score" not in snippet:
-            return True
+        question_similarity = calculate_question_similarity(
+            question=question,
+            text=snippet["text"],
+        )
 
-        if snippet["score"] > 0:
+        if question_similarity >= 0.3:
             return True
 
     return False
@@ -396,6 +410,7 @@ def validate_context_node(state: LangGraphAgentState) -> dict:
 
     if not has_valid_context:
         has_valid_context = is_contextual_context_valid(
+            question=state["question"],
             context_document_title=state["context_document_title"],
             snippets=state["snippets"],
         )

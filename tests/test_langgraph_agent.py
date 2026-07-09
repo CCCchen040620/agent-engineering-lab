@@ -377,3 +377,57 @@ def test_run_langgraph_agent_uses_contextual_question_for_search(tmp_path):
     assert result["steps"][1]["input"]["contextual_question"] == "员工手册 每天需要工作多久？"
     assert result["steps"][1]["input"]["context_document_title"] == "员工手册"
     assert result["has_valid_context"] is True
+
+
+def test_run_langgraph_agent_does_not_use_context_when_similarity_is_zero(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=1,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="员工每天需要完成 8 小时工作。",
+    )
+
+    connection.close()
+
+    messages = [
+        {
+            "role": "assistant",
+            "content": "新员工需要在入职后 30 天内完成安全培训。",
+            "metadata": {
+                "citations": [
+                    {
+                        "title": "员工手册",
+                        "text": "新员工入职后需要在 30 天内完成安全培训。",
+                        "path": "sqlite://1",
+                    }
+                ]
+            },
+        }
+    ]
+
+    result = run_langgraph_agent(
+        question="报销需要什么材料？",
+        database_path=str(database_path),
+        mode="vector",
+        min_score=0.0,
+        messages=messages,
+    )
+
+    assert result["intent"] == "answer_question"
+    assert result["context_document_title"] == "员工手册"
+    assert result["has_valid_context"] is False
+    assert result["citations"] == []
+    assert "暂时无法回答" in result["answer"]
