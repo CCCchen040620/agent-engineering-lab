@@ -8,6 +8,12 @@
 pytest
 ```
 
+也可以运行本地健康检查脚本：
+
+```powershell
+.\scripts\check_project.ps1
+```
+
 当前稳定状态：
 
 ```text
