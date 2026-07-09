@@ -498,3 +498,86 @@ def test_langgraph_agent_conversation_chat_uses_context_for_search(tmp_path):
     assert messages[-1]["role"] == "assistant"
     assert messages[-1]["content"] == data["answer"]
     assert messages[-1]["metadata"]["citations"] == data["citations"]
+
+
+def test_langgraph_agent_conversation_chat_avoids_unrelated_context(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=1,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="员工每天需要完成 8 小时工作。",
+    )
+
+    connection.close()
+
+    app.dependency_overrides[get_database_path] = lambda: str(database_path)
+
+    conversation_response = client.post(
+        "/api/v1/conversations",
+        json={"title": "防止上下文污染测试"},
+    )
+
+    conversation_id = conversation_response.json()["id"]
+
+    connection = create_connection(str(database_path))
+
+    create_conversations_table(connection)
+    create_messages_table(connection)
+
+    add_message(
+        connection,
+        conversation_id=conversation_id,
+        role="assistant",
+        content="新员工需要在入职后 30 天内完成安全培训。",
+        metadata={
+            "citations": [
+                {
+                    "title": "员工手册",
+                    "text": "新员工入职后需要在 30 天内完成安全培训。",
+                    "path": "sqlite://1",
+                }
+            ]
+        },
+    )
+
+    connection.close()
+
+    response = client.post(
+        f"/api/v1/langgraph-agent/conversations/{conversation_id}/chat",
+        json={"question": "报销需要什么材料？"},
+        params={"mode": "vector", "min_score": 0.0},
+    )
+
+    messages_response = client.get(
+        f"/api/v1/conversations/{conversation_id}/messages"
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert messages_response.status_code == 200
+
+    data = response.json()
+    messages = messages_response.json()
+
+    assert data["intent"] == "answer_question"
+    assert data["context_document_title"] == "员工手册"
+    assert data["has_valid_context"] is False
+    assert data["citations"] == []
+    assert "暂时无法回答" in data["answer"]
+
+    assert messages[-1]["role"] == "assistant"
+    assert messages[-1]["metadata"]["citations"] == []
