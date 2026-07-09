@@ -334,3 +334,78 @@ def test_langgraph_agent_conversation_chat_uses_saved_messages(tmp_path):
     assert messages[2]["content"] == "查看这份文档的片段"
     assert messages[3]["role"] == "assistant"
     assert messages[3]["content"] == data["answer"]
+
+
+def test_langgraph_agent_conversation_chat_uses_citation_metadata(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=1,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="新员工入职后需要在 30 天内完成安全培训。",
+    )
+
+    connection.close()
+
+    app.dependency_overrides[get_database_path] = lambda: str(database_path)
+    app.dependency_overrides[get_langgraph_agent_generator] = (
+        lambda: lambda prompt: "这是模型回答"
+    )
+
+    conversation_response = client.post(
+        "/api/v1/conversations",
+        json={"title": "metadata 引用测试"},
+    )
+
+    conversation_id = conversation_response.json()["id"]
+
+    connection = create_connection(str(database_path))
+
+    create_conversations_table(connection)
+    create_messages_table(connection)
+
+    add_message(
+        connection,
+        conversation_id=conversation_id,
+        role="assistant",
+        content="这是一段没有固定片段格式的回答。",
+        metadata={
+            "citations": [
+                {
+                    "title": "员工手册",
+                    "text": "新员工入职后需要在 30 天内完成安全培训。",
+                    "path": "sqlite://1",
+                }
+            ]
+        },
+    )
+
+    connection.close()
+
+    response = client.post(
+        f"/api/v1/langgraph-agent/conversations/{conversation_id}/chat",
+        json={"question": "查看这份文档的片段"},
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["intent"] == "read_document"
+    assert data["document_title"] == "员工手册"
+    assert data["steps"][1]["observation"]["source"] == "messages"
+    assert "新员工入职后需要在 30 天内完成安全培训。" in data["answer"]
