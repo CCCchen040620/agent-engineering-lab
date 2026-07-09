@@ -296,6 +296,18 @@ python -m week10.migrate_sqlite_schema
 - 如果缺少 `metadata_json`，自动添加
 - 如果已经存在，直接跳过
 
+运行后会输出迁移结果，例如：
+
+```text
+SQLite schema migration completed.
+{'conversations_table_ready': True, 'messages_table_ready': True, 'metadata_json_added': False}
+```
+
+其中：
+
+- `metadata_json_added=True` 表示本次真的新增了字段
+- `metadata_json_added=False` 表示字段已经存在，本次安全跳过
+
 该脚本可以重复运行。
 
 ## 10. 补齐历史 chunk embeddings
