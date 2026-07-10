@@ -8,10 +8,14 @@ from backend.services.sqlite_conversation_repository import (
     create_messages_table,
     find_conversation_by_id,
     list_messages_by_conversation,
+    update_conversation_summary,
 )
 from backend.config import DEFAULT_MIN_SCORE, DEFAULT_TOP_K
 from backend.routers.db_documents import get_database_path
 from backend.services.langgraph_agent import run_langgraph_agent
+from backend.services.conversation_summary_service import (
+    build_conversation_summary,
+)
 from backend.services.ollama_service import generate_with_ollama
 from week05.models import ChatRequest
 
@@ -109,9 +113,23 @@ def langgraph_agent_conversation_chat(
         metadata=assistant_metadata,
     )
 
+    updated_messages = list_messages_by_conversation(
+        connection,
+        conversation_id=conversation_id,
+    )
+
+    conversation_summary = build_conversation_summary(updated_messages)
+
+    updated_conversation = update_conversation_summary(
+        connection,
+        conversation_id=conversation_id,
+        summary=conversation_summary,
+    )
+
     connection.close()
 
     result["conversation_id"] = conversation_id
+    result["conversation_summary"] = updated_conversation["summary"]
     result["saved_messages"] = [
         user_message,
         assistant_message,

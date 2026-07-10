@@ -14,6 +14,7 @@ from backend.services.sqlite_conversation_repository import (
     add_message,
     create_conversations_table,
     create_messages_table,
+    find_conversation_by_id,
 )
 
 
@@ -228,6 +229,18 @@ def test_langgraph_agent_conversation_chat_saves_messages(tmp_path):
     assert messages[1]["metadata"]["keyword"] == data["keyword"]
     assert messages[1]["metadata"]["citations"] == data["citations"]
     assert messages[1]["metadata"]["steps"] == data["steps"]
+
+    connection = create_connection(str(database_path))
+
+    conversation = find_conversation_by_id(
+        connection,
+        conversation_id,
+    )
+
+    connection.close()
+
+    assert data["conversation_summary"] == "最近问题：公司有没有股票期权？。"
+    assert conversation["summary"] == "最近问题：公司有没有股票期权？。"
 
 
 def test_langgraph_agent_conversation_chat_returns_404_when_conversation_not_found(
