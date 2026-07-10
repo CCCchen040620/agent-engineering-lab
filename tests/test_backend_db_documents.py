@@ -510,6 +510,38 @@ def test_create_db_document_with_content_returns_409_for_duplicate_title(
     assert second_response.json()["detail"] == "文档已存在。"
 
 
+def test_create_db_document_with_content_returns_503_when_embedding_fails(
+    monkeypatch,
+    tmp_path,
+):
+    use_temp_database(tmp_path)
+
+    def failing_embedder(text: str) -> list[float]:
+        raise RuntimeError("embedding failed")
+
+    monkeypatch.setattr(
+        "backend.services.document_indexing_service.embed_with_ollama",
+        failing_embedder,
+    )
+
+    response = client.post(
+        "/api/v1/db/documents/with-content",
+        json={
+            "title": "远程办公制度",
+            "file_type": "md",
+            "content": "员工可以远程办公。远程办公需要提前申请。",
+        },
+    )
+
+    list_response = client.get("/api/v1/db/documents")
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 503
+    assert "文档索引失败" in response.json()["detail"]
+    assert list_response.json() == []
+
+
 def test_list_db_document_chunks_endpoint(monkeypatch, tmp_path):
     use_fake_embedder(monkeypatch)
 
@@ -665,3 +697,35 @@ def test_upload_text_document_endpoint_rejects_no_valid_chunks(tmp_path):
 
     assert response.status_code == 422
     assert response.json()["detail"] == "文档正文没有有效内容。"
+
+
+def test_upload_text_document_endpoint_returns_503_when_embedding_fails(
+    monkeypatch,
+    tmp_path,
+):
+    use_temp_database(tmp_path)
+
+    def failing_embedder(text: str) -> list[float]:
+        raise RuntimeError("embedding failed")
+
+    monkeypatch.setattr(
+        "backend.services.document_indexing_service.embed_with_ollama",
+        failing_embedder,
+    )
+
+    response = client.post(
+        "/api/v1/db/documents/upload-text",
+        data={"title": "访客制度"},
+        files={
+            "file": (
+                "visitor_policy.txt",
+                "访客进入办公区需要提前登记。".encode("utf-8"),
+                "text/plain",
+            )
+        },
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 503
+    assert "文档索引失败" in response.json()["detail"]

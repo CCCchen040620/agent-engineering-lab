@@ -160,6 +160,26 @@ def find_document_from_db_by_id(connection, document_id: int) -> dict | None:
     return row_to_document(row)
 
 
+def find_document_from_db_by_title(connection, title: str) -> dict | None:
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT id, title, file_type, chunk_count, is_indexed
+        FROM documents
+        WHERE title = ?
+        """,
+        (title,),
+    )
+
+    row = cursor.fetchone()
+
+    if row is None:
+        return None
+
+    return row_to_document(row)
+
+
 def delete_document_from_db_by_id(connection, document_id: int) -> bool:
     cursor = connection.cursor()
 

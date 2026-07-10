@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from backend.config import DEFAULT_MIN_SCORE, DEFAULT_TOP_K
 from backend.services.document_indexing_service import (
+    DocumentIndexingError,
     create_document_with_chunks_and_embeddings,
     split_text_into_chunks,
 )
@@ -92,12 +93,16 @@ def create_db_document_with_content(
 
     connection = create_connection(database_path)
 
-    document = create_document_with_chunks_and_embeddings(
-        connection,
-        title=request.title,
-        file_type=request.file_type,
-        content=request.content,
-    )
+    try:
+        document = create_document_with_chunks_and_embeddings(
+            connection,
+            title=request.title,
+            file_type=request.file_type,
+            content=request.content,
+        )
+    except DocumentIndexingError as error:
+        connection.close()
+        raise HTTPException(status_code=503, detail=str(error))
 
     connection.close()
 
@@ -140,12 +145,16 @@ async def upload_text_document(
 
     connection = create_connection(database_path)
 
-    document = create_document_with_chunks_and_embeddings(
-        connection,
-        title=document_title,
-        file_type="txt",
-        content=content,
-    )
+    try:
+        document = create_document_with_chunks_and_embeddings(
+            connection,
+            title=document_title,
+            file_type="txt",
+            content=content,
+        )
+    except DocumentIndexingError as error:
+        connection.close()
+        raise HTTPException(status_code=503, detail=str(error))
 
     connection.close()
 

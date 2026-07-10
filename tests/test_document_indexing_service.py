@@ -1,4 +1,7 @@
+import pytest
+
 from backend.services.document_indexing_service import (
+    DocumentIndexingError,
     create_document_with_chunks_and_embeddings,
     create_document_with_chunks,
     split_text_into_chunks,
@@ -6,6 +9,7 @@ from backend.services.document_indexing_service import (
 )
 from backend.services.sqlite_document_repository import (
     create_connection,
+    list_documents_from_db,
     list_chunks_by_document_id,
 )
 from backend.services.sqlite_embedding_repository import (
@@ -166,3 +170,29 @@ def test_create_document_with_chunks_and_embeddings(tmp_path):
     assert len(chunks) == 2
     assert first_embedding["embedding"] == [float(len(chunks[0]["text"])), 1.0]
     assert second_embedding["embedding"] == [float(len(chunks[1]["text"])), 1.0]
+
+
+def test_create_document_with_chunks_and_embeddings_raises_indexing_error(
+    tmp_path,
+):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    def failing_embedder(text: str) -> list[float]:
+        raise RuntimeError("embedding failed")
+
+    with pytest.raises(DocumentIndexingError) as error:
+        create_document_with_chunks_and_embeddings(
+            connection,
+            title="远程办公制度",
+            file_type="md",
+            content="员工可以远程办公。远程办公需要提前申请。",
+            embedder=failing_embedder,
+        )
+
+    documents = list_documents_from_db(connection)
+
+    connection.close()
+
+    assert "文档索引失败" in str(error.value)
+    assert documents == []

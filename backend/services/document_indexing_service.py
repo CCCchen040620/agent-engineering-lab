@@ -8,8 +8,18 @@ from backend.services.sqlite_embedding_repository import (
 from backend.services.sqlite_document_repository import (
     create_chunks_table,
     create_documents_table,
+    find_document_from_db_by_title,
     insert_chunk_to_db,
     try_insert_document_to_db,
+)
+
+
+class DocumentIndexingError(Exception):
+    pass
+
+
+INDEXING_ERROR_MESSAGE = (
+    "文档索引失败：本地 Embedding 模型不可用，请确认 Ollama 和 bge-m3 已启动。"
 )
 
 
@@ -105,6 +115,17 @@ def create_document_with_chunks_and_embeddings(
     if chunks == []:
         return None
 
+    if find_document_from_db_by_title(connection, title) is not None:
+        return None
+
+    embeddings = []
+
+    for chunk_text in chunks:
+        try:
+            embeddings.append(embedder(chunk_text))
+        except Exception as error:
+            raise DocumentIndexingError(INDEXING_ERROR_MESSAGE) from error
+
     document = try_insert_document_to_db(
         connection,
         title=title,
@@ -116,14 +137,12 @@ def create_document_with_chunks_and_embeddings(
     if document is None:
         return None
 
-    for chunk_text in chunks:
+    for chunk_text, embedding in zip(chunks, embeddings):
         chunk = insert_chunk_to_db(
             connection,
             document_id=document["id"],
             text=chunk_text,
         )
-
-        embedding = embedder(chunk_text)
 
         insert_chunk_embedding_to_db(
             connection,

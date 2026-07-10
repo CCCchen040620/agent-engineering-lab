@@ -132,6 +132,8 @@ GET /api/v1/db/documents/6/chunks
 
 上传 `.txt` 文件，并自动完成文档入库、chunks 切分和 embeddings 生成。
 
+如果本地 Embedding 模型不可用，接口会返回 `503 Service Unavailable`，并提示确认 Ollama 和 `bge-m3` 已启动。
+
 请求类型：
 
 ```text
@@ -1170,6 +1172,7 @@ GET /api/v1/conversations/1/messages
 
 - `409 Conflict`：文档标题已存在
 - `422 Unprocessable Entity`：文档正文没有有效内容，无法切分出 chunks
+- `503 Service Unavailable`：文档索引失败，本地 Embedding 模型不可用
 
 ### Embedding 补索引
 
