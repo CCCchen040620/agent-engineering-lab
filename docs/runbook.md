@@ -144,9 +144,20 @@ docker compose down
 docker compose logs -f
 ```
 
+查看容器健康状态：
+
+```powershell
+docker compose ps
+```
+
+正常情况下，backend 和 frontend 都应该显示为 running 或 healthy。
+
 说明：
 
 - backend 启动时会先运行 `python -m week10.migrate_sqlite_schema`。
+- backend 会通过 `/health` 做健康检查。
+- frontend 会通过 Streamlit 的 `/_stcore/health` 做健康检查。
+- frontend 会等 backend 健康后再启动。
 - 项目目录会挂载到容器 `/app`。
 - SQLite 数据库仍然写在本地 `data/app.db`。
 - Ollama 默认使用宿主机服务，不进入容器。
