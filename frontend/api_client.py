@@ -116,7 +116,26 @@ def chat_with_langgraph_agent_conversation_api(
 
     return None, get_error_detail(response)
     
-     
+
+def get_conversation_api(
+    base_url: str,
+    conversation_id: int,
+) -> tuple[dict | None, str | None]:
+    """Get one conversation by id."""
+    try:
+        response = requests.get(
+            base_url + f"/api/v1/conversations/{conversation_id}",
+            timeout=30,
+        )
+    except requests.RequestException:
+        return None, "后端服务暂时不可用，请确认 FastAPI 已启动。"
+
+    if response.status_code == 200:
+        return response.json(), None
+
+    return None, get_error_detail(response)
+    
+       
 def submit_feedback_api(
     base_url: str,
     question: str,

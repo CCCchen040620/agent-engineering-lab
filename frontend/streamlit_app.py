@@ -7,6 +7,7 @@ from frontend.api_client import (
     chat_with_langgraph_agent_conversation_api,
     chat_with_llm_api,
     create_document_with_content_api,
+    get_conversation_api,
     submit_feedback_api,
     upload_text_document_api,
 )
@@ -126,6 +127,22 @@ with st.sidebar:
         value=1,
         step=1,
     )
+
+    if save_to_conversation:
+        conversation, conversation_error = get_conversation_api(
+            base_url=BACKEND_API_BASE_URL,
+            conversation_id=int(conversation_id),
+        )
+
+        if conversation_error is not None:
+            st.warning(f"无法读取当前会话：{conversation_error}")
+        else:
+            st.caption(f"当前会话：{conversation['title']}")
+
+            if conversation["summary"] == "":
+                st.info("当前会话还没有摘要。")
+            else:
+                st.info(f"当前会话摘要：{conversation['summary']}")
 
     if st.button("清空对话历史"):
         st.session_state["chat_history"] = []
