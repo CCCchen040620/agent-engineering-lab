@@ -51,6 +51,28 @@ def list_conversations_endpoint(
     return conversations
 
 
+@router.get("/{conversation_id}")
+def get_conversation_by_id_endpoint(
+    conversation_id: int,
+    database_path: str = Depends(get_database_path),
+):
+    connection = create_connection(database_path)
+
+    create_conversations_table(connection)
+
+    conversation = find_conversation_by_id(connection, conversation_id)
+
+    connection.close()
+
+    if conversation is None:
+        raise HTTPException(
+            status_code=404,
+            detail="会话不存在。",
+        )
+
+    return conversation
+
+    
 @router.get("/{conversation_id}/messages")
 def list_conversation_messages_endpoint(
     conversation_id: int,

@@ -65,6 +65,46 @@ def test_list_conversations_endpoint(tmp_path):
     ]
 
 
+def test_get_conversation_by_id_endpoint(tmp_path):
+    database_path = tmp_path / "test.db"
+
+    app.dependency_overrides[get_database_path] = lambda: str(database_path)
+
+    create_response = client.post(
+        "/api/v1/conversations",
+        json={"title": "长期记忆测试"},
+    )
+
+    conversation_id = create_response.json()["id"]
+
+    response = client.get(f"/api/v1/conversations/{conversation_id}")
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data == {
+        "id": conversation_id,
+        "title": "长期记忆测试",
+        "summary": "",
+    }
+
+
+def test_get_conversation_by_id_endpoint_returns_404_when_not_found(tmp_path):
+    database_path = tmp_path / "test.db"
+
+    app.dependency_overrides[get_database_path] = lambda: str(database_path)
+
+    response = client.get("/api/v1/conversations/999")
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "会话不存在。"
+
+    
 def test_add_conversation_message_endpoint(tmp_path):
     database_path = tmp_path / "test.db"
 
