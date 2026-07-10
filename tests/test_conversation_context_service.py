@@ -1,6 +1,7 @@
 from backend.services.conversation_context_service import (
     build_contextual_question,
     find_latest_cited_document_title,
+    find_latest_cited_document_title_from_summary,
     infer_document_title_from_messages,
 )
 
@@ -233,3 +234,32 @@ def test_infer_document_title_from_messages_skips_empty_citations():
     result = infer_document_title_from_messages(messages)
 
     assert result == "员工手册"
+
+
+def test_find_latest_cited_document_title_from_summary():
+    summary = "最近问题：每天需要工作多久？；最近引用文档：员工手册。"
+
+    result = find_latest_cited_document_title_from_summary(summary)
+
+    assert result == "员工手册"
+
+
+def test_find_latest_cited_document_title_from_summary_returns_empty_string():
+    summary = "最近问题：公司有没有股票期权？。"
+
+    result = find_latest_cited_document_title_from_summary(summary)
+
+    assert result == ""
+
+
+def test_build_contextual_question_uses_summary_when_messages_have_no_citation():
+    messages = []
+    summary = "最近问题：每天需要工作多久？；最近引用文档：员工手册。"
+
+    result = build_contextual_question(
+        question="每天需要工作多久？",
+        messages=messages,
+        conversation_summary=summary,
+    )
+
+    assert result == "员工手册 每天需要工作多久？"

@@ -15,8 +15,31 @@ def find_latest_cited_document_title(messages: list[dict]) -> str:
     return ""
 
 
-def build_contextual_question(question: str, messages: list[dict]) -> str:
+def find_latest_cited_document_title_from_summary(summary: str) -> str:
+    marker = "最近引用文档："
+
+    if marker not in summary:
+        return ""
+
+    after_marker = summary.split(marker, 1)[1]
+
+    if "。" in after_marker:
+        return after_marker.split("。", 1)[0].strip()
+
+    return after_marker.strip()
+
+
+def build_contextual_question(
+    question: str,
+    messages: list[dict],
+    conversation_summary: str = "",
+) -> str:
     latest_cited_document_title = find_latest_cited_document_title(messages)
+
+    if latest_cited_document_title == "":
+        latest_cited_document_title = find_latest_cited_document_title_from_summary(
+            conversation_summary
+        )
 
     if latest_cited_document_title == "":
         return question

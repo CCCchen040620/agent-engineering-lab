@@ -463,6 +463,54 @@ def test_run_langgraph_agent_uses_contextual_question_for_search(tmp_path):
     assert result["has_valid_context"] is True
 
 
+def test_run_langgraph_agent_uses_summary_for_contextual_question(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=1,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="员工每天需要完成 8 小时工作。",
+    )
+
+    connection.close()
+
+    def fake_generator(prompt: str) -> str:
+        assert "员工每天需要完成 8 小时工作。" in prompt
+        return "员工每天需要完成 8 小时工作。"
+
+    result = run_langgraph_agent(
+        question="每天需要工作多久？",
+        database_path=str(database_path),
+        mode="vector",
+        min_score=0.0,
+        generator=fake_generator,
+        messages=[],
+        conversation_summary="最近问题：新员工什么时候完成安全培训？；最近引用文档：员工手册。",
+    )
+
+    assert result["intent"] == "answer_question"
+    assert result["contextual_question"] == "员工手册 每天需要工作多久？"
+    assert result["context_document_title"] == "员工手册"
+    assert result["answer"] == "员工每天需要完成 8 小时工作。"
+    assert len(result["citations"]) == 1
+    assert result["citations"][0]["title"] == "员工手册"
+    assert result["has_valid_context"] is True
+    assert result["steps"][2]["input"]["contextual_question"] == "员工手册 每天需要工作多久？"
+    assert result["steps"][2]["input"]["context_document_title"] == "员工手册"
+
+    
 def test_run_langgraph_agent_does_not_use_context_when_similarity_is_zero(tmp_path):
     database_path = tmp_path / "test.db"
     connection = create_connection(str(database_path))

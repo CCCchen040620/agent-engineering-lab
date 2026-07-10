@@ -14,6 +14,7 @@ from backend.services.agent_tools import (
 from backend.services.conversation_context_service import (
     build_contextual_question,
     find_latest_cited_document_title,
+    find_latest_cited_document_title_from_summary,
     infer_document_title_from_messages,
     is_contextual_context_valid,
 )
@@ -330,9 +331,15 @@ def filter_snippets_by_context_document(
 def search_knowledge_node(state: LangGraphAgentState) -> dict:
     context_document_title = find_latest_cited_document_title(state["messages"])
 
+    if context_document_title == "":
+        context_document_title = find_latest_cited_document_title_from_summary(
+            state["conversation_summary"]
+        )
+
     contextual_question = build_contextual_question(
         question=state["question"],
         messages=state["messages"],
+        conversation_summary=state["conversation_summary"],
     )
 
     tool_result = search_knowledge_base_tool(
