@@ -1,3 +1,5 @@
+import logging
+
 from typing import Callable, Literal, TypedDict
 
 from langgraph.graph import END, START, StateGraph
@@ -21,6 +23,8 @@ from backend.services.conversation_context_service import (
 from backend.services.simple_agent import decide_agent_intent, extract_document_title
 from week04.settings import SQLITE_DATABASE_PATH
 
+
+logger = logging.getLogger(__name__)
 
 class LangGraphAgentState(TypedDict):
     question: str
@@ -578,6 +582,14 @@ def run_langgraph_agent(
 ) -> LangGraphAgentState:
     graph = build_langgraph_agent()
 
+    logger.info(
+        "langgraph_agent_started question=%s mode=%s top_k=%s min_score=%s",
+        question,
+        mode,
+        top_k,
+        min_score,
+    )
+
     initial_state: LangGraphAgentState = {
         "question": question,
         "messages": messages if messages is not None else [],
@@ -614,4 +626,14 @@ def run_langgraph_agent(
         "generator": generator,
     }
 
-    return graph.invoke(initial_state)
+    result = graph.invoke(initial_state)
+
+    logger.info(
+        "langgraph_agent_finished intent=%s keyword=%s has_valid_context=%s citation_count=%s",
+        result.get("intent"),
+        result.get("keyword"),
+        result.get("has_valid_context"),
+        len(result.get("citations", [])),
+    )
+
+    return result
