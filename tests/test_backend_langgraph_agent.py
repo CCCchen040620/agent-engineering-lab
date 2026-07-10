@@ -66,11 +66,12 @@ def test_langgraph_agent_chat_endpoint_answers_with_context(tmp_path):
     assert data["keyword"] == "安全培训"
     assert data["answer"] == "新员工需要在入职后 30 天内完成安全培训。"
     assert len(data["citations"]) == 1
-    assert data["steps"][0]["tool"] == "decide_agent_intent"
-    assert data["steps"][1]["tool"] == "search_knowledge_base_tool"
-    assert data["steps"][2]["tool"] == "validate_context_node"
-    assert data["steps"][2]["observation"]["has_valid_context"] is True
-    assert data["steps"][3]["tool"] == "answer_with_context_tool"
+    assert data["steps"][0]["tool"] == "load_conversation_summary"
+    assert data["steps"][1]["tool"] == "decide_agent_intent"
+    assert data["steps"][2]["tool"] == "search_knowledge_base_tool"
+    assert data["steps"][3]["tool"] == "validate_context_node"
+    assert data["steps"][3]["observation"]["has_valid_context"] is True
+    assert data["steps"][4]["tool"] == "answer_with_context_tool"
 
 
 def test_langgraph_agent_chat_endpoint_refuses_without_context(tmp_path):
@@ -92,11 +93,12 @@ def test_langgraph_agent_chat_endpoint_refuses_without_context(tmp_path):
     assert data["intent"] == "answer_question"
     assert data["keyword"] == "股票期权"
     assert data["citations"] == []
-    assert data["steps"][0]["tool"] == "decide_agent_intent"
-    assert data["steps"][1]["tool"] == "search_knowledge_base_tool"
-    assert data["steps"][2]["tool"] == "validate_context_node"
-    assert data["steps"][2]["observation"]["has_valid_context"] is False
-    assert data["steps"][3]["tool"] == "refuse_answer_tool"
+    assert data["steps"][0]["tool"] == "load_conversation_summary"
+    assert data["steps"][1]["tool"] == "decide_agent_intent"
+    assert data["steps"][2]["tool"] == "search_knowledge_base_tool"
+    assert data["steps"][3]["tool"] == "validate_context_node"
+    assert data["steps"][3]["observation"]["has_valid_context"] is False
+    assert data["steps"][4]["tool"] == "refuse_answer_tool"
 
 
 def test_langgraph_agent_chat_endpoint_reads_document_chunks(tmp_path):
@@ -148,11 +150,12 @@ def test_langgraph_agent_chat_endpoint_reads_document_chunks(tmp_path):
     assert "新员工需要完成安全培训。" in data["answer"]
     assert len(data["citations"]) == 2
 
-    assert data["steps"][0]["tool"] == "decide_agent_intent"
-    assert data["steps"][1]["tool"] == "extract_document_title"
-    assert data["steps"][2]["tool"] == "find_document_by_title_tool"
-    assert data["steps"][2]["observation"]["found"] is True
-    assert data["steps"][3]["tool"] == "read_document_chunks_tool"
+    assert data["steps"][0]["tool"] == "load_conversation_summary"
+    assert data["steps"][1]["tool"] == "decide_agent_intent"
+    assert data["steps"][2]["tool"] == "extract_document_title"
+    assert data["steps"][3]["tool"] == "find_document_by_title_tool"
+    assert data["steps"][3]["observation"]["found"] is True
+    assert data["steps"][4]["tool"] == "read_document_chunks_tool"
 
 
 def test_langgraph_agent_chat_endpoint_asks_clarification_when_title_missing(
@@ -179,10 +182,11 @@ def test_langgraph_agent_chat_endpoint_asks_clarification_when_title_missing(
     assert data["citations"] == []
     assert "文档标题" in data["answer"]
 
-    assert data["steps"][0]["tool"] == "decide_agent_intent"
-    assert data["steps"][1]["tool"] == "extract_document_title"
-    assert data["steps"][1]["next_action"] == "ask_clarification_node"
-    assert data["steps"][2]["tool"] == "ask_clarification_tool"
+    assert data["steps"][0]["tool"] == "load_conversation_summary"
+    assert data["steps"][1]["tool"] == "decide_agent_intent"
+    assert data["steps"][2]["tool"] == "extract_document_title"
+    assert data["steps"][2]["next_action"] == "ask_clarification_node"
+    assert data["steps"][3]["tool"] == "ask_clarification_tool"
 
 
 def test_langgraph_agent_conversation_chat_saves_messages(tmp_path):
@@ -336,8 +340,8 @@ def test_langgraph_agent_conversation_chat_uses_saved_messages(tmp_path):
 
     assert data["intent"] == "read_document"
     assert data["document_title"] == "员工手册"
-    assert data["steps"][1]["tool"] == "extract_document_title"
-    assert data["steps"][1]["observation"]["source"] == "messages"
+    assert data["steps"][2]["tool"] == "extract_document_title"
+    assert data["steps"][2]["observation"]["source"] == "messages"
     assert "新员工入职后需要在 30 天内完成安全培训。" in data["answer"]
     assert len(data["citations"]) == 1
 
@@ -421,7 +425,7 @@ def test_langgraph_agent_conversation_chat_uses_citation_metadata(tmp_path):
 
     assert data["intent"] == "read_document"
     assert data["document_title"] == "员工手册"
-    assert data["steps"][1]["observation"]["source"] == "messages"
+    assert data["steps"][2]["observation"]["source"] == "messages"
     assert "新员工入职后需要在 30 天内完成安全培训。" in data["answer"]
 
 
@@ -533,8 +537,8 @@ def test_langgraph_agent_conversation_chat_uses_context_for_search(tmp_path):
     assert data["answer"] == "员工每天需要完成 8 小时工作。"
     assert len(data["citations"]) == 1
     assert data["citations"][0]["title"] == "员工手册"
-    assert data["steps"][1]["input"]["contextual_question"] == "员工手册 每天需要工作多久？"
-    assert data["steps"][1]["input"]["context_document_title"] == "员工手册"
+    assert data["steps"][2]["input"]["contextual_question"] == "员工手册 每天需要工作多久？"
+    assert data["steps"][2]["input"]["context_document_title"] == "员工手册"
 
     assert messages[-1]["role"] == "assistant"
     assert messages[-1]["content"] == data["answer"]

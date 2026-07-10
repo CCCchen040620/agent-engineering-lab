@@ -587,7 +587,19 @@ def run_langgraph_agent(
         "missing_field": "",
         "answer": None,
         "citations": [],
-        "steps": [],
+        "steps": [
+            {
+                "step": 1,
+                "tool": "load_conversation_summary",
+                "input": {
+                    "has_summary": conversation_summary != "",
+                },
+                "observation": {
+                    "conversation_summary": conversation_summary,
+                },
+                "next_action": "decide_intent_node",
+            }
+        ],
         "database_path": database_path,
         "top_k": top_k,
         "mode": mode,
