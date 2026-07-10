@@ -34,6 +34,7 @@ pytest
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\start_backend.ps1
+```
 
 迁移 SQLite schema：
 

@@ -43,6 +43,7 @@
 - [错误档案](docs/error-log.md)
 - [英文术语卡](docs/glossary.md)
 - [师生协作方式](MENTORING.md)
+- [项目安装说明](docs/setup.md)
 - [当前 API 文档](docs/api.md)
 - [项目运行手册](docs/runbook.md)
 - [前端说明](docs/frontend.md)
