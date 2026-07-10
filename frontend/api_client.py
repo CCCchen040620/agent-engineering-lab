@@ -3,6 +3,22 @@
 import requests
 
 
+def get_system_status_api(base_url: str) -> tuple[dict | None, str | None]:
+    """Get backend, database, Ollama, and model status."""
+    try:
+        response = requests.get(
+            base_url + "/api/v1/system/status",
+            timeout=30,
+        )
+    except requests.RequestException:
+        return None, "后端服务暂时不可用，请确认 FastAPI 已启动。"
+
+    if response.status_code == 200:
+        return response.json(), None
+
+    return None, get_error_detail(response)
+
+
 def chat_with_llm_api(
     base_url: str,
     question: str,

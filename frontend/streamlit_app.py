@@ -8,6 +8,7 @@ from frontend.api_client import (
     chat_with_llm_api,
     create_document_with_content_api,
     get_conversation_api,
+    get_system_status_api,
     submit_feedback_api,
     upload_text_document_api,
 )
@@ -83,7 +84,44 @@ def format_agent_step(step_index: int, step: dict) -> str:
     return step_description
 
 
+def render_status_line(label: str, is_ok: bool) -> None:
+    if is_ok:
+        st.success(f"{label}：正常")
+    else:
+        st.error(f"{label}：异常")
+
+
+def render_system_status() -> None:
+    status, error_message = get_system_status_api(
+        base_url=BACKEND_API_BASE_URL,
+    )
+
+    with st.expander("系统状态诊断", expanded=True):
+        if error_message is not None:
+            st.error(error_message)
+            return
+
+        render_status_line("API", status["api"] == "ok")
+        render_status_line("SQLite", status["database"]["status"] == "ok")
+        render_status_line("Ollama", status["ollama"]["status"] == "ok")
+
+        llm_model = status["ollama"]["llm_model"]
+        embedding_model = status["ollama"]["embedding_model"]
+
+        render_status_line(
+            f"LLM：{llm_model['name']}",
+            llm_model["available"],
+        )
+        render_status_line(
+            f"Embedding：{embedding_model['name']}",
+            embedding_model["available"],
+        )
+
+
 with st.sidebar:
+    render_system_status()
+
+    st.divider()
     st.header("检索设置")
 
     chat_engine = st.radio(

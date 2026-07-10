@@ -4,6 +4,7 @@ from frontend.api_client import (
     chat_with_agent_api,
     chat_with_llm_api,
     create_document_with_content_api,
+    get_system_status_api,
     submit_feedback_api,
     upload_text_document_api,
 )
@@ -16,6 +17,57 @@ class FakeResponse:
 
     def json(self):
         return self.data
+
+
+def test_get_system_status_api_gets_status(monkeypatch):
+    captured = {}
+
+    def fake_get(url, timeout):
+        captured["url"] = url
+        captured["timeout"] = timeout
+
+        return FakeResponse(
+            200,
+            {
+                "status": "ok",
+                "api": "ok",
+                "database": {"status": "ok"},
+                "ollama": {
+                    "status": "ok",
+                    "llm_model": {
+                        "name": "qwen3.6:latest",
+                        "available": True,
+                    },
+                    "embedding_model": {
+                        "name": "bge-m3:latest",
+                        "available": True,
+                    },
+                },
+            },
+        )
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    data, error_message = get_system_status_api("http://127.0.0.1:8000")
+
+    assert error_message is None
+    assert data["status"] == "ok"
+    assert data["ollama"]["llm_model"]["available"] is True
+
+    assert captured["url"] == "http://127.0.0.1:8000/api/v1/system/status"
+    assert captured["timeout"] == 30
+
+
+def test_get_system_status_api_handles_network_failure(monkeypatch):
+    def fake_get(url, timeout):
+        raise requests.RequestException
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    data, error_message = get_system_status_api("http://127.0.0.1:8000")
+
+    assert data is None
+    assert error_message == "后端服务暂时不可用，请确认 FastAPI 已启动。"
 
 
 def test_chat_with_llm_api_posts_question_and_query_params(monkeypatch):

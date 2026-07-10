@@ -20,6 +20,7 @@ ollama list
 
 当前页面支持：
 
+- 在侧边栏展示系统状态诊断，包括 API、SQLite、Ollama、LLM 模型和 Embedding 模型状态。
 - 输入企业知识库问题
 - 提问时会调用 FastAPI 后端接口 `POST /api/v1/db/chat/llm`，由后端完成检索、组装提示词和调用本地大模型。
 - 可切换问答引擎：
