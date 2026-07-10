@@ -14,10 +14,24 @@ pytest
 .\scripts\check_project.ps1
 ```
 
+完整初始化项目可以运行：
+
+```powershell
+.\scripts\bootstrap_project.ps1
+```
+
+该脚本会依次执行 SQLite schema migration、chunk embedding backfill、conversation summary backfill 和 pytest。
+
+如果暂时不想补齐 embedding，可以运行：
+
+```powershell
+.\scripts\bootstrap_project.ps1 -SkipEmbeddings
+```
+
 当前稳定状态：
 
 ```text
-360 passed, 1 warning
+362 passed, 1 warning
 ```
 
 ## 2. 推荐启动脚本
