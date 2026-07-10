@@ -1,6 +1,10 @@
 import json
+import logging
 from urllib import request
 from backend.config import EMBEDDING_MODEL, OLLAMA_BASE_URL
+
+
+logger = logging.getLogger(__name__)
 
 
 def embed_with_ollama(
@@ -24,8 +28,17 @@ def embed_with_ollama(
         method="POST",
     )
 
-    with request.urlopen(http_request, timeout=120) as response:
-        response_text = response.read().decode("utf-8")
+    try:
+        with request.urlopen(http_request, timeout=120) as response:
+            response_text = response.read().decode("utf-8")
+    except Exception as error:
+        logger.warning(
+            "ollama_embedding_failed model=%s error=%s",
+            model,
+            error,
+        )
+
+        raise
 
     result = json.loads(response_text)
 

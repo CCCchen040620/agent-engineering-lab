@@ -1,3 +1,6 @@
+import pytest
+from urllib.error import URLError
+
 from backend.services.ollama_embedding_service import embed_with_ollama
 
 
@@ -24,3 +27,22 @@ def test_embed_with_ollama(monkeypatch):
     embedding = embed_with_ollama("员工每周可以申请一天远程办公。")
 
     assert embedding == [0.1, 0.2, 0.3]
+
+
+def test_embed_with_ollama_logs_warning_when_failed(monkeypatch, caplog):
+    def fake_urlopen(http_request, timeout):
+        raise URLError("connection refused")
+
+    monkeypatch.setattr(
+        "backend.services.ollama_embedding_service.request.urlopen",
+        fake_urlopen,
+    )
+
+    with pytest.raises(URLError):
+        embed_with_ollama(
+            "员工每周可以申请一天远程办公。",
+            model="bge-m3:latest",
+        )
+
+    assert "ollama_embedding_failed" in caplog.text
+    assert "bge-m3:latest" in caplog.text

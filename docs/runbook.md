@@ -39,7 +39,7 @@ GET /api/v1/system/status
 当前稳定状态：
 
 ```text
-371 passed, 1 warning
+372 passed, 1 warning
 ```
 
 ## 2. 推荐启动脚本
@@ -983,6 +983,12 @@ langgraph_agent_finished intent=... keyword=... has_valid_context=... citation_c
 
 ```text
 ollama_generation_failed model=...
+```
+
+如果本地 Embedding 生成失败，后端会记录 warning 日志：
+
+```text
+ollama_embedding_failed model=...
 ```
 
 ## 20. 后端旧进程排查
