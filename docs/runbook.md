@@ -955,7 +955,31 @@ POST /api/v1/langgraph-agent/conversations/999/chat
 - 它仍不是完整长期记忆方案。
 - 后续可以继续引入摘要记忆、历史压缩、用户偏好记忆，以及更完整的 LangGraph checkpoint 持久化。
 
-## 19. 后端旧进程排查
+## 19. 后端日志
+
+后端日志配置位于：
+
+```text
+backend/logging_config.py
+```
+
+FastAPI 启动时会初始化日志格式。当前 LangGraph Agent 问答会记录两类关键日志：
+
+```text
+langgraph_agent_started question=... mode=... top_k=... min_score=...
+```
+
+```text
+langgraph_agent_finished intent=... keyword=... has_valid_context=... citation_count=...
+```
+
+正常回答时，`has_valid_context` 通常为 `True`，`citation_count` 大于 0。
+
+拒答时，`has_valid_context` 通常为 `False`，`citation_count` 为 0。
+
+当前日志只输出到后端终端，暂时没有写入日志文件。
+
+## 20. 后端旧进程排查
 
 在 Windows 上使用 `uvicorn --reload` 时，偶尔会出现旧的父子进程没有完全退出，导致代码已经修改，但 API 仍然返回旧逻辑。
 
