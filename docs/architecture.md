@@ -6,7 +6,7 @@
 2. 普通 RAG、Simple Agent、LangGraph Agent 分别在项目里处于什么位置？
 3. 当前项目距离最终交付还缺哪些工程化能力？
 
-当前项目可以理解为一个“本地可运行的企业知识库 Agent 原型”：它已经具备 FastAPI 后端、Streamlit 前端、SQLite 数据库、RAG 检索、Ollama 本地大模型、Embedding 检索、LangGraph Agent 编排、会话消息存储和自动化测试，但还没有进入完整生产部署阶段。
+当前项目可以理解为一个“本地可运行的企业知识库 Agent 原型”：它已经具备 FastAPI 后端、Streamlit 前端、SQLite 数据库、RAG 检索、Ollama 本地大模型、Embedding 检索、LangGraph Agent 编排、会话消息存储、会话摘要记忆和自动化测试，但还没有进入完整生产部署阶段。
 
 ## 一、整体架构图
 
@@ -97,8 +97,8 @@ backend/main.py
 | `documents` | 保存文档基本信息，例如标题、文件类型、chunk 数量、是否已索引 |
 | `chunks` | 保存文档切分后的片段 |
 | `chunk_embeddings` | 保存每个 chunk 的 embedding 向量 |
-| `conversations` | 保存会话 |
-| `messages` | 保存每轮用户和助手消息，并保存 metadata |
+| `conversations` | 保存会话，以及会话级 `summary` 摘要 |
+| `messages` | 保存每轮用户和助手消息，并保存消息级 `metadata` |
 | `feedback` | 保存用户对回答的反馈 |
 
 其中最核心的是：
@@ -114,6 +114,7 @@ conversations 1 ---- N messages
 - 一份文档可以切成多个片段。
 - 一个片段可以有一个对应的 embedding。
 - 一个会话里可以有多条消息。
+- 一个会话可以有一个 summary，用来压缩该会话的历史上下文。
 
 ## 五、RAG 问答链路
 
@@ -221,7 +222,7 @@ backend/services/agent_tools.py
 
 ## 八、会话上下文与“有限长期记忆”
 
-当前项目已经开始做会话记忆，但还不是完整长期记忆系统。
+当前项目已经具备一个安全版长期记忆雏形，但还不是完整长期记忆系统。
 
 当前已经支持：
 
@@ -232,33 +233,39 @@ backend/services/agent_tools.py
    - `keyword`
    - `citations`
    - `steps`
-4. 后续问题可以从历史 citations 中推断最近引用过的文档。
-5. 对“每天需要工作多久？”这类省略主语的问题，可以结合上一轮引用文档构造 contextual question。
-6. 如果当前问题和历史上下文不相关，会拒绝使用历史上下文，避免上下文污染。
+4. 根据 messages 生成 conversation summary，并写回 `conversations.summary`。
+5. LangGraph Agent 每轮开始时会读取旧 summary，并在 `steps` 中记录 `load_conversation_summary`。
+6. 对“每天需要工作多久？”这类省略主语的问题，可以结合最近引用文档或 summary 构造 contextual question。
+7. 如果当前问题和历史上下文不相关，会拒绝使用历史上下文，避免上下文污染。
+8. Streamlit 页面可以显示当前会话摘要。
+9. `week10/backfill_conversation_summaries.py` 可以给旧会话补齐 summary。
 
 相关核心文件：
 
 ```text
 backend/services/conversation_context_service.py
+backend/services/conversation_summary_service.py
 backend/services/sqlite_conversation_repository.py
 backend/routers/conversations.py
 backend/routers/langgraph_agent.py
+week10/backfill_conversation_summaries.py
 ```
 
 当前能力更准确地说是：
 
 ```text
-基于会话历史和引用 metadata 的上下文补全
+基于 messages、metadata 和 summary 的安全上下文补全
 ```
 
 暂时还不能称为完整长期记忆，因为它还没有：
 
 - 用户画像记忆
 - 跨会话记忆
-- 长对话摘要
 - 记忆更新策略
 - 记忆遗忘策略
 - 记忆权限控制
+
+当前设计中，summary 只用于辅助检索方向，不能直接作为最终回答依据。最终回答仍然必须来自知识库 chunks 和 citations。
 
 ## 九、前端页面结构
 
@@ -319,7 +326,7 @@ scripts/
 4. 还没有线上部署地址。
 5. 文件解析能力还比较基础，主要围绕 txt / 手动内容。
 6. 权限、用户体系、租户隔离还没有做。
-7. 长期记忆仍处于上下文补全阶段。
+7. 长期记忆仍是安全版雏形，还没有用户画像、跨会话记忆和权限控制。
 8. RAG 评测集还不完整。
 9. 日志、监控、限流、安全防护还比较薄。
 10. README、架构图、演示视频、简历项目描述还没有最终收尾。
@@ -330,7 +337,7 @@ scripts/
 
 建议后续按这个顺序推进：
 
-1. 继续完善会话长期记忆：摘要、metadata、跨轮上下文和污染防护。
+1. 继续完善会话长期记忆：摘要质量、跨轮上下文、污染防护和记忆策略。
 2. 补齐 RAG 评测集：有答案、无答案、提示词攻击、上下文污染、检索命中。
 3. 引入 Docker Compose：统一启动后端、前端、数据库和本地依赖。
 4. 升级 PostgreSQL + pgvector：替换 SQLite embedding 检索。
@@ -340,7 +347,7 @@ scripts/
 你现在最需要掌握的不是“背会所有代码”，而是能讲清楚这条主线：
 
 ```text
-用户问题 → API → Agent 判断意图 → 工具调用 → 检索知识库 → 上下文校验 → 回答或拒答 → 保存会话和 metadata
+用户问题 → API → Agent 读取 summary → 判断意图 → 工具调用 → 检索知识库 → 上下文校验 → 回答或拒答 → 保存会话、metadata 和 summary
 ```
 
 这条主线，就是当前项目的骨架。

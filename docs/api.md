@@ -748,10 +748,13 @@ decide_intent_node -> search_knowledge_node -> validate_context_node -> answer_n
 该接口会：
 
 1. 检查 conversation 是否存在
-2. 调用 LangGraph Agent
-3. 将用户问题保存为 `user` 消息
-4. 将 Agent 回答保存为 `assistant` 消息
-5. 返回 Agent 结果和本次保存的消息
+2. 读取已有 messages 和 conversation summary
+3. 调用 LangGraph Agent
+4. 将用户问题保存为 `user` 消息
+5. 将 Agent 回答保存为 `assistant` 消息
+6. 根据最新 messages 生成新的 conversation summary
+7. 写回 `conversations.summary`
+8. 返回 Agent 结果、本轮保存的消息和新的 `conversation_summary`
 
 请求示例：
 
@@ -777,6 +780,7 @@ POST /api/v1/langgraph-agent/conversations/1/chat?mode=keyword&top_k=3
   "answer": "知识库中没有找到相关资料，暂时无法回答。",
   "citations": [],
   "conversation_id": 1,
+  "conversation_summary": "最近问题：公司有没有股票期权？。",
   "saved_messages": [
     {
       "id": 1,
@@ -810,12 +814,13 @@ POST /api/v1/langgraph-agent/conversations/1/chat?mode=keyword&top_k=3
 - `/api/v1/langgraph-agent/conversations/{conversation_id}/chat` 会把本轮 user/assistant 消息保存到 SQLite。
 - Streamlit 用户问答页在选择 `LangGraph Agent 问答` 并勾选 `保存 LangGraph Agent 问答到会话` 时，会调用该接口。
 - 返回中的 `saved_messages` 会被前端用于显示本轮实际保存了几条消息。
-- 当前接口会读取该 `conversation_id` 下已有的 messages，并用于有限的上下文增强。
+- 当前接口会读取该 `conversation_id` 下已有的 messages 和 summary，并用于有限的上下文增强。
 - assistant 消息会在 `metadata` 中保存 `intent`、`keyword`、`citations` 和 `steps`。
-- 如果历史 assistant 消息里有引用文档，后续问题会尝试基于最近引用文档构造 `contextual_question`。
+- 如果历史 assistant 消息或 summary 里有最近引用文档，后续问题会尝试基于最近引用文档构造 `contextual_question`。
 - 当最近引用文档存在时，检索结果会优先过滤到该文档，减少无关引用混入。
 - 如果当前问题和历史上下文不相关，Agent 会拒答，避免被旧上下文带偏。
-- 这还不是完整长期记忆：当前没有做长期摘要、用户画像、跨会话记忆，也没有把全部历史内容交给模型自由推理。
+- summary 只用于辅助检索方向，不能直接作为最终回答依据。
+- 这还不是完整长期记忆：当前没有用户画像、跨会话记忆，也没有把全部历史内容交给模型自由推理。
 - 它和 Memory Demo API 不同：Memory Demo 使用 `InMemorySaver`，重启会丢；该接口把消息写入 SQLite，重启后消息仍然存在。
 
 ### POST /api/v1/memory-demo/chat
@@ -911,9 +916,9 @@ POST /api/v1/memory-demo/chat?thread_id=other
 
 ## Conversation 接口
 
-Conversation 接口用于保存会话和消息。
+Conversation 接口用于保存会话、消息和会话级摘要。
 
-当前它还没有直接接入正式 Agent，而是先提供数据库层面的会话存储能力，为后续 LangGraph memory 和长期对话历史做准备。
+当前 LangGraph Agent 的带会话接口已经会读取并更新 `summary`。`summary` 是对一个 conversation 的简短记忆摘要。
 
 ### POST /api/v1/conversations
 
@@ -932,7 +937,8 @@ Conversation 接口用于保存会话和消息。
 ```json
 {
   "id": 1,
-  "title": "第一次对话"
+  "title": "第一次对话",
+  "summary": ""
 }
 ```
 
@@ -952,11 +958,13 @@ Conversation 接口用于保存会话和消息。
 [
   {
     "id": 1,
-    "title": "第一次对话"
+    "title": "第一次对话",
+    "summary": "最近问题：公司有没有股票期权？。"
   },
   {
     "id": 2,
-    "title": "第二次对话"
+    "title": "第二次对话",
+    "summary": ""
   }
 ]
 ```
@@ -964,6 +972,26 @@ Conversation 接口用于保存会话和消息。
 说明：
 
 - 该接口适合前端展示历史会话列表。
+
+### GET /api/v1/conversations/{conversation_id}
+
+查看单个会话详情。
+
+返回示例：
+
+```json
+{
+  "id": 1,
+  "title": "第一次对话",
+  "summary": "最近问题：公司有没有股票期权？。"
+}
+```
+
+说明：
+
+- `summary` 是会话级摘要。
+- Streamlit 用户问答页会用该接口显示当前会话摘要。
+- 如果 conversation 不存在，返回 `404`。
 
 ### POST /api/v1/conversations/{conversation_id}/messages
 
