@@ -510,6 +510,49 @@ def test_run_langgraph_agent_uses_summary_for_contextual_question(tmp_path):
     assert result["steps"][2]["input"]["contextual_question"] == "员工手册 每天需要工作多久？"
     assert result["steps"][2]["input"]["context_document_title"] == "员工手册"
 
+
+def test_run_langgraph_agent_does_not_use_summary_for_unrelated_question(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=1,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="员工每天需要完成 8 小时工作。",
+    )
+
+    connection.close()
+
+    result = run_langgraph_agent(
+        question="报销需要什么材料？",
+        database_path=str(database_path),
+        mode="vector",
+        min_score=0.0,
+        messages=[],
+        conversation_summary="最近问题：每天需要工作多久？；最近引用文档：员工手册。",
+    )
+
+    assert result["intent"] == "answer_question"
+    assert result["contextual_question"] == "员工手册 报销需要什么材料？"
+    assert result["context_document_title"] == "员工手册"
+    assert result["has_valid_context"] is False
+    assert result["citations"] == []
+    assert "暂时无法回答" in result["answer"]
+    assert result["steps"][3]["tool"] == "validate_context_node"
+    assert result["steps"][3]["observation"]["has_valid_context"] is False
+    assert result["steps"][4]["tool"] == "refuse_answer_tool"
+
     
 def test_run_langgraph_agent_does_not_use_context_when_similarity_is_zero(tmp_path):
     database_path = tmp_path / "test.db"
