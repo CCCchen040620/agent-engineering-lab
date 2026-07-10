@@ -7,6 +7,7 @@ from backend.services.sqlite_conversation_repository import (
     find_conversation_by_id,
     list_conversations,
     list_messages_by_conversation,
+    update_conversation_summary,
 )
 
 
@@ -19,6 +20,7 @@ def test_create_conversation():
 
     assert conversation["id"] == 1
     assert conversation["title"] == "第一次对话"
+    assert conversation["summary"] == ""
 
     connection.close()
 
@@ -122,10 +124,12 @@ def test_list_conversations():
         {
             "id": 1,
             "title": "第一次对话",
+            "summary": "",
         },
         {
             "id": 2,
             "title": "第二次对话",
+            "summary": "",
         },
     ]
 
@@ -144,6 +148,7 @@ def test_find_conversation_by_id():
     assert conversation == {
         "id": 1,
         "title": "第一次对话",
+        "summary": "",
     }
 
     connection.close()
@@ -227,5 +232,47 @@ def test_list_messages_returns_metadata():
     assert len(messages) == 1
     assert messages[0]["content"] == "新员工需要完成安全培训。"
     assert messages[0]["metadata"] == metadata
+
+    connection.close()
+
+
+def test_update_conversation_summary():
+    connection = create_connection(":memory:")
+
+    create_conversations_table(connection)
+
+    conversation = create_conversation(connection, "第一轮对话")
+
+    updated = update_conversation_summary(
+        connection,
+        conversation_id=conversation["id"],
+        summary="用户正在询问员工手册相关问题。",
+    )
+
+    assert updated == {
+        "id": conversation["id"],
+        "title": "第一轮对话",
+        "summary": "用户正在询问员工手册相关问题。",
+    }
+
+    found = find_conversation_by_id(connection, conversation["id"])
+
+    assert found["summary"] == "用户正在询问员工手册相关问题。"
+
+    connection.close()
+
+
+def test_update_conversation_summary_returns_none_when_not_found():
+    connection = create_connection(":memory:")
+
+    create_conversations_table(connection)
+
+    updated = update_conversation_summary(
+        connection,
+        conversation_id=999,
+        summary="不存在的会话摘要",
+    )
+
+    assert updated is None
 
     connection.close()

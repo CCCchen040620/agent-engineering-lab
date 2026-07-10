@@ -3,6 +3,7 @@ import sqlite3
 from week10.migrate_sqlite_schema import (
     column_exists,
     migrate_conversation_schema,
+    migrate_conversation_summary,
     migrate_messages_metadata_json,
 )
 
@@ -112,6 +113,7 @@ def test_migrate_conversation_schema_creates_missing_tables():
     assert result == {
         "conversations_table_ready": True,
         "messages_table_ready": True,
+        "summary_added": False,
         "metadata_json_added": False,
     }
 
@@ -146,9 +148,30 @@ def test_migrate_conversation_schema_reports_metadata_json_added():
     assert result == {
         "conversations_table_ready": True,
         "messages_table_ready": True,
+        "summary_added": True,
         "metadata_json_added": True,
     }
 
     assert column_exists(connection, "messages", "metadata_json") is True
+
+    connection.close()
+
+
+def test_migrate_conversation_summary_adds_missing_column():
+    connection = sqlite3.connect(":memory:")
+
+    connection.execute(
+        """
+        CREATE TABLE conversations (
+            id INTEGER PRIMARY KEY,
+            title TEXT NOT NULL
+        )
+        """
+    )
+
+    result = migrate_conversation_summary(connection)
+
+    assert result is True
+    assert column_exists(connection, "conversations", "summary") is True
 
     connection.close()

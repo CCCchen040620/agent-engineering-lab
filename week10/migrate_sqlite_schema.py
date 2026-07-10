@@ -42,13 +42,31 @@ def migrate_conversation_schema(connection: sqlite3.Connection) -> dict:
     create_conversations_table(connection)
     create_messages_table(connection)
 
+    summary_added = migrate_conversation_summary(connection)
     metadata_json_added = migrate_messages_metadata_json(connection)
 
     return {
         "conversations_table_ready": True,
         "messages_table_ready": True,
+        "summary_added": summary_added,
         "metadata_json_added": metadata_json_added,
     }
+
+
+def migrate_conversation_summary(connection: sqlite3.Connection) -> bool:
+    if column_exists(connection, "conversations", "summary"):
+        return False
+
+    connection.execute(
+        """
+        ALTER TABLE conversations
+        ADD COLUMN summary TEXT NOT NULL DEFAULT ''
+        """
+    )
+
+    connection.commit()
+
+    return True
 
 
 def main() -> None:

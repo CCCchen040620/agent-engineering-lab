@@ -7,7 +7,8 @@ def create_conversations_table(connection: sqlite3.Connection) -> None:
         """
         CREATE TABLE IF NOT EXISTS conversations (
             id INTEGER PRIMARY KEY,
-            title TEXT NOT NULL
+            title TEXT NOT NULL,
+            summary TEXT NOT NULL DEFAULT ''
         )
         """
     )
@@ -31,7 +32,7 @@ def create_messages_table(connection: sqlite3.Connection) -> None:
 
     connection.commit()
 
-
+    
 def create_conversation(
     connection: sqlite3.Connection,
     title: str,
@@ -51,13 +52,14 @@ def create_conversation(
     return {
         "id": conversation_id,
         "title": title,
+        "summary": "",
     }
 
 
 def list_conversations(connection: sqlite3.Connection) -> list[dict]:
     cursor = connection.execute(
         """
-        SELECT id, title
+        SELECT id, title, summary
         FROM conversations
         ORDER BY id
         """
@@ -72,6 +74,7 @@ def list_conversations(connection: sqlite3.Connection) -> list[dict]:
             {
                 "id": row[0],
                 "title": row[1],
+                "summary": row[2],
             }
         )
 
@@ -84,7 +87,7 @@ def find_conversation_by_id(
 ) -> dict | None:
     cursor = connection.execute(
         """
-        SELECT id, title
+        SELECT id, title, summary
         FROM conversations
         WHERE id = ?
         """,
@@ -99,6 +102,7 @@ def find_conversation_by_id(
     return {
         "id": row[0],
         "title": row[1],
+        "summary": row[2],
     }
 
     
@@ -167,3 +171,25 @@ def list_messages_by_conversation(
         )
 
     return messages
+
+
+def update_conversation_summary(
+    connection: sqlite3.Connection,
+    conversation_id: int,
+    summary: str,
+) -> dict | None:
+    cursor = connection.execute(
+        """
+        UPDATE conversations
+        SET summary = ?
+        WHERE id = ?
+        """,
+        (summary, conversation_id),
+    )
+
+    connection.commit()
+
+    if cursor.rowcount == 0:
+        return None
+
+    return find_conversation_by_id(connection, conversation_id)

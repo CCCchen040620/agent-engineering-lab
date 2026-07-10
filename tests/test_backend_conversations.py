@@ -25,6 +25,7 @@ def test_create_conversation_endpoint(tmp_path):
 
     assert data["id"] == 1
     assert data["title"] == "第一次对话"
+    assert data["summary"] == ""
 
 
 def test_list_conversations_endpoint(tmp_path):
@@ -54,10 +55,12 @@ def test_list_conversations_endpoint(tmp_path):
         {
             "id": 1,
             "title": "第一次对话",
+            "summary": "",
         },
         {
             "id": 2,
             "title": "第二次对话",
+            "summary": "",
         },
     ]
 
