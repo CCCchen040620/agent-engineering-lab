@@ -709,3 +709,79 @@ def test_langgraph_agent_conversation_chat_receives_existing_summary(tmp_path):
     data = response.json()
 
     assert data["conversation_summary"] == "最近问题：公司有没有股票期权？。"
+
+
+def test_langgraph_agent_conversation_chat_does_not_use_summary_for_unrelated_question(
+    tmp_path,
+):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+    create_conversations_table(connection)
+    create_messages_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=1,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="员工每天需要完成 8 小时工作。",
+    )
+
+    connection.close()
+
+    app.dependency_overrides[get_database_path] = lambda: str(database_path)
+
+    conversation_response = client.post(
+        "/api/v1/conversations",
+        json={"title": "summary 防污染测试"},
+    )
+
+    conversation_id = conversation_response.json()["id"]
+
+    connection = create_connection(str(database_path))
+
+    from backend.services.sqlite_conversation_repository import (
+        update_conversation_summary,
+    )
+
+    update_conversation_summary(
+        connection,
+        conversation_id=conversation_id,
+        summary="最近问题：每天需要工作多久？；最近引用文档：员工手册。",
+    )
+
+    connection.close()
+
+    response = client.post(
+        f"/api/v1/langgraph-agent/conversations/{conversation_id}/chat",
+        json={"question": "报销需要什么材料？"},
+        params={"mode": "vector", "min_score": 0.0},
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["intent"] == "answer_question"
+    assert data["contextual_question"] == "员工手册 报销需要什么材料？"
+    assert data["context_document_title"] == "员工手册"
+    assert data["has_valid_context"] is False
+    assert data["citations"] == []
+    assert "暂时无法回答" in data["answer"]
+    assert data["steps"][0]["tool"] == "load_conversation_summary"
+    assert data["steps"][0]["input"]["has_summary"] is True
+    assert data["steps"][2]["input"]["contextual_question"] == "员工手册 报销需要什么材料？"
+    assert data["steps"][3]["tool"] == "validate_context_node"
+    assert data["steps"][3]["observation"]["has_valid_context"] is False
+    assert data["steps"][4]["tool"] == "refuse_answer_tool"
