@@ -14,7 +14,7 @@ Copy-Item .env.example .env
 
 - `.env.example` 可以提交到 Git，用于说明需要哪些配置项。
 - `.env` 是本地私有配置，已被 `.gitignore` 忽略，不应该提交。
-- 当前项目不会自动读取 `.env` 文件；如果需要覆盖配置，可以在 PowerShell 中临时设置环境变量，或后续接入 dotenv 工具。
+- 当前项目启动时会自动读取 `.env` 文件；也可以在 PowerShell 中临时设置环境变量覆盖配置。
 
 ## 配置项
 

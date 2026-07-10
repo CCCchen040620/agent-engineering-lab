@@ -74,7 +74,7 @@ python -m pip install -e ".[dev]"
 Copy-Item .env.example .env
 ```
 
-当前项目不会自动读取 `.env` 文件。实际运行时如需覆盖配置，可以参考 [配置说明](configuration.md)，在 PowerShell 中设置环境变量。
+当前项目启动时会自动读取 `.env` 文件。实际运行时如需覆盖配置，可以修改 `.env`，也可以参考 [配置说明](configuration.md) 在 PowerShell 中临时设置环境变量。
 
 首次运行，或更新代码后涉及数据库字段变化时，运行：
 

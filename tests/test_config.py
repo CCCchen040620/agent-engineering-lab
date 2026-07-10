@@ -45,3 +45,53 @@ def test_config_can_read_environment_variables(monkeypatch):
     monkeypatch.delenv("DEFAULT_MIN_SCORE")
 
     importlib.reload(config)
+
+
+def test_config_can_read_dotenv_file(tmp_path, monkeypatch):
+    dotenv_file = tmp_path / ".env"
+
+    dotenv_file.write_text(
+        "\n".join(
+            [
+                "OLLAMA_BASE_URL=http://localhost:7777",
+                "BACKEND_API_BASE_URL=http://localhost:6666",
+                "LLM_MODEL=dotenv-llm",
+                "EMBEDDING_MODEL=dotenv-embedding",
+                "DEFAULT_TOP_K=4",
+                "DEFAULT_MIN_SCORE=0.7",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
+    monkeypatch.delenv("BACKEND_API_BASE_URL", raising=False)
+    monkeypatch.delenv("LLM_MODEL", raising=False)
+    monkeypatch.delenv("EMBEDDING_MODEL", raising=False)
+    monkeypatch.delenv("DEFAULT_TOP_K", raising=False)
+    monkeypatch.delenv("DEFAULT_MIN_SCORE", raising=False)
+
+    monkeypatch.chdir(tmp_path)
+
+    reloaded_config = importlib.reload(config)
+
+    assert reloaded_config.OLLAMA_BASE_URL == "http://localhost:7777"
+    assert reloaded_config.BACKEND_API_BASE_URL == "http://localhost:6666"
+    assert reloaded_config.LLM_MODEL == "dotenv-llm"
+    assert reloaded_config.EMBEDDING_MODEL == "dotenv-embedding"
+    assert reloaded_config.DEFAULT_TOP_K == 4
+    assert reloaded_config.DEFAULT_MIN_SCORE == 0.7
+
+    empty_folder = tmp_path / "empty"
+    empty_folder.mkdir()
+
+    monkeypatch.chdir(empty_folder)
+
+    monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
+    monkeypatch.delenv("BACKEND_API_BASE_URL", raising=False)
+    monkeypatch.delenv("LLM_MODEL", raising=False)
+    monkeypatch.delenv("EMBEDDING_MODEL", raising=False)
+    monkeypatch.delenv("DEFAULT_TOP_K", raising=False)
+    monkeypatch.delenv("DEFAULT_MIN_SCORE", raising=False)
+
+    importlib.reload(config)

@@ -1,5 +1,10 @@
 import os
 
+from dotenv import find_dotenv, load_dotenv
+
+
+load_dotenv(find_dotenv(usecwd=True))
+
 
 def get_int_env(name: str, default: int) -> int:
     value = os.getenv(name)
