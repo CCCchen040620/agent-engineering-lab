@@ -2,6 +2,20 @@
 
 本项目的运行配置集中在 `backend/config.py` 中，并支持通过环境变量覆盖默认值。
 
+项目提供了 [.env.example](../.env.example) 作为配置模板。
+
+可以复制一份本地配置：
+
+```powershell
+Copy-Item .env.example .env
+```
+
+说明：
+
+- `.env.example` 可以提交到 Git，用于说明需要哪些配置项。
+- `.env` 是本地私有配置，已被 `.gitignore` 忽略，不应该提交。
+- 当前项目不会自动读取 `.env` 文件；如果需要覆盖配置，可以在 PowerShell 中临时设置环境变量，或后续接入 dotenv 工具。
+
 ## 配置项
 
 | 环境变量 | 默认值 | 说明 |

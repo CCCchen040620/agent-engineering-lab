@@ -68,6 +68,14 @@ python -m pip install -e ".[dev]"
 
 ## 4. 迁移 SQLite schema
 
+如果需要查看可配置项，可以先复制配置模板：
+
+```powershell
+Copy-Item .env.example .env
+```
+
+当前项目不会自动读取 `.env` 文件。实际运行时如需覆盖配置，可以参考 [配置说明](configuration.md)，在 PowerShell 中设置环境变量。
+
 首次运行，或更新代码后涉及数据库字段变化时，运行：
 
 ```powershell
