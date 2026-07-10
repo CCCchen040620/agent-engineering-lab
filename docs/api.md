@@ -16,6 +16,7 @@ http://127.0.0.1:8000/docs
 
 - `GET /health`：健康检查
 - `GET /api/v1/info`：系统信息与功能列表
+- `GET /api/v1/system/status`：系统诊断，检查 API、SQLite、Ollama、LLM 模型和 Embedding 模型状态
 
 ### 问答接口
 

@@ -10,6 +10,7 @@ from backend.routers.agent import router as agent_router
 from backend.routers.langgraph_agent import router as langgraph_agent_router
 from backend.routers.memory_demo import router as memory_demo_router
 from backend.routers.conversations import router as conversations_router
+from backend.routers.system import router as system_router
 
 
 app = FastAPI(title="Enterprise Knowledge Base Agent")
@@ -24,3 +25,4 @@ app.include_router(agent_router)
 app.include_router(langgraph_agent_router)
 app.include_router(memory_demo_router)
 app.include_router(conversations_router)
+app.include_router(system_router)

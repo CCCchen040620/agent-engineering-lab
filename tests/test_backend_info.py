@@ -40,3 +40,4 @@ def test_info_endpoint():
     assert "document_embedding_status" in data["features"]
     assert "simple_agent_chat" in data["features"]
     assert "agent_tool_workflow" in data["features"]
+    assert "system_status_diagnostics" in data["features"]

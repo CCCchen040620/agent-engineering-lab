@@ -39,5 +39,6 @@ def get_info():
             "document_embedding_status",
             "simple_agent_chat",
             "agent_tool_workflow",
+            "system_status_diagnostics",
         ],
     }

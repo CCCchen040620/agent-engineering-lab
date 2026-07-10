@@ -14,6 +14,14 @@ pytest
 .\scripts\check_project.ps1
 ```
 
+查看系统依赖状态：
+
+```text
+GET /api/v1/system/status
+```
+
+该接口用于排查 API、SQLite、Ollama、LLM 模型和 Embedding 模型是否可用。
+
 完整初始化项目可以运行：
 
 ```powershell
@@ -31,7 +39,7 @@ pytest
 当前稳定状态：
 
 ```text
-362 passed, 1 warning
+367 passed, 1 warning
 ```
 
 ## 2. 推荐启动脚本
