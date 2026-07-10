@@ -24,6 +24,7 @@ from week04.settings import SQLITE_DATABASE_PATH
 class LangGraphAgentState(TypedDict):
     question: str
     messages: list[dict]
+    conversation_summary: str
     intent: str | None
     keyword: str
     contextual_question: str
@@ -566,12 +567,14 @@ def run_langgraph_agent(
     min_score: float = 0.0,
     generator: Callable[[str], str] = lambda prompt: "这是模型回答",
     messages: list[dict] | None = None,
+    conversation_summary: str = "",
 ) -> LangGraphAgentState:
     graph = build_langgraph_agent()
 
     initial_state: LangGraphAgentState = {
         "question": question,
         "messages": messages if messages is not None else [],
+        "conversation_summary": conversation_summary,
         "intent": None,
         "keyword": "",
         "contextual_question": question,

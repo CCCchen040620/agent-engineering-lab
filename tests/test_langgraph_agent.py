@@ -508,3 +508,12 @@ def test_run_langgraph_agent_does_not_use_context_when_similarity_is_zero(tmp_pa
     assert result["has_valid_context"] is False
     assert result["citations"] == []
     assert "暂时无法回答" in result["answer"]
+
+
+def test_run_langgraph_agent_returns_conversation_summary():
+    result = run_langgraph_agent(
+        question="公司有没有股票期权？",
+        conversation_summary="最近问题：员工每天需要工作多久？；最近引用文档：员工手册。",
+    )
+
+    assert result["conversation_summary"] == "最近问题：员工每天需要工作多久？；最近引用文档：员工手册。"

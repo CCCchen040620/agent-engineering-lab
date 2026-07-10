@@ -84,6 +84,7 @@ def langgraph_agent_conversation_chat(
         min_score=min_score,
         generator=generator,
         messages=messages,
+        conversation_summary=conversation["summary"],
     )
 
     user_metadata = {

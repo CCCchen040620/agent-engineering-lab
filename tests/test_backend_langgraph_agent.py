@@ -662,3 +662,46 @@ def test_conversation_list_shows_updated_summary_after_agent_chat(tmp_path):
             "summary": "最近问题：公司有没有股票期权？。",
         }
     ]
+
+
+def test_langgraph_agent_conversation_chat_receives_existing_summary(tmp_path):
+    database_path = tmp_path / "test.db"
+
+    app.dependency_overrides[get_database_path] = lambda: str(database_path)
+
+    conversation_response = client.post(
+        "/api/v1/conversations",
+        json={"title": "已有摘要会话"},
+    )
+
+    conversation_id = conversation_response.json()["id"]
+
+    connection = create_connection(str(database_path))
+
+    create_conversations_table(connection)
+    create_messages_table(connection)
+
+    from backend.services.sqlite_conversation_repository import (
+        update_conversation_summary,
+    )
+
+    update_conversation_summary(
+        connection,
+        conversation_id=conversation_id,
+        summary="最近问题：员工每天需要工作多久？；最近引用文档：员工手册。",
+    )
+
+    connection.close()
+
+    response = client.post(
+        f"/api/v1/langgraph-agent/conversations/{conversation_id}/chat",
+        json={"question": "公司有没有股票期权？"},
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["conversation_summary"] == "最近问题：公司有没有股票期权？。"
