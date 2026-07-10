@@ -26,42 +26,102 @@ def use_fake_embedder(monkeypatch):
     )
 
 
-def test_list_db_documents_endpoint():
+def test_list_db_documents_endpoint(tmp_path):
+    use_temp_database(tmp_path)
+
+    client.post(
+        "/api/v1/db/documents",
+        json={
+            "title": "员工手册",
+            "file_type": "md",
+            "chunk_count": 12,
+            "is_indexed": True,
+        },
+    )
+
     response = client.get("/api/v1/db/documents")
+
+    clear_dependency_overrides()
 
     assert response.status_code == 200
 
     data = response.json()
 
     assert isinstance(data, list)
-    assert len(data) >= 1
+    assert len(data) == 1
     assert data[0]["title"] == "员工手册"
 
 
-def test_list_db_documents_endpoint_with_indexed_only():
+def test_list_db_documents_endpoint_with_indexed_only(tmp_path):
+    use_temp_database(tmp_path)
+
+    client.post(
+        "/api/v1/db/documents",
+        json={
+            "title": "员工手册",
+            "file_type": "md",
+            "chunk_count": 12,
+            "is_indexed": True,
+        },
+    )
+
+    client.post(
+        "/api/v1/db/documents",
+        json={
+            "title": "培训资料",
+            "file_type": "pdf",
+            "chunk_count": 3,
+            "is_indexed": False,
+        },
+    )
+
     response = client.get("/api/v1/db/documents?indexed_only=true")
 
-    assert response.status_code == 200
-
-    data = response.json()
-
-    assert isinstance(data, list)
-
-    for document in data:
-        assert document["is_indexed"] == True
-
-
-def test_list_db_documents_endpoint_with_file_type():
-    response = client.get("/api/v1/db/documents?file_type=md")
+    clear_dependency_overrides()
 
     assert response.status_code == 200
 
     data = response.json()
 
-    assert isinstance(data, list)
+    assert len(data) == 1
+    assert data[0]["title"] == "员工手册"
+    assert data[0]["is_indexed"] == True
 
-    for document in data:
-        assert document["file_type"] == "md"
+
+def test_list_db_documents_endpoint_with_file_type(tmp_path):
+    use_temp_database(tmp_path)
+
+    client.post(
+        "/api/v1/db/documents",
+        json={
+            "title": "员工手册",
+            "file_type": "md",
+            "chunk_count": 12,
+            "is_indexed": True,
+        },
+    )
+
+    client.post(
+        "/api/v1/db/documents",
+        json={
+            "title": "培训资料",
+            "file_type": "pdf",
+            "chunk_count": 3,
+            "is_indexed": False,
+        },
+    )
+
+    response = client.get("/api/v1/db/documents?file_type=pdf")
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data) == 1
+    assert data[0]["title"] == "培训资料"
+    assert data[0]["file_type"] == "pdf"
 
 
 def use_temp_database(tmp_path):
