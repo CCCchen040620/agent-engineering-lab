@@ -39,7 +39,7 @@ GET /api/v1/system/status
 当前稳定状态：
 
 ```text
-369 passed, 1 warning
+371 passed, 1 warning
 ```
 
 ## 2. 推荐启动脚本
@@ -978,6 +978,12 @@ langgraph_agent_finished intent=... keyword=... has_valid_context=... citation_c
 拒答时，`has_valid_context` 通常为 `False`，`citation_count` 为 0。
 
 当前日志只输出到后端终端，暂时没有写入日志文件。
+
+如果本地 LLM 生成失败，后端会记录 warning 日志：
+
+```text
+ollama_generation_failed model=...
+```
 
 ## 20. 后端旧进程排查
 

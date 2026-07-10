@@ -42,3 +42,19 @@ def test_try_generate_with_ollama_returns_fallback_when_failed(monkeypatch):
 
     assert result["ok"] == False
     assert "本地模型暂时不可用" in result["response"]
+
+
+def test_try_generate_with_ollama_logs_warning_when_failed(monkeypatch, caplog):
+    def fake_urlopen(http_request, timeout):
+        raise URLError("connection refused")
+
+    monkeypatch.setattr(
+        "backend.services.ollama_service.request.urlopen",
+        fake_urlopen,
+    )
+
+    result = try_generate_with_ollama("你好", model="qwen3.6:latest")
+
+    assert result["ok"] == False
+    assert "ollama_generation_failed" in caplog.text
+    assert "qwen3.6:latest" in caplog.text

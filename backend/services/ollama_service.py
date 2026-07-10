@@ -1,6 +1,10 @@
 import json
+import logging
 from urllib import request
 from backend.config import LLM_MODEL, OLLAMA_BASE_URL
+
+
+logger = logging.getLogger(__name__)
 
 
 def generate_with_ollama(prompt: str, model: str = LLM_MODEL) -> str:
@@ -37,7 +41,13 @@ def try_generate_with_ollama(prompt: str, model: str = LLM_MODEL) -> dict:
             "ok": True,
             "response": response,
         }
-    except Exception:
+    except Exception as error:
+        logger.warning(
+            "ollama_generation_failed model=%s error=%s",
+            model,
+            error,
+        )
+
         return {
             "ok": False,
             "response": "本地模型暂时不可用，请稍后再试。",
