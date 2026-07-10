@@ -622,3 +622,43 @@ def test_langgraph_agent_conversation_chat_avoids_unrelated_context(tmp_path):
 
     assert messages[-1]["role"] == "assistant"
     assert messages[-1]["metadata"]["citations"] == []
+
+
+def test_conversation_list_shows_updated_summary_after_agent_chat(tmp_path):
+    database_path = tmp_path / "test.db"
+
+    app.dependency_overrides[get_database_path] = lambda: str(database_path)
+    app.dependency_overrides[get_langgraph_agent_generator] = (
+        lambda: lambda prompt: "知识库中没有找到相关资料，暂时无法回答。"
+    )
+
+    conversation_response = client.post(
+        "/api/v1/conversations",
+        json={"title": "长期记忆测试"},
+    )
+
+    conversation_id = conversation_response.json()["id"]
+
+    chat_response = client.post(
+        f"/api/v1/langgraph-agent/conversations/{conversation_id}/chat",
+        json={"question": "公司有没有股票期权？"},
+    )
+
+    conversations_response = client.get("/api/v1/conversations")
+
+    app.dependency_overrides.clear()
+
+    assert chat_response.status_code == 200
+    assert conversations_response.status_code == 200
+
+    chat_data = chat_response.json()
+    conversations = conversations_response.json()
+
+    assert chat_data["conversation_summary"] == "最近问题：公司有没有股票期权？。"
+    assert conversations == [
+        {
+            "id": conversation_id,
+            "title": "长期记忆测试",
+            "summary": "最近问题：公司有没有股票期权？。",
+        }
+    ]
