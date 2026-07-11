@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from backend.logging_config import configure_logging
+from backend.request_id_middleware import add_request_id
 from backend.routers.chat import router as chat_router
 from backend.routers.info import router as info_router
 from backend.routers.health import router as health_router
@@ -16,6 +17,7 @@ from backend.routers.system import router as system_router
 
 configure_logging()
 app = FastAPI(title="Enterprise Knowledge Base Agent")
+app.middleware("http")(add_request_id)
 
 app.include_router(chat_router)
 app.include_router(info_router)

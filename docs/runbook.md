@@ -39,7 +39,7 @@ GET /api/v1/system/status
 当前稳定状态：
 
 ```text
-394 passed, 1 warning
+397 passed, 1 warning
 ```
 
 ## 2. 推荐启动脚本
@@ -988,7 +988,27 @@ POST /api/v1/langgraph-agent/conversations/999/chat
 backend/logging_config.py
 ```
 
-FastAPI 启动时会初始化日志格式。当前 LangGraph Agent 问答会记录两类关键日志：
+FastAPI 启动时会初始化日志格式。
+
+每次请求进入后端时，都会生成或复用一个 `request_id`，并写入响应头：
+
+```text
+X-Request-ID: ...
+```
+
+后端也会记录请求开始和结束日志：
+
+```text
+request_started method=... path=... request_id=...
+```
+
+```text
+request_finished method=... path=... status_code=... request_id=... duration_ms=...
+```
+
+排查问题时，可以用同一个 `request_id` 把一次请求产生的多条日志串起来看。
+
+当前 LangGraph Agent 问答会记录两类关键日志：
 
 ```text
 langgraph_agent_started question=... mode=... top_k=... min_score=...
