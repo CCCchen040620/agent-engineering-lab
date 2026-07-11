@@ -39,7 +39,7 @@ GET /api/v1/system/status
 当前稳定状态：
 
 ```text
-397 passed, 1 warning
+398 passed, 1 warning
 ```
 
 ## 2. 推荐启动脚本
@@ -1007,6 +1007,14 @@ request_finished method=... path=... status_code=... request_id=... duration_ms=
 ```
 
 排查问题时，可以用同一个 `request_id` 把一次请求产生的多条日志串起来看。
+
+如果请求耗时超过 `SLOW_REQUEST_THRESHOLD_MS`，后端会额外记录慢请求日志：
+
+```text
+slow_request method=... path=... request_id=... duration_ms=... threshold_ms=...
+```
+
+默认阈值是 1000ms，可以在 `.env` 中调整。
 
 当前 LangGraph Agent 问答会记录两类关键日志：
 

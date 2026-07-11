@@ -13,6 +13,7 @@ from backend.config import (
     OLLAMA_BASE_URL,
     RATE_LIMIT_MAX_REQUESTS,
     RATE_LIMIT_WINDOW_SECONDS,
+    SLOW_REQUEST_THRESHOLD_MS,
 )
 
 
@@ -28,6 +29,7 @@ def test_default_config_values():
     assert MAX_UPLOAD_FILE_BYTES == 1_048_576
     assert RATE_LIMIT_WINDOW_SECONDS == 60
     assert RATE_LIMIT_MAX_REQUESTS == 20
+    assert SLOW_REQUEST_THRESHOLD_MS == 1000.0
 
 
 def test_config_can_read_environment_variables(monkeypatch):
@@ -42,6 +44,7 @@ def test_config_can_read_environment_variables(monkeypatch):
     monkeypatch.setenv("MAX_UPLOAD_FILE_BYTES", "2048")
     monkeypatch.setenv("RATE_LIMIT_WINDOW_SECONDS", "30")
     monkeypatch.setenv("RATE_LIMIT_MAX_REQUESTS", "10")
+    monkeypatch.setenv("SLOW_REQUEST_THRESHOLD_MS", "500")
 
     reloaded_config = importlib.reload(config)
 
@@ -56,6 +59,7 @@ def test_config_can_read_environment_variables(monkeypatch):
     assert reloaded_config.MAX_UPLOAD_FILE_BYTES == 2048
     assert reloaded_config.RATE_LIMIT_WINDOW_SECONDS == 30
     assert reloaded_config.RATE_LIMIT_MAX_REQUESTS == 10
+    assert reloaded_config.SLOW_REQUEST_THRESHOLD_MS == 500.0
 
     monkeypatch.delenv("OLLAMA_BASE_URL")
     monkeypatch.delenv("BACKEND_API_BASE_URL")
@@ -68,6 +72,7 @@ def test_config_can_read_environment_variables(monkeypatch):
     monkeypatch.delenv("MAX_UPLOAD_FILE_BYTES")
     monkeypatch.delenv("RATE_LIMIT_WINDOW_SECONDS")
     monkeypatch.delenv("RATE_LIMIT_MAX_REQUESTS")
+    monkeypatch.delenv("SLOW_REQUEST_THRESHOLD_MS")
 
     importlib.reload(config)
 
@@ -89,6 +94,7 @@ def test_config_can_read_dotenv_file(tmp_path, monkeypatch):
                 "MAX_UPLOAD_FILE_BYTES=4096",
                 "RATE_LIMIT_WINDOW_SECONDS=45",
                 "RATE_LIMIT_MAX_REQUESTS=12",
+                "SLOW_REQUEST_THRESHOLD_MS=750",
             ]
         ),
         encoding="utf-8",
@@ -105,6 +111,7 @@ def test_config_can_read_dotenv_file(tmp_path, monkeypatch):
     monkeypatch.delenv("MAX_UPLOAD_FILE_BYTES", raising=False)
     monkeypatch.delenv("RATE_LIMIT_WINDOW_SECONDS", raising=False)
     monkeypatch.delenv("RATE_LIMIT_MAX_REQUESTS", raising=False)
+    monkeypatch.delenv("SLOW_REQUEST_THRESHOLD_MS", raising=False)
 
     monkeypatch.chdir(tmp_path)
 
@@ -121,6 +128,7 @@ def test_config_can_read_dotenv_file(tmp_path, monkeypatch):
     assert reloaded_config.MAX_UPLOAD_FILE_BYTES == 4096
     assert reloaded_config.RATE_LIMIT_WINDOW_SECONDS == 45
     assert reloaded_config.RATE_LIMIT_MAX_REQUESTS == 12
+    assert reloaded_config.SLOW_REQUEST_THRESHOLD_MS == 750.0
 
     empty_folder = tmp_path / "empty"
     empty_folder.mkdir()
@@ -138,5 +146,6 @@ def test_config_can_read_dotenv_file(tmp_path, monkeypatch):
     monkeypatch.delenv("MAX_UPLOAD_FILE_BYTES", raising=False)
     monkeypatch.delenv("RATE_LIMIT_WINDOW_SECONDS", raising=False)
     monkeypatch.delenv("RATE_LIMIT_MAX_REQUESTS", raising=False)
+    monkeypatch.delenv("SLOW_REQUEST_THRESHOLD_MS", raising=False)
 
     importlib.reload(config)
