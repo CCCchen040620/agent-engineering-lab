@@ -21,6 +21,34 @@ from backend.services.sqlite_conversation_repository import (
 client = TestClient(app)
 
 
+def test_langgraph_agent_chat_endpoint_accepts_timeout_seconds(monkeypatch, tmp_path):
+    database_path = tmp_path / "test.db"
+
+    app.dependency_overrides[get_database_path] = lambda: str(database_path)
+
+    response = client.post(
+        "/api/v1/langgraph-agent/chat?timeout_seconds=1",
+        json={"question": "知识库里有哪些文档？"},
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["timeout_seconds"] == 1
+
+
+def test_langgraph_agent_chat_endpoint_rejects_invalid_timeout_seconds():
+    response = client.post(
+        "/api/v1/langgraph-agent/chat?timeout_seconds=0",
+        json={"question": "知识库里有哪些文档？"},
+    )
+
+    assert response.status_code == 422
+
+    
 def test_langgraph_agent_chat_endpoint_answers_with_context(tmp_path):
     database_path = tmp_path / "test.db"
     connection = create_connection(str(database_path))

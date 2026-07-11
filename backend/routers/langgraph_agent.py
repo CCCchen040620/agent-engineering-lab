@@ -10,7 +10,11 @@ from backend.services.sqlite_conversation_repository import (
     list_messages_by_conversation,
     update_conversation_summary,
 )
-from backend.config import DEFAULT_MIN_SCORE, DEFAULT_TOP_K
+from backend.config import (
+    DEFAULT_MIN_SCORE,
+    DEFAULT_TOP_K,
+    LANGGRAPH_AGENT_TIMEOUT_SECONDS,
+)
 from backend.routers.db_documents import get_database_path
 from backend.routers.rate_limit import enforce_heavy_request_rate_limit
 from backend.services.langgraph_agent import run_langgraph_agent
@@ -34,6 +38,11 @@ def langgraph_agent_chat(
     top_k: int = Query(default=DEFAULT_TOP_K, ge=1, le=5),
     mode: str = "keyword",
     min_score: float = Query(default=DEFAULT_MIN_SCORE, ge=0, le=1),
+    timeout_seconds: float = Query(
+        default=LANGGRAPH_AGENT_TIMEOUT_SECONDS,
+        ge=1,
+        le=120,
+    ),
     database_path: str = Depends(get_database_path),
     generator: Callable[[str], str] = Depends(get_langgraph_agent_generator),
     _rate_limit: None = Depends(enforce_heavy_request_rate_limit),
@@ -44,6 +53,7 @@ def langgraph_agent_chat(
         top_k=top_k,
         mode=mode,
         min_score=min_score,
+        timeout_seconds=timeout_seconds,
         generator=generator,
     )
 
@@ -55,6 +65,11 @@ def langgraph_agent_conversation_chat(
     top_k: int = Query(default=DEFAULT_TOP_K, ge=1, le=5),
     mode: str = "keyword",
     min_score: float = Query(default=DEFAULT_MIN_SCORE, ge=0, le=1),
+    timeout_seconds: float = Query(
+        default=LANGGRAPH_AGENT_TIMEOUT_SECONDS,
+        ge=1,
+        le=120,
+    ),
     database_path: str = Depends(get_database_path),
     generator: Callable[[str], str] = Depends(get_langgraph_agent_generator),
     _rate_limit: None = Depends(enforce_heavy_request_rate_limit),
@@ -85,6 +100,7 @@ def langgraph_agent_conversation_chat(
         top_k=top_k,
         mode=mode,
         min_score=min_score,
+        timeout_seconds=timeout_seconds,
         generator=generator,
         messages=messages,
         conversation_summary=conversation["summary"],
