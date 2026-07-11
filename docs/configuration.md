@@ -22,6 +22,7 @@ Copy-Item .env.example .env
 |---|---|---|
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama 服务地址 |
 | `BACKEND_API_BASE_URL` | `http://127.0.0.1:8000` | FastAPI 后端服务地址，Streamlit 上传 txt 文档时会调用这个地址 |
+| `DATABASE_URL` | `sqlite:///data/app.db` | 数据库连接地址；当前默认使用 SQLite，后续迁移 PostgreSQL 时会改为 PostgreSQL 地址 |
 | `LLM_MODEL` | `qwen3.6:latest` | 本地大模型名称，用于生成回答 |
 | `EMBEDDING_MODEL` | `bge-m3:latest` | Embedding 模型名称，用于生成语义向量 |
 | `DEFAULT_TOP_K` | `3` | 默认最多返回的检索片段数量 |
@@ -39,6 +40,7 @@ Copy-Item .env.example .env
 
 ```powershell
 $env:BACKEND_API_BASE_URL="http://127.0.0.1:8000"
+$env:DATABASE_URL="sqlite:///data/app.db"
 $env:LLM_MODEL="qwen3.6:latest"
 $env:EMBEDDING_MODEL="bge-m3:latest"
 $env:DEFAULT_TOP_K="3"
