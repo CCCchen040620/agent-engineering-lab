@@ -81,7 +81,7 @@ GET /api/v1/system/status
 当前稳定状态：
 
 ```text
-418 passed, 1 warning
+419 passed, 1 warning
 ```
 
 ## 2. 推荐启动脚本
@@ -144,6 +144,14 @@ docker compose up --build
 FastAPI: http://127.0.0.1:8000/docs
 Streamlit: http://127.0.0.1:8501
 ```
+
+Docker Compose 启动完成后，可以运行验收脚本：
+
+```powershell
+.\scripts\check_docker_compose.ps1
+```
+
+该脚本会检查 backend、frontend 容器是否运行，并检查 FastAPI 与 Streamlit 的健康接口是否可访问。
 
 第一版 Docker Compose 不会把 Ollama 放进容器，而是默认访问宿主机：
 
@@ -215,6 +223,21 @@ docker compose ps
 ```
 
 正常情况下，backend 和 frontend 都应该显示为 running 或 healthy。
+
+启动完成后运行 Docker Compose 验收脚本：
+
+```powershell
+.\scripts\check_docker_compose.ps1
+```
+
+该脚本会检查：
+
+- `backend` 服务是否 running
+- `frontend` 服务是否 running
+- `http://127.0.0.1:8000/health` 是否可访问
+- `http://127.0.0.1:8501/_stcore/health` 是否可访问
+
+如果脚本失败，优先检查 Docker Desktop 是否启动、容器是否仍在启动中、端口 8000/8501 是否被占用。
 
 说明：
 

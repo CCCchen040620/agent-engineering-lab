@@ -5,6 +5,7 @@ def test_required_project_scripts_exist():
     required_scripts = [
         "scripts/bootstrap_project.ps1",
         "scripts/check_environment.ps1",
+        "scripts/check_docker_compose.ps1",
         "scripts/check_project.ps1",
         "scripts/migrate_sqlite.ps1",
         "scripts/start_backend.ps1",
@@ -34,3 +35,14 @@ def test_bootstrap_project_runs_environment_check_first():
     assert "Step 2/5: Migrating SQLite schema" in script
     assert "Step 5/5: Running tests" in script
     assert "SkipEnvironmentCheck" in script
+
+
+def test_docker_compose_check_validates_services_and_health_endpoints():
+    script = Path("scripts/check_docker_compose.ps1").read_text(encoding="utf-8")
+
+    assert "docker compose ps -q" in script
+    assert "backend" in script
+    assert "frontend" in script
+    assert "http://127.0.0.1:8000/health" in script
+    assert "http://127.0.0.1:8501/_stcore/health" in script
+    assert "docker compose up --build" in script
