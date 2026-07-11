@@ -102,3 +102,5 @@ DATABASE_PATH=data/app.db
 当前 SQLite LLM RAG 问答服务也已经开始使用 DATABASE_PATH 作为默认数据库路径。
 
 当前反馈接口也已经开始使用 DATABASE_PATH 作为默认数据库路径。
+
+项目已增加防回退测试，用于确保 backend 目录不再重新引入 SQLITE_DATABASE_PATH。
