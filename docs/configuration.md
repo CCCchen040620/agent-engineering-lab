@@ -73,3 +73,14 @@ postgresql://agent_user:password@localhost:5432/agent_db
 ```
 
 这一步目前只是把数据库地址配置化，并增加 URL 解析能力；项目主流程仍然使用 SQLite。
+
+代码中的 `DATABASE_PATH` 不是单独的环境变量，而是从 `DATABASE_URL` 推导出来的内部配置。
+
+例如：
+
+```text
+DATABASE_URL=sqlite:///data/app.db
+DATABASE_PATH=data/app.db
+```
+
+后续旧 SQLite 代码会逐步从 `DATABASE_PATH` 读取数据库文件路径，而不是继续直接依赖写死路径。

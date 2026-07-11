@@ -3,6 +3,8 @@ import importlib
 import backend.config as config
 from backend.config import (
     BACKEND_API_BASE_URL,
+    DATABASE_PATH,
+    DATABASE_URL,
     DEFAULT_MIN_SCORE,
     DEFAULT_TOP_K,
     EMBEDDING_MODEL,
@@ -14,7 +16,6 @@ from backend.config import (
     RATE_LIMIT_MAX_REQUESTS,
     RATE_LIMIT_WINDOW_SECONDS,
     SLOW_REQUEST_THRESHOLD_MS,
-    DATABASE_URL,
 )
 
 
@@ -32,6 +33,7 @@ def test_default_config_values():
     assert RATE_LIMIT_MAX_REQUESTS == 20
     assert SLOW_REQUEST_THRESHOLD_MS == 1000.0
     assert DATABASE_URL == "sqlite:///data/app.db"
+    assert DATABASE_PATH == "data/app.db"
 
 
 def test_config_can_read_environment_variables(monkeypatch):
@@ -64,6 +66,7 @@ def test_config_can_read_environment_variables(monkeypatch):
     assert reloaded_config.RATE_LIMIT_MAX_REQUESTS == 10
     assert reloaded_config.SLOW_REQUEST_THRESHOLD_MS == 500.0
     assert reloaded_config.DATABASE_URL == "sqlite:///test.db"
+    assert reloaded_config.DATABASE_PATH == "test.db"
 
     monkeypatch.delenv("OLLAMA_BASE_URL")
     monkeypatch.delenv("BACKEND_API_BASE_URL")
@@ -157,6 +160,7 @@ def test_config_can_read_dotenv_file(tmp_path, monkeypatch):
 
 
 def test_default_database_url():
-    from backend.config import DATABASE_URL
+    from backend.config import DATABASE_PATH, DATABASE_URL
 
     assert DATABASE_URL == "sqlite:///data/app.db"
+    assert DATABASE_PATH == "data/app.db"
