@@ -1,10 +1,27 @@
 from fastapi.testclient import TestClient
 
 from backend.main import app
+from backend.routers import db_documents
 from backend.routers.db_documents import get_database_path
 
 
 client = TestClient(app)
+
+
+def test_conversation_endpoint_uses_config_database_path(tmp_path, monkeypatch):
+    app.dependency_overrides.clear()
+    database_path = tmp_path / "configured.db"
+    monkeypatch.setattr(db_documents, "DATABASE_PATH", str(database_path))
+
+    response = client.post(
+        "/api/v1/conversations",
+        json={"title": "配置路径会话"},
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 201
+    assert database_path.exists()
 
 
 def test_create_conversation_endpoint(tmp_path):

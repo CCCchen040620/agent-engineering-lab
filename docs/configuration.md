@@ -88,3 +88,5 @@ DATABASE_PATH=data/app.db
 当前系统状态检查已经开始使用 `DATABASE_PATH` 读取 SQLite 数据库路径。
 
 当前 SQLite schema 迁移脚本也已经开始使用 `DATABASE_PATH` 读取数据库文件路径。
+
+当前 DB API 的公共数据库路径依赖也已经开始使用 `DATABASE_PATH`。

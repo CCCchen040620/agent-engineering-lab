@@ -81,7 +81,7 @@ GET /api/v1/system/status
 当前稳定状态：
 
 ```text
-435 passed, 1 warning
+436 passed, 1 warning
 ```
 
 GitHub Actions 当前包含两个检查：
