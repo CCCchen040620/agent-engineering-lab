@@ -73,3 +73,21 @@ def test_github_actions_installs_project_dev_dependencies():
     assert 'python -m pip install -e ".[dev]"' in github_actions
     assert "pytest pytest-cov fastapi pydantic" not in github_actions
     assert '"httpx>=0.28,<1"' in pyproject
+
+
+def test_dockerfile_installs_project_dependencies_from_pyproject():
+    dockerfile = Path("Dockerfile").read_text(encoding="utf-8")
+
+    assert "python -m pip install --no-cache-dir -e ." in dockerfile
+    assert '"fastapi>=0.137,<1"' not in dockerfile
+    assert '"streamlit>=1.58,<2"' not in dockerfile
+
+
+def test_pyproject_defines_package_discovery():
+    pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
+
+    assert "[tool.setuptools.packages.find]" in pyproject
+    assert '"backend*"' in pyproject
+    assert '"frontend*"' in pyproject
+    assert '"week*"' in pyproject
+    assert '"tests*"' in pyproject

@@ -26,6 +26,19 @@ dev = [
     "pytest-cov>=6,<8",
 ]
 
+[tool.setuptools.packages.find]
+include = [
+    "backend*",
+    "frontend*",
+    "week*",
+]
+exclude = [
+    "data*",
+    "docs*",
+    "scripts*",
+    "tests*",
+]
+
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests"]
