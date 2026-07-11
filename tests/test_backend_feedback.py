@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-
+from backend.routers import feedback
 from backend.main import app
 from backend.routers.feedback import get_feedback_database_path
 
@@ -105,3 +105,23 @@ def test_feedback_summary_endpoint(tmp_path):
         "helpful": 1,
         "not_helpful": 1,
     }
+
+
+def test_feedback_endpoint_uses_config_database_path(tmp_path, monkeypatch):
+    app.dependency_overrides.clear()
+    database_path = tmp_path / "configured.db"
+    monkeypatch.setattr(feedback, "DATABASE_PATH", str(database_path))
+
+    response = client.post(
+        "/api/v1/feedback",
+        json={
+            "question": "新员工什么时候完成安全培训？",
+            "answer": "新员工需要在 30 天内完成安全培训。",
+            "rating": "helpful",
+        },
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 201
+    assert database_path.exists()

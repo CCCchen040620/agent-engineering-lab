@@ -7,7 +7,7 @@ from backend.services.sqlite_feedback_repository import (
     list_feedback_from_db,
     summarize_feedback_from_db,
 )
-from week04.settings import SQLITE_DATABASE_PATH
+from backend.config import DATABASE_PATH
 from week05.models import Feedback, FeedbackCreateRequest
 
 
@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/v1")
 
 
 def get_feedback_database_path() -> str:
-    return SQLITE_DATABASE_PATH
+    return DATABASE_PATH
 
 
 @router.post("/feedback", response_model=Feedback, status_code=201)
