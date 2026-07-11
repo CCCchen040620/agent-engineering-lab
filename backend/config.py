@@ -26,6 +26,7 @@ def get_float_env(name: str, default: float) -> float:
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 BACKEND_API_BASE_URL = os.getenv("BACKEND_API_BASE_URL", "http://127.0.0.1:8000")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///data/app.db")
 
 LLM_MODEL = os.getenv("LLM_MODEL", "qwen3.6:latest")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "bge-m3:latest")

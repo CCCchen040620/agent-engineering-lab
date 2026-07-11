@@ -14,6 +14,7 @@ from backend.config import (
     RATE_LIMIT_MAX_REQUESTS,
     RATE_LIMIT_WINDOW_SECONDS,
     SLOW_REQUEST_THRESHOLD_MS,
+    DATABASE_URL,
 )
 
 
@@ -30,6 +31,7 @@ def test_default_config_values():
     assert RATE_LIMIT_WINDOW_SECONDS == 60
     assert RATE_LIMIT_MAX_REQUESTS == 20
     assert SLOW_REQUEST_THRESHOLD_MS == 1000.0
+    assert DATABASE_URL == "sqlite:///data/app.db"
 
 
 def test_config_can_read_environment_variables(monkeypatch):
@@ -45,6 +47,7 @@ def test_config_can_read_environment_variables(monkeypatch):
     monkeypatch.setenv("RATE_LIMIT_WINDOW_SECONDS", "30")
     monkeypatch.setenv("RATE_LIMIT_MAX_REQUESTS", "10")
     monkeypatch.setenv("SLOW_REQUEST_THRESHOLD_MS", "500")
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///test.db")
 
     reloaded_config = importlib.reload(config)
 
@@ -60,6 +63,7 @@ def test_config_can_read_environment_variables(monkeypatch):
     assert reloaded_config.RATE_LIMIT_WINDOW_SECONDS == 30
     assert reloaded_config.RATE_LIMIT_MAX_REQUESTS == 10
     assert reloaded_config.SLOW_REQUEST_THRESHOLD_MS == 500.0
+    assert reloaded_config.DATABASE_URL == "sqlite:///test.db"
 
     monkeypatch.delenv("OLLAMA_BASE_URL")
     monkeypatch.delenv("BACKEND_API_BASE_URL")
@@ -73,6 +77,7 @@ def test_config_can_read_environment_variables(monkeypatch):
     monkeypatch.delenv("RATE_LIMIT_WINDOW_SECONDS")
     monkeypatch.delenv("RATE_LIMIT_MAX_REQUESTS")
     monkeypatch.delenv("SLOW_REQUEST_THRESHOLD_MS")
+    monkeypatch.delenv("DATABASE_URL")
 
     importlib.reload(config)
 
@@ -149,3 +154,9 @@ def test_config_can_read_dotenv_file(tmp_path, monkeypatch):
     monkeypatch.delenv("SLOW_REQUEST_THRESHOLD_MS", raising=False)
 
     importlib.reload(config)
+
+
+def test_default_database_url():
+    from backend.config import DATABASE_URL
+
+    assert DATABASE_URL == "sqlite:///data/app.db"
