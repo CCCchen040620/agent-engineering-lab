@@ -152,6 +152,13 @@ with st.sidebar:
         step=0.05,
     )
 
+    timeout_seconds = st.slider(
+        "Agent 超时时间 timeout_seconds",
+        min_value=1,
+        max_value=120,
+        value=30,
+    )
+
     st.divider()
     st.header("会话保存")
 
@@ -282,6 +289,7 @@ if st.button("提问"):
                         top_k=top_k,
                         mode=mode,
                         min_score=min_score,
+                        timeout_seconds=timeout_seconds,
                     )
                 else:
                     response, error_message = chat_with_langgraph_agent_api(
@@ -290,6 +298,7 @@ if st.button("提问"):
                         top_k=top_k,
                         mode=mode,
                         min_score=min_score,
+                        timeout_seconds=timeout_seconds,
                     )
             else:
                 response, error_message = chat_with_llm_api(

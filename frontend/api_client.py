@@ -81,6 +81,7 @@ def chat_with_langgraph_agent_api(
     top_k: int,
     mode: str,
     min_score: float,
+    timeout_seconds: int,
 ) -> tuple[dict | None, str | None]:
     """Ask the FastAPI LangGraph Agent endpoint and return data or an error."""
     try:
@@ -90,6 +91,7 @@ def chat_with_langgraph_agent_api(
                 "top_k": top_k,
                 "mode": mode,
                 "min_score": min_score,
+                "timeout_seconds": timeout_seconds,
             },
             json={"question": question},
             timeout=300,
@@ -110,6 +112,7 @@ def chat_with_langgraph_agent_conversation_api(
     top_k: int,
     mode: str,
     min_score: float,
+    timeout_seconds: int,
 ) -> tuple[dict | None, str | None]:
     """Ask the LangGraph Agent endpoint and save messages to a conversation."""
     try:
@@ -120,6 +123,7 @@ def chat_with_langgraph_agent_conversation_api(
                 "top_k": top_k,
                 "mode": mode,
                 "min_score": min_score,
+                "timeout_seconds": timeout_seconds,
             },
             json={"question": question},
             timeout=300,
