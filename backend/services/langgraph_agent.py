@@ -6,6 +6,7 @@ from typing import Callable, Literal, TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from backend.services.agent_tools import (
+    MODEL_UNAVAILABLE_ANSWER,
     answer_with_context_tool,
     ask_clarification_tool,
     find_document_by_title_tool,
@@ -53,6 +54,7 @@ class LangGraphAgentState(TypedDict):
     started_at: float
     timeout_seconds: float
     is_timeout: bool
+    is_fallback: bool
 
 
 def decide_intent_node(state: LangGraphAgentState) -> dict:
@@ -469,32 +471,106 @@ def route_by_context(
     return "refuse_node"
 
 
-def answer_node(state: LangGraphAgentState) -> dict:
-    tool_result = answer_with_context_tool(
-        question=state["question"],
-        snippets=state["snippets"],
-        generator=state["generator"],
-    )
+def build_fallback_answer(snippets: list[dict]) -> str:
+    lines = [
+        "本地模型暂时不可用，以下是根据知识库检索结果整理的基础回答："
+    ]
+
+    for index, snippet in enumerate(snippets, start=1):
+        lines.append(f"[{index}] {snippet['text']}")
+        lines.append(f"来源：{snippet['title']}")
+
+    return "\n".join(lines)
+
+
+def build_fallback_answer_result(
+    state: LangGraphAgentState,
+    error_message: str,
+) -> dict:
+    citations = []
+
+    for snippet in state["snippets"]:
+        citations.append(
+            {
+                "title": snippet["title"],
+                "text": snippet["text"],
+                "path": snippet["path"],
+            }
+        )
 
     return {
-        "answer": tool_result["answer"],
-        "citations": tool_result["citations"],
+        "is_fallback": True,
+        "answer": build_fallback_answer(state["snippets"]),
+        "citations": citations,
         "steps": state["steps"]
         + [
             {
                 "step": len(state["steps"]) + 1,
-                "tool": "answer_with_context_tool",
+                "tool": "answer_with_context_tool_failed",
                 "input": {
                     "question": state["question"],
                     "snippet_count": len(state["snippets"]),
                 },
                 "observation": {
-                    "citation_count": len(tool_result["citations"]),
+                    "error": error_message,
+                },
+                "next_action": "fallback_answer_tool",
+            },
+            {
+                "step": len(state["steps"]) + 2,
+                "tool": "fallback_answer_tool",
+                "input": {
+                    "snippet_count": len(state["snippets"]),
+                },
+                "observation": {
+                    "citation_count": len(citations),
                 },
                 "next_action": "finish",
-            }
+            },
         ],
     }
+
+
+def answer_node(state: LangGraphAgentState) -> dict:
+    try:
+        tool_result = answer_with_context_tool(
+            question=state["question"],
+            snippets=state["snippets"],
+            generator=state["generator"],
+        )
+
+        if tool_result["answer"] == MODEL_UNAVAILABLE_ANSWER:
+            return build_fallback_answer_result(
+                state=state,
+                error_message=MODEL_UNAVAILABLE_ANSWER,
+            )
+
+        return {
+            "is_fallback": False,
+            "answer": tool_result["answer"],
+            "citations": tool_result["citations"],
+            "steps": state["steps"]
+            + [
+                {
+                    "step": len(state["steps"]) + 1,
+                    "tool": "answer_with_context_tool",
+                    "input": {
+                        "question": state["question"],
+                        "snippet_count": len(state["snippets"]),
+                    },
+                    "observation": {
+                        "citation_count": len(tool_result["citations"]),
+                    },
+                    "next_action": "finish",
+                }
+            ],
+        }
+
+    except Exception as error:
+        return build_fallback_answer_result(
+            state=state,
+            error_message=str(error),
+        )
 
 
 def refuse_node(state: LangGraphAgentState) -> dict:
@@ -678,6 +754,7 @@ def run_langgraph_agent(
         "started_at": time.perf_counter(),
         "timeout_seconds": timeout_seconds,
         "is_timeout": False,
+        "is_fallback": False,
     }
 
     result = graph.invoke(initial_state)

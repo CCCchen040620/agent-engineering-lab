@@ -636,4 +636,43 @@ def test_run_langgraph_agent_returns_timeout_fallback_when_timeout(tmp_path):
     assert result["citations"] == []
     assert result["steps"][2]["tool"] == "timeout_fallback"
 
-    
+
+def test_run_langgraph_agent_falls_back_when_generator_fails(tmp_path):
+    database_path = tmp_path / "test.db"
+    connection = create_connection(str(database_path))
+
+    create_documents_table(connection)
+    create_chunks_table(connection)
+
+    document = insert_document_to_db(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=1,
+        is_indexed=True,
+    )
+
+    insert_chunk_to_db(
+        connection,
+        document_id=document["id"],
+        text="新员工入职后需要在 30 天内完成安全培训。",
+    )
+
+    connection.close()
+
+    def failing_generator(prompt: str) -> str:
+        raise RuntimeError("模型生成失败")
+
+    result = run_langgraph_agent(
+        question="新员工什么时候完成安全培训？",
+        database_path=str(database_path),
+        mode="keyword",
+        generator=failing_generator,
+    )
+
+    assert result["is_fallback"] is True
+    assert "本地模型暂时不可用" in result["answer"]
+    assert "新员工入职后需要在 30 天内完成安全培训。" in result["answer"]
+    assert len(result["citations"]) == 1
+    assert result["steps"][4]["tool"] == "answer_with_context_tool_failed"
+    assert result["steps"][5]["tool"] == "fallback_answer_tool"
