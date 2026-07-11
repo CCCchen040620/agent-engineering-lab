@@ -1,6 +1,7 @@
 import streamlit as st
 
 from backend.config import BACKEND_API_BASE_URL
+from frontend.document_error_messages import format_document_error_message
 from frontend.api_client import (
     chat_with_agent_api,
     chat_with_langgraph_agent_api,
@@ -213,10 +214,10 @@ with st.sidebar:
                     file_name=uploaded_file.name,
                     content=uploaded_file.getvalue(),
                     title=document_title.strip(),
-                )
+            )
 
             if error_message is not None:
-                st.error(error_message)
+                st.error(format_document_error_message(error_message))
             else:
                 st.success(
                     f"已新增文档：{document['title']}，切分片段数：{document['chunk_count']}"
@@ -229,10 +230,10 @@ with st.sidebar:
                     title=document_title.strip(),
                     file_type=document_file_type,
                     content=document_content.strip(),
-                )
+            )
 
             if error_message is not None:
-                st.error(error_message)
+                st.error(format_document_error_message(error_message))
             else:
                 st.success(
                     f"已新增文档：{document['title']}，切分片段数：{document['chunk_count']}"
