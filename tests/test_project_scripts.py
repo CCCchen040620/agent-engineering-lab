@@ -4,6 +4,7 @@ from pathlib import Path
 def test_required_project_scripts_exist():
     required_scripts = [
         "scripts/bootstrap_project.ps1",
+        "scripts/check_docker_build.ps1",
         "scripts/check_environment.ps1",
         "scripts/check_docker_compose.ps1",
         "scripts/check_project.ps1",
@@ -48,6 +49,15 @@ def test_docker_compose_check_validates_services_and_health_endpoints():
     assert "http://127.0.0.1:8000/health" in script
     assert "http://127.0.0.1:8501/_stcore/health" in script
     assert "docker compose up --build" in script
+
+
+def test_docker_build_check_runs_compose_build():
+    script = Path("scripts/check_docker_build.ps1").read_text(encoding="utf-8")
+
+    assert "docker compose build" in script
+    assert "Docker Compose build failed" in script
+    assert "Docker Desktop" in script
+    assert "pyproject.toml" in script
 
 
 def test_project_python_version_is_aligned():

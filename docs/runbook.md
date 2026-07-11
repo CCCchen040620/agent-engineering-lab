@@ -81,7 +81,7 @@ GET /api/v1/system/status
 当前稳定状态：
 
 ```text
-423 passed, 1 warning
+424 passed, 1 warning
 ```
 
 ## 2. 推荐启动脚本
@@ -133,6 +133,16 @@ powershell -ExecutionPolicy Bypass -File .\scripts\start_backend.ps1
 5. 需要管理数据时，再启动文档管理页或反馈管理页。
 
 也可以使用 Docker Compose 启动后端和 Streamlit 前端：
+
+先检查 Docker 镜像是否可以构建：
+
+```powershell
+.\scripts\check_docker_build.ps1
+```
+
+该脚本会执行 `docker compose build`，用于验证 Dockerfile 和 `pyproject.toml` 里的依赖配置是否能成功构建镜像。
+
+构建通过后启动服务：
 
 ```powershell
 docker compose up --build
@@ -196,6 +206,12 @@ http://127.0.0.1:8000/health
 
 ```powershell
 docker compose up --build
+```
+
+如果只想先验证镜像能不能构建，可以运行：
+
+```powershell
+.\scripts\check_docker_build.ps1
 ```
 
 后台启动：
