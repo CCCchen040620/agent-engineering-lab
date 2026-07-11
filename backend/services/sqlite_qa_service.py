@@ -7,14 +7,14 @@ from backend.services.sqlite_document_repository import (
 from backend.services.sqlite_vector_search_service import search_sqlite_chunks_by_similarity
 from week03.answer_with_citation import build_answer
 from week03.keyword_extractor import extract_keyword
-from week04.settings import SQLITE_DATABASE_PATH
 from week05.models import ChatResponse, Citation
 from backend.services.ranking_service import rank_chunks
+from backend.config import DATABASE_PATH
 
 
 def build_sqlite_chat_response(
     question: str,
-    database_path: str = SQLITE_DATABASE_PATH,
+    database_path: str = DATABASE_PATH,
     top_k: int = 3,
     mode: str = "keyword",
 ) -> ChatResponse:

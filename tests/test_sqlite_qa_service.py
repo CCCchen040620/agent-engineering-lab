@@ -1,3 +1,4 @@
+from pathlib import Path
 from backend.services.sqlite_document_repository import (
     create_chunks_table,
     create_connection,
@@ -151,3 +152,11 @@ def test_build_sqlite_chat_response_vector_mode(tmp_path):
 
     assert len(response.citations) == 1
     assert response.citations[0].title == "报销制度"
+
+
+def test_sqlite_qa_service_uses_config_database_path():
+    source = Path("backend/services/sqlite_qa_service.py").read_text(encoding="utf-8")
+
+    assert "DATABASE_PATH" in source
+    assert "SQLITE_DATABASE_PATH" not in source
+    assert "week04.settings" not in source
