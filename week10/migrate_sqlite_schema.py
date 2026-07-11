@@ -4,7 +4,7 @@ from backend.services.sqlite_conversation_repository import (
     create_conversations_table,
     create_messages_table,
 )
-from week04.settings import SQLITE_DATABASE_PATH
+from backend.config import DATABASE_PATH
 
 
 def column_exists(
@@ -70,7 +70,7 @@ def migrate_conversation_summary(connection: sqlite3.Connection) -> bool:
 
 
 def main() -> None:
-    connection = sqlite3.connect(SQLITE_DATABASE_PATH)
+    connection = sqlite3.connect(DATABASE_PATH)
 
     result = migrate_conversation_schema(connection)
 

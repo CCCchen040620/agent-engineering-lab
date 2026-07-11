@@ -1,5 +1,6 @@
 import sqlite3
 
+from week10 import migrate_sqlite_schema
 from week10.migrate_sqlite_schema import (
     column_exists,
     migrate_conversation_schema,
@@ -175,3 +176,15 @@ def test_migrate_conversation_summary_adds_missing_column():
     assert column_exists(connection, "conversations", "summary") is True
 
     connection.close()
+
+
+def test_main_uses_config_database_path(tmp_path, monkeypatch, capsys):
+    database_path = tmp_path / "app.db"
+    monkeypatch.setattr(migrate_sqlite_schema, "DATABASE_PATH", str(database_path))
+
+    migrate_sqlite_schema.main()
+
+    output = capsys.readouterr().out
+
+    assert database_path.exists()
+    assert "SQLite schema migration completed." in output

@@ -81,7 +81,7 @@ GET /api/v1/system/status
 当前稳定状态：
 
 ```text
-434 passed, 1 warning
+435 passed, 1 warning
 ```
 
 GitHub Actions 当前包含两个检查：
@@ -505,6 +505,8 @@ python -m week10.migrate_sqlite_schema
 - 检查 `messages.metadata_json` 是否存在
 - 如果缺少 `metadata_json`，自动添加
 - 如果已经存在，直接跳过
+
+迁移脚本默认使用 `DATABASE_URL` 推导出的 `DATABASE_PATH`，所以修改 `.env` 中的 `DATABASE_URL` 后，迁移目标也会随之变化。
 
 运行后会输出迁移结果，例如：
 
