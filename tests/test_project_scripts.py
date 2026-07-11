@@ -62,3 +62,14 @@ def test_project_python_version_is_aligned():
     assert "FROM python:3.13-slim" in dockerfile
     assert 'python-version: "3.13"' in github_actions
     assert "py -3.13 -m venv .venv" in setup_doc
+
+
+def test_github_actions_installs_project_dev_dependencies():
+    github_actions = Path(".github/workflows/python-tests.yml").read_text(
+        encoding="utf-8"
+    )
+    pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
+
+    assert 'python -m pip install -e ".[dev]"' in github_actions
+    assert "pytest pytest-cov fastapi pydantic" not in github_actions
+    assert '"httpx>=0.28,<1"' in pyproject

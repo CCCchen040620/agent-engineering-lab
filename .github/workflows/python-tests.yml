@@ -22,7 +22,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pytest pytest-cov fastapi pydantic jieba langgraph python-dotenv python-multipart requests streamlit uvicorn httpx
+          python -m pip install -e ".[dev]"
 
       - name: Run tests
         run: pytest
