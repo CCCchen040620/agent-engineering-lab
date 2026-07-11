@@ -23,8 +23,7 @@ from backend.services.conversation_context_service import (
     is_contextual_context_valid,
 )
 from backend.services.simple_agent import decide_agent_intent, extract_document_title
-from backend.config import LANGGRAPH_AGENT_TIMEOUT_SECONDS
-from week04.settings import SQLITE_DATABASE_PATH
+from backend.config import DATABASE_PATH, LANGGRAPH_AGENT_TIMEOUT_SECONDS
 
 
 logger = logging.getLogger(__name__)
@@ -698,7 +697,7 @@ def is_agent_timeout(state: LangGraphAgentState) -> bool:
 
 def run_langgraph_agent(
     question: str,
-    database_path: str = SQLITE_DATABASE_PATH,
+    database_path: str = DATABASE_PATH,
     top_k: int = 3,
     mode: str = "keyword",
     min_score: float = 0.0,

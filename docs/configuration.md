@@ -94,3 +94,5 @@ DATABASE_PATH=data/app.db
 当前 Agent Tools 工具层也已经开始使用 DATABASE_PATH 作为默认数据库路径。
 
 当前 Simple Agent 编排层也已经开始使用 DATABASE_PATH 作为默认数据库路径。
+
+当前 LangGraph Agent 编排层也已经开始使用 DATABASE_PATH 作为默认数据库路径。

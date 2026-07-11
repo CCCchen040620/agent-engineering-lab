@@ -1,3 +1,4 @@
+from pathlib import Path
 from backend.services.conversation_context_service import (
     calculate_question_similarity,
     is_contextual_context_valid,
@@ -676,3 +677,11 @@ def test_run_langgraph_agent_falls_back_when_generator_fails(tmp_path):
     assert len(result["citations"]) == 1
     assert result["steps"][4]["tool"] == "answer_with_context_tool_failed"
     assert result["steps"][5]["tool"] == "fallback_answer_tool"
+
+
+def test_langgraph_agent_uses_config_database_path():
+    source = Path("backend/services/langgraph_agent.py").read_text(encoding="utf-8")
+
+    assert "DATABASE_PATH" in source
+    assert "SQLITE_DATABASE_PATH" not in source
+    assert "week04.settings" not in source
