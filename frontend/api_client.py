@@ -1,5 +1,7 @@
 """Small HTTP helpers used by Streamlit pages."""
 
+import json
+
 import requests
 
 
@@ -105,6 +107,52 @@ def chat_with_langgraph_agent_api(
     return None, get_error_detail(response)
 
 
+def stream_langgraph_agent_api(
+    base_url: str,
+    question: str,
+    top_k: int,
+    mode: str,
+    min_score: float,
+    timeout_seconds: int,
+):
+    """Stream LangGraph Agent SSE events from FastAPI."""
+    try:
+        response = requests.post(
+            base_url + "/api/v1/langgraph-agent/chat/stream",
+            params={
+                "top_k": top_k,
+                "mode": mode,
+                "min_score": min_score,
+                "timeout_seconds": timeout_seconds,
+            },
+            json={"question": question},
+            timeout=300,
+            stream=True,
+        )
+    except requests.RequestException:
+        yield {
+            "type": "error",
+            "message": "后端服务暂时不可用，请确认 FastAPI 已启动。",
+        }
+        return
+
+    if response.status_code != 200:
+        yield {
+            "type": "error",
+            "message": get_error_detail(response),
+        }
+        return
+
+    for line in response.iter_lines(decode_unicode=True):
+        if line == "":
+            continue
+
+        event = parse_sse_event_line(line)
+
+        if event is not None:
+            yield event
+
+            
 def chat_with_langgraph_agent_conversation_api(
     base_url: str,
     conversation_id: int,
@@ -256,6 +304,18 @@ def get_error_detail(response) -> str:
         return f"{message}（请求编号：{request_id}）"
 
     return message
+
+
+def parse_sse_event_line(line: str) -> dict | None:
+    if not line.startswith("data: "):
+        return None
+
+    data_text = line.removeprefix("data: ").strip()
+
+    if data_text == "":
+        return None
+
+    return json.loads(data_text)
 
 
 def get_unified_error_message(data: dict) -> str:

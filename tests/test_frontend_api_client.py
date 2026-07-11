@@ -9,6 +9,8 @@ from frontend.api_client import (
     get_system_status_api,
     submit_feedback_api,
     upload_text_document_api,
+    parse_sse_event_line,
+    stream_langgraph_agent_api,
 )
 
 
@@ -21,6 +23,18 @@ class FakeResponse:
         return self.data
 
 
+class FakeStreamResponse:
+    def __init__(self, status_code, lines):
+        self.status_code = status_code
+        self.lines = lines
+
+    def iter_lines(self, decode_unicode=True):
+        return iter(self.lines)
+
+    def json(self):
+        return {"detail": "请求失败。"}
+
+       
 class BrokenJsonResponse:
     def json(self):
         raise ValueError("invalid json")
@@ -338,7 +352,7 @@ def test_chat_with_langgraph_agent_api_sends_timeout_seconds(monkeypatch):
     assert data["answer"] == "30 天内完成安全培训。"
     assert captured["params"]["timeout_seconds"] == 30
 
-    
+
 def test_submit_feedback_api_posts_feedback(monkeypatch):
     captured = {}
 
@@ -596,3 +610,92 @@ def test_upload_text_document_api_handles_network_failure(monkeypatch):
 
     assert data is None
     assert error_message == "后端服务暂时不可用，请确认 FastAPI 已启动。"
+
+
+def test_parse_sse_event_line_returns_event():
+    event = parse_sse_event_line(
+        'data: {"type": "delta", "content": "你好"}'
+    )
+
+    assert event == {
+        "type": "delta",
+        "content": "你好",
+    }
+
+
+def test_parse_sse_event_line_ignores_non_data_line():
+    event = parse_sse_event_line("event: message")
+
+    assert event is None
+
+
+def test_stream_langgraph_agent_api_yields_sse_events(monkeypatch):
+    captured = {}
+
+    def fake_post(url, params, json, timeout, stream):
+        captured["url"] = url
+        captured["params"] = params
+        captured["json"] = json
+        captured["timeout"] = timeout
+        captured["stream"] = stream
+
+        return FakeStreamResponse(
+            200,
+            [
+                'data: {"type": "delta", "content": "你好"}',
+                "",
+                'data: {"type": "metadata", "keyword": "测试"}',
+                'data: {"type": "done"}',
+            ],
+        )
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    events = list(
+        stream_langgraph_agent_api(
+            base_url="http://127.0.0.1:8000",
+            question="测试问题",
+            top_k=3,
+            mode="precomputed_embedding",
+            min_score=0.8,
+            timeout_seconds=30,
+        )
+    )
+
+    assert events == [
+        {"type": "delta", "content": "你好"},
+        {"type": "metadata", "keyword": "测试"},
+        {"type": "done"},
+    ]
+
+    assert captured["url"] == "http://127.0.0.1:8000/api/v1/langgraph-agent/chat/stream"
+    assert captured["params"]["timeout_seconds"] == 30
+    assert captured["stream"] is True
+
+
+def test_stream_langgraph_agent_api_yields_error_when_backend_returns_error(monkeypatch):
+    def fake_post(url, params, json, timeout, stream):
+        return FakeStreamResponse(
+            429,
+            [],
+        )
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    events = list(
+        stream_langgraph_agent_api(
+            base_url="http://127.0.0.1:8000",
+            question="测试问题",
+            top_k=3,
+            mode="precomputed_embedding",
+            min_score=0.8,
+            timeout_seconds=30,
+        )
+    )
+
+    assert events == [
+        {
+            "type": "error",
+            "message": "请求失败。",
+        }
+    ]
