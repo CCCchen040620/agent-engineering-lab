@@ -81,8 +81,13 @@ GET /api/v1/system/status
 当前稳定状态：
 
 ```text
-424 passed, 1 warning
+425 passed, 1 warning
 ```
+
+GitHub Actions 当前包含两个检查：
+
+- `test`：在 Windows + Python 3.13 环境运行 pytest。
+- `docker-build`：在 Ubuntu 环境运行 `docker compose build`，验证 Dockerfile 和依赖配置可以构建镜像。
 
 ## 2. 推荐启动脚本
 

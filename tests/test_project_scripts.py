@@ -85,6 +85,16 @@ def test_github_actions_installs_project_dev_dependencies():
     assert '"httpx>=0.28,<1"' in pyproject
 
 
+def test_github_actions_runs_docker_build_job():
+    github_actions = Path(".github/workflows/python-tests.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert "docker-build:" in github_actions
+    assert "runs-on: ubuntu-latest" in github_actions
+    assert "docker compose build" in github_actions
+
+
 def test_dockerfile_installs_project_dependencies_from_pyproject():
     dockerfile = Path("Dockerfile").read_text(encoding="utf-8")
 
