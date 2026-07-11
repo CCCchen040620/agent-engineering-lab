@@ -62,6 +62,26 @@ $PythonMajorMinor = python -c "import sys; print(str(sys.version_info.major) + '
 if ($PythonMajorMinor -ne "3.13") {
     Write-Host "[WARN] Project target Python version is 3.13, but current python is $PythonMajorMinor."
     Write-Host "       Tests may still pass locally, but CI and final delivery should use Python 3.13."
+
+    if (Get-Command "py" -ErrorAction SilentlyContinue) {
+        $PythonLauncherVersion = py -3.13 -c "import sys; print(str(sys.version_info.major) + '.' + str(sys.version_info.minor))" 2>$null
+
+        if ($LASTEXITCODE -eq 0 -and $PythonLauncherVersion -eq "3.13") {
+            Write-Host "[OK] Python launcher can find Python 3.13 with: py -3.13"
+            Write-Host "     Recommended venv command: py -3.13 -m venv .venv"
+        }
+        else {
+            Write-Host "[WARN] Python launcher could not find Python 3.13 with: py -3.13"
+            Write-Host "       Install Python 3.13 or fix PATH before final delivery."
+        }
+    }
+    else {
+        Write-Host "[WARN] Windows Python launcher 'py' is not available."
+        Write-Host "       Install Python 3.13 or add it to PATH before final delivery."
+    }
+}
+else {
+    Write-Host "[OK] Current python matches project target version 3.13."
 }
 
 Write-Host ""

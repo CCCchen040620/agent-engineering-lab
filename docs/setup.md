@@ -12,6 +12,24 @@
 - Ollama
 - 建议至少 16GB 内存
 
+当前项目的目标 Python 版本是 3.13。项目配置、Docker 镜像和 GitHub Actions 都按 Python 3.13 对齐。
+
+在 Windows 上可以先检查默认 Python：
+
+```powershell
+python --version
+```
+
+如果这里显示的不是 Python 3.13，再检查 Python Launcher 是否能找到 3.13：
+
+```powershell
+py -3.13 --version
+```
+
+如果 `py -3.13` 可以正常显示版本，后面创建虚拟环境时优先使用 `py -3.13`，不要直接使用默认 `python`。
+
+如果提示找不到 `py` 或找不到 Python 3.13，说明本机还没有正确安装或配置 Python 3.13。后续最终交付前建议重新安装 Python 3.13，并在安装时勾选 “Add python.exe to PATH”。
+
 当前项目使用的本地模型：
 
 ```text
@@ -28,6 +46,12 @@ ollama list
 ## 2. 创建虚拟环境
 
 在项目根目录运行：
+
+```powershell
+py -3.13 -m venv .venv
+```
+
+如果你的默认 `python` 已经是 3.13，也可以使用：
 
 ```powershell
 python -m venv .venv
@@ -92,6 +116,14 @@ powershell -ExecutionPolicy Bypass -File .\scripts\migrate_sqlite.ps1
 
 ## 5. 运行健康检查
 
+第一次准备环境时，建议先运行：
+
+```powershell
+.\scripts\check_environment.ps1
+```
+
+它会检查本机命令、关键项目文件，并提示当前 Python 是否与项目目标版本 3.13 对齐。
+
 推荐运行：
 
 ```powershell
@@ -103,7 +135,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\migrate_sqlite.ps1
 当前稳定测试状态：
 
 ```text
-338 passed, 1 warning
+420 passed, 1 warning
 ```
 
 ## 6. 启动项目

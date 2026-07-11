@@ -81,7 +81,7 @@ GET /api/v1/system/status
 当前稳定状态：
 
 ```text
-419 passed, 1 warning
+420 passed, 1 warning
 ```
 
 ## 2. 推荐启动脚本

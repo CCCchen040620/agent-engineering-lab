@@ -25,6 +25,8 @@ def test_environment_check_mentions_required_commands():
     assert "ollama" in script
     assert "docker" in script
     assert "3.13" in script
+    assert "py -3.13" in script
+    assert "Recommended venv command" in script
 
 
 def test_bootstrap_project_runs_environment_check_first():
@@ -46,3 +48,17 @@ def test_docker_compose_check_validates_services_and_health_endpoints():
     assert "http://127.0.0.1:8000/health" in script
     assert "http://127.0.0.1:8501/_stcore/health" in script
     assert "docker compose up --build" in script
+
+
+def test_project_python_version_is_aligned():
+    pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
+    dockerfile = Path("Dockerfile").read_text(encoding="utf-8")
+    github_actions = Path(".github/workflows/python-tests.yml").read_text(
+        encoding="utf-8"
+    )
+    setup_doc = Path("docs/setup.md").read_text(encoding="utf-8")
+
+    assert 'requires-python = ">=3.13,<3.14"' in pyproject
+    assert "FROM python:3.13-slim" in dockerfile
+    assert 'python-version: "3.13"' in github_actions
+    assert "py -3.13 -m venv .venv" in setup_doc
