@@ -7,6 +7,9 @@ from backend.config import (
     DEFAULT_TOP_K,
     EMBEDDING_MODEL,
     LLM_MODEL,
+    MAX_DOCUMENT_CONTENT_CHARS,
+    MAX_DOCUMENT_TITLE_CHARS,
+    MAX_UPLOAD_FILE_BYTES,
     OLLAMA_BASE_URL,
 )
 
@@ -18,6 +21,9 @@ def test_default_config_values():
     assert EMBEDDING_MODEL == "bge-m3:latest"
     assert DEFAULT_TOP_K == 3
     assert DEFAULT_MIN_SCORE == 0.3
+    assert MAX_DOCUMENT_TITLE_CHARS == 100
+    assert MAX_DOCUMENT_CONTENT_CHARS == 20000
+    assert MAX_UPLOAD_FILE_BYTES == 1_048_576
 
 
 def test_config_can_read_environment_variables(monkeypatch):
@@ -27,6 +33,9 @@ def test_config_can_read_environment_variables(monkeypatch):
     monkeypatch.setenv("EMBEDDING_MODEL", "test-embedding")
     monkeypatch.setenv("DEFAULT_TOP_K", "5")
     monkeypatch.setenv("DEFAULT_MIN_SCORE", "0.8")
+    monkeypatch.setenv("MAX_DOCUMENT_TITLE_CHARS", "80")
+    monkeypatch.setenv("MAX_DOCUMENT_CONTENT_CHARS", "1000")
+    monkeypatch.setenv("MAX_UPLOAD_FILE_BYTES", "2048")
 
     reloaded_config = importlib.reload(config)
 
@@ -36,6 +45,9 @@ def test_config_can_read_environment_variables(monkeypatch):
     assert reloaded_config.EMBEDDING_MODEL == "test-embedding"
     assert reloaded_config.DEFAULT_TOP_K == 5
     assert reloaded_config.DEFAULT_MIN_SCORE == 0.8
+    assert reloaded_config.MAX_DOCUMENT_TITLE_CHARS == 80
+    assert reloaded_config.MAX_DOCUMENT_CONTENT_CHARS == 1000
+    assert reloaded_config.MAX_UPLOAD_FILE_BYTES == 2048
 
     monkeypatch.delenv("OLLAMA_BASE_URL")
     monkeypatch.delenv("BACKEND_API_BASE_URL")
@@ -43,6 +55,9 @@ def test_config_can_read_environment_variables(monkeypatch):
     monkeypatch.delenv("EMBEDDING_MODEL")
     monkeypatch.delenv("DEFAULT_TOP_K")
     monkeypatch.delenv("DEFAULT_MIN_SCORE")
+    monkeypatch.delenv("MAX_DOCUMENT_TITLE_CHARS")
+    monkeypatch.delenv("MAX_DOCUMENT_CONTENT_CHARS")
+    monkeypatch.delenv("MAX_UPLOAD_FILE_BYTES")
 
     importlib.reload(config)
 
@@ -59,6 +74,9 @@ def test_config_can_read_dotenv_file(tmp_path, monkeypatch):
                 "EMBEDDING_MODEL=dotenv-embedding",
                 "DEFAULT_TOP_K=4",
                 "DEFAULT_MIN_SCORE=0.7",
+                "MAX_DOCUMENT_TITLE_CHARS=90",
+                "MAX_DOCUMENT_CONTENT_CHARS=3000",
+                "MAX_UPLOAD_FILE_BYTES=4096",
             ]
         ),
         encoding="utf-8",
@@ -70,6 +88,9 @@ def test_config_can_read_dotenv_file(tmp_path, monkeypatch):
     monkeypatch.delenv("EMBEDDING_MODEL", raising=False)
     monkeypatch.delenv("DEFAULT_TOP_K", raising=False)
     monkeypatch.delenv("DEFAULT_MIN_SCORE", raising=False)
+    monkeypatch.delenv("MAX_DOCUMENT_TITLE_CHARS", raising=False)
+    monkeypatch.delenv("MAX_DOCUMENT_CONTENT_CHARS", raising=False)
+    monkeypatch.delenv("MAX_UPLOAD_FILE_BYTES", raising=False)
 
     monkeypatch.chdir(tmp_path)
 
@@ -81,6 +102,9 @@ def test_config_can_read_dotenv_file(tmp_path, monkeypatch):
     assert reloaded_config.EMBEDDING_MODEL == "dotenv-embedding"
     assert reloaded_config.DEFAULT_TOP_K == 4
     assert reloaded_config.DEFAULT_MIN_SCORE == 0.7
+    assert reloaded_config.MAX_DOCUMENT_TITLE_CHARS == 90
+    assert reloaded_config.MAX_DOCUMENT_CONTENT_CHARS == 3000
+    assert reloaded_config.MAX_UPLOAD_FILE_BYTES == 4096
 
     empty_folder = tmp_path / "empty"
     empty_folder.mkdir()
@@ -93,5 +117,8 @@ def test_config_can_read_dotenv_file(tmp_path, monkeypatch):
     monkeypatch.delenv("EMBEDDING_MODEL", raising=False)
     monkeypatch.delenv("DEFAULT_TOP_K", raising=False)
     monkeypatch.delenv("DEFAULT_MIN_SCORE", raising=False)
+    monkeypatch.delenv("MAX_DOCUMENT_TITLE_CHARS", raising=False)
+    monkeypatch.delenv("MAX_DOCUMENT_CONTENT_CHARS", raising=False)
+    monkeypatch.delenv("MAX_UPLOAD_FILE_BYTES", raising=False)
 
     importlib.reload(config)

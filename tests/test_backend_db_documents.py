@@ -477,6 +477,42 @@ def test_create_db_document_with_content_rejects_no_valid_chunks(tmp_path):
     assert response.json()["detail"] == "文档正文没有有效内容。"
 
 
+def test_create_db_document_with_content_rejects_too_long_title(tmp_path):
+    use_temp_database(tmp_path)
+
+    response = client.post(
+        "/api/v1/db/documents/with-content",
+        json={
+            "title": "a" * 101,
+            "file_type": "md",
+            "content": "员工可以远程办公。",
+        },
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 422
+    assert "文档标题过长" in response.json()["detail"]
+
+
+def test_create_db_document_with_content_rejects_too_long_content(tmp_path):
+    use_temp_database(tmp_path)
+
+    response = client.post(
+        "/api/v1/db/documents/with-content",
+        json={
+            "title": "长文档",
+            "file_type": "md",
+            "content": "a" * 20001,
+        },
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 413
+    assert "文档正文过长" in response.json()["detail"]
+
+
 def test_create_db_document_with_content_returns_409_for_duplicate_title(
     monkeypatch,
     tmp_path,
@@ -697,6 +733,47 @@ def test_upload_text_document_endpoint_rejects_no_valid_chunks(tmp_path):
 
     assert response.status_code == 422
     assert response.json()["detail"] == "文档正文没有有效内容。"
+
+
+def test_upload_text_document_endpoint_rejects_too_large_file(tmp_path):
+    use_temp_database(tmp_path)
+
+    response = client.post(
+        "/api/v1/db/documents/upload-text",
+        files={
+            "file": (
+                "large_policy.txt",
+                b"a" * 1_048_577,
+                "text/plain",
+            )
+        },
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 413
+    assert "上传文件过大" in response.json()["detail"]
+
+
+def test_upload_text_document_endpoint_rejects_too_long_title(tmp_path):
+    use_temp_database(tmp_path)
+
+    response = client.post(
+        "/api/v1/db/documents/upload-text",
+        data={"title": "a" * 101},
+        files={
+            "file": (
+                "visitor_policy.txt",
+                "访客进入办公区需要提前登记。".encode("utf-8"),
+                "text/plain",
+            )
+        },
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 422
+    assert "文档标题过长" in response.json()["detail"]
 
 
 def test_upload_text_document_endpoint_returns_503_when_embedding_fails(

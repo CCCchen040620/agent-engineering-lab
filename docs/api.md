@@ -132,6 +132,11 @@ GET /api/v1/db/documents/6/chunks
 
 上传 `.txt` 文件，并自动完成文档入库、chunks 切分和 embeddings 生成。
 
+限制：
+
+- 文档标题默认最多 `100` 个字符。
+- 上传文件默认最大 `1048576` 字节，约 1MB。
+
 如果本地 Embedding 模型不可用，接口会返回 `503 Service Unavailable`，并提示确认 Ollama 和 `bge-m3` 已启动。
 
 请求类型：
@@ -1167,11 +1172,14 @@ GET /api/v1/conversations/1/messages
 - `is_indexed` 根据是否成功生成 chunks 和 embeddings 自动设置。
 - 新增时会调用 Ollama embedding 模型，默认使用 `bge-m3:latest`。
 - 新增后可以立即通过 `/api/v1/db/chat/llm` 检索和问答。
+- 文档标题默认最多 `100` 个字符。
+- 文档正文默认最多 `20000` 个字符。
 
 错误返回：
 
 - `409 Conflict`：文档标题已存在
-- `422 Unprocessable Entity`：文档正文没有有效内容，无法切分出 chunks
+- `422 Unprocessable Entity`：文档标题过长，或文档正文没有有效内容，无法切分出 chunks
+- `413 Payload Too Large`：文档正文过长，或上传文件过大
 - `503 Service Unavailable`：文档索引失败，本地 Embedding 模型不可用
 
 ### Embedding 补索引

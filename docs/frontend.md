@@ -78,6 +78,7 @@ ollama list
 - 新增文档后可立即参与 RAG 问答:
   - 新增知识文档时，系统会自动切分 chunks，并使用 Ollama `bge-m3` 为 chunks 生成 embeddings，以便 `precomputed_embedding` 模式检索。
   - 如果文档索引失败，页面会提示确认 Ollama 已启动，并检查 `bge-m3:latest` 模型是否可用。
+  - 如果标题、正文或上传文件超过限制，页面会显示更明确的缩短/拆分提示。
   - “注意事项”:
   - 新增知识文档会写入本地 SQLite 数据库 `data/app.db`。该数据库属于运行时数据，已通过 `.gitignore` 忽略，不会提交到 Git。
 - 上传 `.txt` 文件并自动读取正文

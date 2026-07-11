@@ -26,6 +26,9 @@ Copy-Item .env.example .env
 | `EMBEDDING_MODEL` | `bge-m3:latest` | Embedding 模型名称，用于生成语义向量 |
 | `DEFAULT_TOP_K` | `3` | 默认最多返回的检索片段数量 |
 | `DEFAULT_MIN_SCORE` | `0.3` | 默认最低相似度门槛 |
+| `MAX_DOCUMENT_TITLE_CHARS` | `100` | 文档标题最大字符数 |
+| `MAX_DOCUMENT_CONTENT_CHARS` | `20000` | 手动新增文档正文最大字符数 |
+| `MAX_UPLOAD_FILE_BYTES` | `1048576` | txt 上传文件最大字节数，默认约 1MB |
 
 ## PowerShell 示例
 
@@ -37,3 +40,6 @@ $env:LLM_MODEL="qwen3.6:latest"
 $env:EMBEDDING_MODEL="bge-m3:latest"
 $env:DEFAULT_TOP_K="3"
 $env:DEFAULT_MIN_SCORE="0.8"
+$env:MAX_DOCUMENT_TITLE_CHARS="100"
+$env:MAX_DOCUMENT_CONTENT_CHARS="20000"
+$env:MAX_UPLOAD_FILE_BYTES="1048576"

@@ -6,6 +6,12 @@ from backend.services.document_indexing_service import (
     create_document_with_chunks_and_embeddings,
     split_text_into_chunks,
 )
+from backend.services.document_validation_service import (
+    DocumentValidationError,
+    validate_document_content,
+    validate_document_title,
+    validate_upload_file_size,
+)
 from backend.services.sqlite_qa_service import build_sqlite_chat_response
 from backend.services.sqlite_llm_qa_service import build_sqlite_llm_chat_response
 from backend.services.sqlite_document_repository import (
@@ -86,6 +92,12 @@ def create_db_document_with_content(
     request: DocumentCreateWithContentRequest,
     database_path: str = Depends(get_database_path),
 ):
+    try:
+        validate_document_title(request.title)
+        validate_document_content(request.content)
+    except DocumentValidationError as error:
+        raise HTTPException(status_code=error.status_code, detail=str(error))
+
     chunks = split_text_into_chunks(request.content)
 
     if chunks == []:
@@ -126,6 +138,11 @@ async def upload_text_document(
     content_bytes = await file.read()
 
     try:
+        validate_upload_file_size(content_bytes)
+    except DocumentValidationError as error:
+        raise HTTPException(status_code=error.status_code, detail=str(error))
+
+    try:
         content = content_bytes.decode("utf-8")
     except UnicodeDecodeError:
         raise HTTPException(
@@ -142,6 +159,12 @@ async def upload_text_document(
         document_title = filename.rsplit(".", 1)[0]
     else:
         document_title = title.strip()
+
+    try:
+        validate_document_title(document_title)
+        validate_document_content(content)
+    except DocumentValidationError as error:
+        raise HTTPException(status_code=error.status_code, detail=str(error))
 
     connection = create_connection(database_path)
 
