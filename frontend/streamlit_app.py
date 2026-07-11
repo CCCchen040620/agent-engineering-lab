@@ -277,6 +277,8 @@ if st.button("提问"):
     if question.strip() == "":
         st.warning("请输入问题后再提问。")
     else:
+        answer_rendered_during_streaming = False
+
         with st.spinner("正在检索知识库并调用本地 Qwen 生成回答..."):
             if chat_engine == "Simple Agent 问答":
                 response, error_message = chat_with_agent_api(
@@ -291,10 +293,12 @@ if st.button("提问"):
                     st.info("学习版流式输出暂不支持会话保存，已自动使用普通 LangGraph Agent 问答。")
 
                 if use_streaming and not save_to_conversation:
+                    st.subheader("回答")
                     answer_placeholder = st.empty()
                     streamed_answer = ""
                     metadata = {}
                     error_message = None
+                    answer_rendered_during_streaming = True
 
                     for event in stream_langgraph_agent_api(
                         base_url=BACKEND_API_BASE_URL,
@@ -367,7 +371,8 @@ if st.button("提问"):
             history_item["feedback_id"] = None
             st.session_state["chat_history"].append(history_item)
 
-            st.subheader("回答")
+            if not answer_rendered_during_streaming:
+                st.subheader("回答")
 
             if response.get("is_fallback") is True:
                 st.warning("本地模型不可用，已使用知识库片段生成基础回答。")
@@ -380,7 +385,8 @@ if st.button("提问"):
             else:
                 st.info("已生成回答，但本次没有引用来源。")
 
-            st.write(response["answer"])
+            if not answer_rendered_during_streaming:
+                st.write(response["answer"])
 
             st.caption(f"检索关键词：{response['keyword']}")
             st.caption(f"问答引擎：{chat_engine}")
