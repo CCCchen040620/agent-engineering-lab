@@ -1,3 +1,4 @@
+from pathlib import Path
 from backend.services.agent_tools import (
     ask_clarification_tool,
     list_documents_tool,
@@ -298,3 +299,11 @@ def test_find_document_by_title_tool_supports_contains_match(tmp_path):
     assert result["found"] == True
     assert result["document"]["title"] == "员工手册"
     assert result["match_type"] == "contains"
+
+
+def test_agent_tools_use_config_database_path():
+    source = Path("backend/services/agent_tools.py").read_text(encoding="utf-8")
+
+    assert "DATABASE_PATH" in source
+    assert "SQLITE_DATABASE_PATH" not in source
+    assert "week04.settings" not in source

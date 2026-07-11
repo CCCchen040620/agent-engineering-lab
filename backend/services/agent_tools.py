@@ -2,7 +2,7 @@
 
 from typing import Callable
 
-from backend.config import DEFAULT_MIN_SCORE, DEFAULT_TOP_K
+from backend.config import DATABASE_PATH, DEFAULT_MIN_SCORE, DEFAULT_TOP_K
 from backend.services.ollama_service import generate_with_ollama
 from backend.services.prompt_service import build_rag_prompt
 from backend.services.sqlite_llm_qa_service import search_sqlite_snippets
@@ -14,13 +14,12 @@ from backend.services.sqlite_document_repository import (
     list_chunks_by_document_id,
     list_documents_from_db_filtered,
 )
-from week04.settings import SQLITE_DATABASE_PATH
 
 REFUSAL_ANSWER = "知识库中没有找到相关资料，暂时无法回答。"
 MODEL_UNAVAILABLE_ANSWER = "本地模型暂时不可用，请稍后再试。"
 
 
-def list_documents_tool(database_path: str = SQLITE_DATABASE_PATH) -> dict:
+def list_documents_tool(database_path: str = DATABASE_PATH) -> dict:
     """列出知识库中的文档。"""
     connection = create_connection(database_path)
 
@@ -38,7 +37,7 @@ def list_documents_tool(database_path: str = SQLITE_DATABASE_PATH) -> dict:
 
 def find_document_by_title_tool(
     title: str,
-    database_path: str = SQLITE_DATABASE_PATH,
+    database_path: str = DATABASE_PATH,
 ) -> dict:
     """根据文档标题查找文档，优先精确匹配，再尝试包含匹配。"""
     documents_result = list_documents_tool(database_path)
@@ -68,7 +67,7 @@ def find_document_by_title_tool(
 
 def read_document_chunks_tool(
     document_id: int,
-    database_path: str = SQLITE_DATABASE_PATH,
+    database_path: str = DATABASE_PATH,
 ) -> dict:
     """读取某一份文档的 chunks。"""
     connection = create_connection(database_path)
@@ -100,7 +99,7 @@ def read_document_chunks_tool(
 
 def search_knowledge_base_tool(
     question: str,
-    database_path: str = SQLITE_DATABASE_PATH,
+    database_path: str = DATABASE_PATH,
     top_k: int = DEFAULT_TOP_K,
     mode: str = "keyword",
     min_score: float = DEFAULT_MIN_SCORE,
