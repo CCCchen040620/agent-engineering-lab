@@ -4,15 +4,39 @@
 
 ## 1. 检查测试
 
+第一次拉取项目、换电脑、重装依赖或排查环境问题时，先运行开发环境自检：
+
+```powershell
+.\scripts\check_environment.ps1
+```
+
+该脚本会检查：
+
+- Python、Git、pytest 是否可用
+- Ollama、Docker 是否安装
+- `.env.example`、`pyproject.toml`、`Dockerfile`、`docker-compose.yml` 是否存在
+- 常用 PowerShell 脚本是否存在
+
+说明：
+
+- Python、Git、pytest 和关键项目文件是必需项。
+- Ollama 和 Docker 是可选检查项；没有安装时会提示 warning，但不会阻止基础 Python 测试。
+- 如果要使用本地大模型、embedding 或 Docker Compose，则需要单独确认 Ollama 和 Docker 可用。
+- 项目最终目标栈是 Python 3.13；如果本机默认 `python` 不是 3.13，脚本会提示 warning。
+
+日常回归测试：
+
 ```powershell
 pytest
 ```
 
-也可以运行本地健康检查脚本：
+也可以运行本地项目检查脚本：
 
 ```powershell
 .\scripts\check_project.ps1
 ```
+
+该脚本会先迁移 SQLite schema，再运行完整测试。
 
 查看系统依赖状态：
 
@@ -39,7 +63,7 @@ GET /api/v1/system/status
 当前稳定状态：
 
 ```text
-405 passed, 1 warning
+417 passed, 1 warning
 ```
 
 ## 2. 推荐启动脚本
