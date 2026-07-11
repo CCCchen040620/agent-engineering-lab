@@ -1,4 +1,5 @@
 import logging
+import time
 
 from typing import Callable, Literal, TypedDict
 
@@ -21,6 +22,7 @@ from backend.services.conversation_context_service import (
     is_contextual_context_valid,
 )
 from backend.services.simple_agent import decide_agent_intent, extract_document_title
+from backend.config import LANGGRAPH_AGENT_TIMEOUT_SECONDS
 from week04.settings import SQLITE_DATABASE_PATH
 
 
@@ -48,6 +50,9 @@ class LangGraphAgentState(TypedDict):
     mode: str
     min_score: float
     generator: Callable[[str], str]
+    started_at: float
+    timeout_seconds: float
+    is_timeout: bool
 
 
 def decide_intent_node(state: LangGraphAgentState) -> dict:
@@ -62,7 +67,7 @@ def decide_intent_node(state: LangGraphAgentState) -> dict:
                 "tool": "decide_agent_intent",
                 "input": {"question": state["question"]},
                 "observation": {"intent": intent},
-                "next_action": "route_by_intent",
+                "next_action": "route_by_timeout",
             }
         ],
     }
@@ -82,6 +87,20 @@ def route_by_intent(
         return "extract_document_title_node"
 
     return "search_knowledge_node"
+
+
+def route_by_timeout(
+    state: LangGraphAgentState,
+) -> Literal[
+    "list_documents_node",
+    "extract_document_title_node",
+    "search_knowledge_node",
+    "timeout_fallback_node",
+]:
+    if is_agent_timeout(state):
+        return "timeout_fallback_node"
+
+    return route_by_intent(state)
 
 
 def list_documents_node(state: LangGraphAgentState) -> dict:
@@ -502,12 +521,35 @@ def refuse_node(state: LangGraphAgentState) -> dict:
     }
 
 
+def timeout_fallback_node(state: LangGraphAgentState) -> dict:
+    return {
+        "is_timeout": True,
+        "answer": "Agent 执行超时，请稍后重试。",
+        "citations": [],
+        "steps": state["steps"]
+        + [
+            {
+                "step": len(state["steps"]) + 1,
+                "tool": "timeout_fallback",
+                "input": {
+                    "timeout_seconds": state["timeout_seconds"],
+                },
+                "observation": {
+                    "is_timeout": True,
+                },
+                "next_action": "finish",
+            }
+        ],
+    }
+
+
 def build_langgraph_agent():
     graph_builder = StateGraph(LangGraphAgentState)
 
     graph_builder.add_node("decide_intent_node", decide_intent_node)
     graph_builder.add_node("list_documents_node", list_documents_node)
     graph_builder.add_node("search_knowledge_node", search_knowledge_node)
+    graph_builder.add_node("timeout_fallback_node", timeout_fallback_node)
     graph_builder.add_node("validate_context_node", validate_context_node)
     graph_builder.add_node("answer_node", answer_node)
     graph_builder.add_node("refuse_node", refuse_node)
@@ -521,15 +563,17 @@ def build_langgraph_agent():
 
     graph_builder.add_conditional_edges(
         "decide_intent_node",
-        route_by_intent,
+        route_by_timeout,
         [
             "list_documents_node",
             "extract_document_title_node",
             "search_knowledge_node",
+            "timeout_fallback_node",
         ],
     )
 
     graph_builder.add_edge("list_documents_node", END)
+    graph_builder.add_edge("timeout_fallback_node", END)
 
     graph_builder.add_conditional_edges(
         "extract_document_title_node",
@@ -570,6 +614,12 @@ def build_langgraph_agent():
     return graph_builder.compile()
 
 
+def is_agent_timeout(state: LangGraphAgentState) -> bool:
+    elapsed_seconds = time.perf_counter() - state["started_at"]
+
+    return elapsed_seconds >= state["timeout_seconds"]
+
+
 def run_langgraph_agent(
     question: str,
     database_path: str = SQLITE_DATABASE_PATH,
@@ -579,6 +629,7 @@ def run_langgraph_agent(
     generator: Callable[[str], str] = lambda prompt: "这是模型回答",
     messages: list[dict] | None = None,
     conversation_summary: str = "",
+    timeout_seconds: float = LANGGRAPH_AGENT_TIMEOUT_SECONDS,
 ) -> LangGraphAgentState:
     graph = build_langgraph_agent()
 
@@ -624,6 +675,9 @@ def run_langgraph_agent(
         "mode": mode,
         "min_score": min_score,
         "generator": generator,
+        "started_at": time.perf_counter(),
+        "timeout_seconds": timeout_seconds,
+        "is_timeout": False,
     }
 
     result = graph.invoke(initial_state)

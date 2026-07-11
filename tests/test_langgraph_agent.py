@@ -620,3 +620,20 @@ def test_run_langgraph_agent_returns_conversation_summary():
     assert result["steps"][0]["observation"]["conversation_summary"] == "最近问题：员工每天需要工作多久？；最近引用文档：员工手册。"
     assert result["steps"][0]["next_action"] == "decide_intent_node"
     assert result["steps"][1]["tool"] == "decide_agent_intent"
+
+
+def test_run_langgraph_agent_returns_timeout_fallback_when_timeout(tmp_path):
+    database_path = tmp_path / "test.db"
+
+    result = run_langgraph_agent(
+        question="知识库里有哪些文档？",
+        database_path=str(database_path),
+        timeout_seconds=0,
+    )
+
+    assert result["is_timeout"] is True
+    assert result["answer"] == "Agent 执行超时，请稍后重试。"
+    assert result["citations"] == []
+    assert result["steps"][2]["tool"] == "timeout_fallback"
+
+    
