@@ -12,6 +12,7 @@ from frontend.api_client import (
     get_system_status_api,
     submit_feedback_api,
     upload_text_document_api,
+    stream_langgraph_agent_api,
 )
 
 
@@ -159,6 +160,11 @@ with st.sidebar:
         value=30,
     )
 
+    use_streaming = st.checkbox(
+        "使用学习版流式输出",
+        value=False,
+    )
+
     st.divider()
     st.header("会话保存")
 
@@ -281,25 +287,68 @@ if st.button("提问"):
                     min_score=min_score,
                 )
             elif chat_engine == "LangGraph Agent 问答":
-                if save_to_conversation:
-                    response, error_message = chat_with_langgraph_agent_conversation_api(
+                if use_streaming and save_to_conversation:
+                    st.info("学习版流式输出暂不支持会话保存，已自动使用普通 LangGraph Agent 问答。")
+
+                if use_streaming and not save_to_conversation:
+                    answer_placeholder = st.empty()
+                    streamed_answer = ""
+                    metadata = {}
+                    error_message = None
+
+                    for event in stream_langgraph_agent_api(
                         base_url=BACKEND_API_BASE_URL,
-                        conversation_id=int(conversation_id),
                         question=question.strip(),
                         top_k=top_k,
                         mode=mode,
                         min_score=min_score,
                         timeout_seconds=timeout_seconds,
-                    )
+                    ):
+                        if event["type"] == "delta":
+                            streamed_answer = streamed_answer + event["content"]
+                            answer_placeholder.write(streamed_answer)
+
+                        elif event["type"] == "metadata":
+                            metadata = event
+
+                        elif event["type"] == "error":
+                            error_message = event["message"]
+
+                        elif event["type"] == "done":
+                            break
+
+                    if error_message is not None:
+                        response = None
+                    else:
+                        response = {
+                            "question": question.strip(),
+                            "keyword": metadata.get("keyword", ""),
+                            "answer": streamed_answer,
+                            "citations": [],
+                            "steps": [],
+                            "is_fallback": metadata.get("is_fallback", False),
+                            "is_timeout": metadata.get("is_timeout", False),
+                        }
                 else:
-                    response, error_message = chat_with_langgraph_agent_api(
-                        base_url=BACKEND_API_BASE_URL,
-                        question=question.strip(),
-                        top_k=top_k,
-                        mode=mode,
-                        min_score=min_score,
-                        timeout_seconds=timeout_seconds,
-                    )
+                    if save_to_conversation:
+                        response, error_message = chat_with_langgraph_agent_conversation_api(
+                            base_url=BACKEND_API_BASE_URL,
+                            conversation_id=int(conversation_id),
+                            question=question.strip(),
+                            top_k=top_k,
+                            mode=mode,
+                            min_score=min_score,
+                            timeout_seconds=timeout_seconds,
+                        )
+                    else:
+                        response, error_message = chat_with_langgraph_agent_api(
+                            base_url=BACKEND_API_BASE_URL,
+                            question=question.strip(),
+                            top_k=top_k,
+                            mode=mode,
+                            min_score=min_score,
+                            timeout_seconds=timeout_seconds,
+                        )
             else:
                 response, error_message = chat_with_llm_api(
                     base_url=BACKEND_API_BASE_URL,
