@@ -3,6 +3,7 @@ from pathlib import Path
 
 def test_required_project_scripts_exist():
     required_scripts = [
+        "scripts/bootstrap_project.ps1",
         "scripts/check_environment.ps1",
         "scripts/check_project.ps1",
         "scripts/migrate_sqlite.ps1",
@@ -23,3 +24,13 @@ def test_environment_check_mentions_required_commands():
     assert "ollama" in script
     assert "docker" in script
     assert "3.13" in script
+
+
+def test_bootstrap_project_runs_environment_check_first():
+    script = Path("scripts/bootstrap_project.ps1").read_text(encoding="utf-8")
+
+    assert "check_environment.ps1" in script
+    assert "Step 1/5: Checking local environment" in script
+    assert "Step 2/5: Migrating SQLite schema" in script
+    assert "Step 5/5: Running tests" in script
+    assert "SkipEnvironmentCheck" in script

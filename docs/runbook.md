@@ -52,7 +52,19 @@ GET /api/v1/system/status
 .\scripts\bootstrap_project.ps1
 ```
 
-该脚本会依次执行 SQLite schema migration、chunk embedding backfill、conversation summary backfill 和 pytest。
+该脚本会依次执行：
+
+1. 开发环境自检
+2. SQLite schema migration
+3. chunk embedding backfill
+4. conversation summary backfill
+5. pytest
+
+如果只是临时想跳过环境自检，可以运行：
+
+```powershell
+.\scripts\bootstrap_project.ps1 -SkipEnvironmentCheck
+```
 
 如果暂时不想补齐 embedding，可以运行：
 
@@ -60,10 +72,16 @@ GET /api/v1/system/status
 .\scripts\bootstrap_project.ps1 -SkipEmbeddings
 ```
 
+如果只想验证 bootstrap 前几步，不想运行完整测试，可以运行：
+
+```powershell
+.\scripts\bootstrap_project.ps1 -SkipTests
+```
+
 当前稳定状态：
 
 ```text
-417 passed, 1 warning
+418 passed, 1 warning
 ```
 
 ## 2. 推荐启动脚本

@@ -1,4 +1,5 @@
 param(
+    [switch]$SkipEnvironmentCheck,
     [switch]$SkipEmbeddings,
     [switch]$SkipSummaries,
     [switch]$SkipTests
@@ -26,36 +27,46 @@ function Invoke-ProjectStep {
 
 Write-Host "Bootstrapping Enterprise Knowledge Base Agent project..."
 
-Invoke-ProjectStep "Step 1/4: Migrating SQLite schema..." {
+if ($SkipEnvironmentCheck) {
+    Write-Host ""
+    Write-Host "Step 1/5: Skipping environment check."
+}
+else {
+    Invoke-ProjectStep "Step 1/5: Checking local environment..." {
+        & "$PSScriptRoot\check_environment.ps1"
+    }
+}
+
+Invoke-ProjectStep "Step 2/5: Migrating SQLite schema..." {
     python -m week10.migrate_sqlite_schema
 }
 
 if ($SkipEmbeddings) {
     Write-Host ""
-    Write-Host "Step 2/4: Skipping chunk embedding backfill."
+    Write-Host "Step 3/5: Skipping chunk embedding backfill."
 }
 else {
-    Invoke-ProjectStep "Step 2/4: Backfilling chunk embeddings..." {
+    Invoke-ProjectStep "Step 3/5: Backfilling chunk embeddings..." {
         python -m week08.backfill_chunk_embeddings
     }
 }
 
 if ($SkipSummaries) {
     Write-Host ""
-    Write-Host "Step 3/4: Skipping conversation summary backfill."
+    Write-Host "Step 4/5: Skipping conversation summary backfill."
 }
 else {
-    Invoke-ProjectStep "Step 3/4: Backfilling conversation summaries..." {
+    Invoke-ProjectStep "Step 4/5: Backfilling conversation summaries..." {
         python -m week10.backfill_conversation_summaries
     }
 }
 
 if ($SkipTests) {
     Write-Host ""
-    Write-Host "Step 4/4: Skipping tests."
+    Write-Host "Step 5/5: Skipping tests."
 }
 else {
-    Invoke-ProjectStep "Step 4/4: Running tests..." {
+    Invoke-ProjectStep "Step 5/5: Running tests..." {
         pytest
     }
 }
