@@ -1,6 +1,9 @@
+import json
+
 from typing import Callable
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from backend.services.sqlite_document_repository import create_connection
 from backend.services.sqlite_conversation_repository import (
     add_message,
@@ -32,6 +35,47 @@ def get_langgraph_agent_generator() -> Callable[[str], str]:
     return generate_with_ollama
 
 
+def split_text_for_stream(text: str, chunk_size: int = 20) -> list[str]:
+    chunks = []
+
+    for start_index in range(0, len(text), chunk_size):
+        chunks.append(text[start_index:start_index + chunk_size])
+
+    return chunks
+
+
+def format_stream_event(event: dict) -> str:
+    return "data: " + json.dumps(event, ensure_ascii=False) + "\n\n"
+
+
+def stream_langgraph_agent_result(result: dict):
+    answer = result["answer"]
+
+    for chunk in split_text_for_stream(answer):
+        yield format_stream_event(
+            {
+                "type": "delta",
+                "content": chunk,
+            }
+        )
+
+    yield format_stream_event(
+        {
+            "type": "metadata",
+            "keyword": result["keyword"],
+            "citation_count": len(result["citations"]),
+            "is_fallback": result.get("is_fallback", False),
+            "is_timeout": result.get("is_timeout", False),
+        }
+    )
+
+    yield format_stream_event(
+        {
+            "type": "done",
+        }
+    )
+
+
 @router.post("/chat")
 def langgraph_agent_chat(
     request: ChatRequest,
@@ -58,6 +102,37 @@ def langgraph_agent_chat(
     )
 
 
+@router.post("/chat/stream")
+def langgraph_agent_chat_stream(
+    request: ChatRequest,
+    top_k: int = Query(default=DEFAULT_TOP_K, ge=1, le=5),
+    mode: str = "keyword",
+    min_score: float = Query(default=DEFAULT_MIN_SCORE, ge=0, le=1),
+    timeout_seconds: float = Query(
+        default=LANGGRAPH_AGENT_TIMEOUT_SECONDS,
+        ge=1,
+        le=120,
+    ),
+    database_path: str = Depends(get_database_path),
+    generator: Callable[[str], str] = Depends(get_langgraph_agent_generator),
+    _rate_limit: None = Depends(enforce_heavy_request_rate_limit),
+):
+    result = run_langgraph_agent(
+        question=request.question,
+        database_path=database_path,
+        top_k=top_k,
+        mode=mode,
+        min_score=min_score,
+        timeout_seconds=timeout_seconds,
+        generator=generator,
+    )
+
+    return StreamingResponse(
+        stream_langgraph_agent_result(result),
+        media_type="text/event-stream",
+    )
+
+    
 @router.post("/conversations/{conversation_id}/chat")
 def langgraph_agent_conversation_chat(
     conversation_id: int,

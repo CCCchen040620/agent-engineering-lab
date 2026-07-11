@@ -48,7 +48,7 @@ def test_langgraph_agent_chat_endpoint_rejects_invalid_timeout_seconds():
 
     assert response.status_code == 422
 
-    
+
 def test_langgraph_agent_chat_endpoint_answers_with_context(tmp_path):
     database_path = tmp_path / "test.db"
     connection = create_connection(str(database_path))
@@ -813,3 +813,29 @@ def test_langgraph_agent_conversation_chat_does_not_use_summary_for_unrelated_qu
     assert data["steps"][3]["tool"] == "validate_context_node"
     assert data["steps"][3]["observation"]["has_valid_context"] is False
     assert data["steps"][4]["tool"] == "refuse_answer_tool"
+
+
+def test_langgraph_agent_stream_endpoint_returns_sse(monkeypatch, tmp_path):
+    database_path = tmp_path / "test.db"
+
+    app.dependency_overrides[get_database_path] = lambda: str(database_path)
+    app.dependency_overrides[get_langgraph_agent_generator] = (
+        lambda: lambda prompt: "这是流式回答"
+    )
+
+    response = client.post(
+        "/api/v1/langgraph-agent/chat/stream",
+        json={"question": "知识库里有哪些文档？"},
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+
+    text = response.text
+
+    assert 'data: {"type": "delta"' in text
+    assert "这是流式回答" in text or "当前知识库文档" in text
+    assert 'data: {"type": "metadata"' in text
+    assert 'data: {"type": "done"}' in text
