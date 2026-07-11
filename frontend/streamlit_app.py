@@ -320,7 +320,9 @@ if st.button("提问"):
 
             st.subheader("回答")
 
-            if "本地模型暂时不可用" in response["answer"]:
+            if response.get("is_fallback") is True:
+                st.warning("本地模型不可用，已使用知识库片段生成基础回答。")
+            elif "本地模型暂时不可用" in response["answer"]:
                 st.warning("本地模型暂时不可用，请稍后再试。")
             elif "暂时无法回答" in response["answer"]:
                 st.warning("知识库中没有找到相关资料，系统已拒答。")
@@ -369,6 +371,9 @@ if st.session_state["chat_history"] != []:
                 f"| 关键词：{item['keyword']} "
                 f"| 引用数量：{len(item['citations'])}"
             )
+
+            if item.get("is_fallback") is True:
+                caption_text = caption_text + " | 降级回答"
 
             if "conversation_id" in item:
                 caption_text = caption_text + f" | 会话：{item['conversation_id']}"
