@@ -39,3 +39,12 @@ def test_format_document_error_message_explains_rate_limit():
     message = format_document_error_message("请求过于频繁，请稍后再试。")
 
     assert "稍等一会儿" in message
+
+
+def test_format_document_error_message_keeps_request_id_suffix():
+    message = format_document_error_message(
+        "请求过于频繁，请稍后再试。（请求编号：rate-limit-request）"
+    )
+
+    assert "稍等一会儿" in message
+    assert "请求编号：rate-limit-request" in message

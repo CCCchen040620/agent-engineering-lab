@@ -239,13 +239,36 @@ def upload_text_document_api(
 
 
 def get_error_detail(response) -> str:
-    """Read FastAPI error detail from a response."""
+    """Read a friendly error message from a FastAPI response."""
     try:
-        detail = response.json()["detail"]
+        data = response.json()
     except Exception:
         return "请求失败，请稍后再试。"
+
+    message = get_unified_error_message(data)
+    request_id = data.get("request_id")
+
+    if isinstance(request_id, str) and request_id != "":
+        return f"{message}（请求编号：{request_id}）"
+
+    return message
+
+
+def get_unified_error_message(data: dict) -> str:
+    error = data.get("error")
+
+    if isinstance(error, dict):
+        message = error.get("message")
+
+        if isinstance(message, str) and message != "":
+            return message
+
+    detail = data.get("detail")
 
     if isinstance(detail, str):
         return detail
 
-    return str(detail)
+    if detail is not None:
+        return str(detail)
+
+    return "请求失败，请稍后再试。"

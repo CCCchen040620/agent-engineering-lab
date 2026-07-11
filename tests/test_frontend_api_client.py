@@ -4,6 +4,7 @@ from frontend.api_client import (
     chat_with_agent_api,
     chat_with_llm_api,
     create_document_with_content_api,
+    get_error_detail,
     get_system_status_api,
     submit_feedback_api,
     upload_text_document_api,
@@ -17,6 +18,44 @@ class FakeResponse:
 
     def json(self):
         return self.data
+
+
+class BrokenJsonResponse:
+    def json(self):
+        raise ValueError("invalid json")
+
+
+def test_get_error_detail_prefers_unified_error_message():
+    response = FakeResponse(
+        404,
+        {
+            "detail": "旧错误信息。",
+            "error": {
+                "code": "not_found",
+                "message": "文档不存在。",
+                "status_code": 404,
+            },
+            "request_id": "request-123",
+        },
+    )
+
+    message = get_error_detail(response)
+
+    assert message == "文档不存在。（请求编号：request-123）"
+
+
+def test_get_error_detail_falls_back_to_detail():
+    response = FakeResponse(409, {"detail": "文档已存在。"})
+
+    message = get_error_detail(response)
+
+    assert message == "文档已存在。"
+
+
+def test_get_error_detail_falls_back_when_response_is_not_json():
+    message = get_error_detail(BrokenJsonResponse())
+
+    assert message == "请求失败，请稍后再试。"
 
 
 def test_get_system_status_api_gets_status(monkeypatch):
@@ -128,6 +167,35 @@ def test_chat_with_llm_api_returns_backend_error(monkeypatch):
 
     assert data is None
     assert error_message == "问题不能为空。"
+
+
+def test_chat_with_llm_api_returns_unified_backend_error(monkeypatch):
+    def fake_post(url, params, json, timeout):
+        return FakeResponse(
+            429,
+            {
+                "detail": "请求过于频繁，请稍后再试。",
+                "error": {
+                    "code": "rate_limited",
+                    "message": "请求过于频繁，请稍后再试。",
+                    "status_code": 429,
+                },
+                "request_id": "rate-limit-request",
+            },
+        )
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    data, error_message = chat_with_llm_api(
+        base_url="http://127.0.0.1:8000",
+        question="新员工什么时候完成安全培训？",
+        top_k=3,
+        mode="precomputed_embedding",
+        min_score=0.8,
+    )
+
+    assert data is None
+    assert error_message == "请求过于频繁，请稍后再试。（请求编号：rate-limit-request）"
 
 
 def test_chat_with_llm_api_handles_network_failure(monkeypatch):
