@@ -1,3 +1,4 @@
+from pathlib import Path
 from backend.services.simple_agent import (
     decide_agent_intent,
     extract_document_title,
@@ -286,3 +287,11 @@ def test_run_simple_agent_asks_clarification_when_document_is_not_found(tmp_path
     assert result["steps"][2]["observation"]["found"] == False
     assert result["steps"][2]["observation"]["match_type"] is None
     assert result["steps"][3]["tool"] == "ask_clarification_tool"
+
+
+def test_simple_agent_uses_config_database_path():
+    source = Path("backend/services/simple_agent.py").read_text(encoding="utf-8")
+
+    assert "DATABASE_PATH" in source
+    assert "SQLITE_DATABASE_PATH" not in source
+    assert "week04.settings" not in source

@@ -2,7 +2,7 @@
 
 from typing import Callable
 
-from backend.config import DEFAULT_MIN_SCORE, DEFAULT_TOP_K
+from backend.config import DATABASE_PATH, DEFAULT_MIN_SCORE, DEFAULT_TOP_K
 from backend.services.agent_tools import (
     answer_with_context_tool,
     ask_clarification_tool,
@@ -13,7 +13,6 @@ from backend.services.agent_tools import (
     search_knowledge_base_tool,
 )
 from backend.services.ollama_service import generate_with_ollama
-from week04.settings import SQLITE_DATABASE_PATH
 
 
 def decide_agent_intent(question: str) -> str:
@@ -60,7 +59,7 @@ def extract_document_title(question: str) -> str:
 
 def run_simple_agent(
     question: str,
-    database_path: str = SQLITE_DATABASE_PATH,
+    database_path: str = DATABASE_PATH,
     top_k: int = DEFAULT_TOP_K,
     mode: str = "keyword",
     min_score: float = DEFAULT_MIN_SCORE,

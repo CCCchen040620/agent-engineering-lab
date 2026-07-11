@@ -92,3 +92,5 @@ DATABASE_PATH=data/app.db
 当前 DB API 的公共数据库路径依赖也已经开始使用 `DATABASE_PATH`。
 
 当前 Agent Tools 工具层也已经开始使用 DATABASE_PATH 作为默认数据库路径。
+
+当前 Simple Agent 编排层也已经开始使用 DATABASE_PATH 作为默认数据库路径。
