@@ -39,7 +39,7 @@ GET /api/v1/system/status
 当前稳定状态：
 
 ```text
-398 passed, 1 warning
+400 passed, 1 warning
 ```
 
 ## 2. 推荐启动脚本
@@ -1043,6 +1043,26 @@ ollama_generation_failed model=...
 ```text
 ollama_embedding_failed model=...
 ```
+
+## 19.1 统一错误响应
+
+后端错误响应会保留 `detail` 字段，同时增加统一的 `error` 和 `request_id` 字段。
+
+示例：
+
+```json
+{
+  "detail": "文档不存在。",
+  "error": {
+    "code": "not_found",
+    "message": "文档不存在。",
+    "status_code": 404
+  },
+  "request_id": "..."
+}
+```
+
+这样做的好处是：旧代码仍然可以读取 `detail`，新前端可以统一读取 `error.message`，排查问题时可以用 `request_id` 对应后端日志。
 
 ## 20. 后端旧进程排查
 

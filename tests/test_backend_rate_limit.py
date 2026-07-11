@@ -35,6 +35,11 @@ def test_heavy_endpoint_returns_429_when_rate_limited(tmp_path, caplog):
     assert first_response.status_code == 200
     assert second_response.status_code == 429
     assert second_response.json()["detail"] == "请求过于频繁，请稍后再试。"
+    assert second_response.json()["error"] == {
+        "code": "rate_limited",
+        "message": "请求过于频繁，请稍后再试。",
+        "status_code": 429,
+    }
     assert second_response.headers["Retry-After"] == "60"
     assert "rate_limit_exceeded" in caplog.text
     assert "/api/v1/db/chat/llm" in caplog.text

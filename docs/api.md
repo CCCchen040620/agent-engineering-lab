@@ -18,6 +18,31 @@ http://127.0.0.1:8000/docs
 - `GET /api/v1/info`：系统信息与功能列表
 - `GET /api/v1/system/status`：系统诊断，检查 API、SQLite、Ollama、LLM 模型和 Embedding 模型状态
 
+### 错误响应格式
+
+后端错误响应会保留 FastAPI 常见的 `detail` 字段，同时增加统一的 `error` 和 `request_id` 字段。
+
+示例：
+
+```json
+{
+  "detail": "文档不存在。",
+  "error": {
+    "code": "not_found",
+    "message": "文档不存在。",
+    "status_code": 404
+  },
+  "request_id": "..."
+}
+```
+
+说明：
+
+- `detail`：保留旧格式，兼容已有测试和前端逻辑。
+- `error.code`：程序更适合读取的错误类型，例如 `not_found`、`conflict`、`validation_error`、`rate_limited`。
+- `error.message`：适合展示给用户看的错误说明。
+- `request_id`：本次请求编号，可用于结合后端日志排查问题。
+
 ### 问答接口
 
 - `POST /api/v1/chat`：根据企业知识库回答问题，并返回引用来源
