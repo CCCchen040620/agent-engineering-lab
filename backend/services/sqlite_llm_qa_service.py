@@ -1,5 +1,5 @@
 from typing import Callable
-from backend.config import DEFAULT_MIN_SCORE, DEFAULT_TOP_K
+from backend.config import DATABASE_PATH, DEFAULT_MIN_SCORE, DEFAULT_TOP_K
 from backend.services.sqlite_precomputed_embedding_search_service import (
     search_sqlite_chunks_by_precomputed_embedding,
 )
@@ -15,7 +15,6 @@ from backend.services.sqlite_document_repository import (
 )
 from backend.services.sqlite_vector_search_service import search_sqlite_chunks_by_similarity
 from week03.keyword_extractor import extract_keyword
-from week04.settings import SQLITE_DATABASE_PATH
 from week05.models import ChatResponse, Citation
 
 
@@ -92,7 +91,7 @@ def search_sqlite_snippets(
 
 def build_sqlite_llm_chat_response(
     question: str,
-    database_path: str = SQLITE_DATABASE_PATH,
+    database_path: str = DATABASE_PATH,
     top_k: int = DEFAULT_TOP_K,
     mode: str = "vector",
     min_score: float = DEFAULT_MIN_SCORE,

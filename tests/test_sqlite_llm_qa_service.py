@@ -1,3 +1,4 @@
+from pathlib import Path
 from backend.services.sqlite_document_repository import (
     create_chunks_table,
     create_connection,
@@ -211,3 +212,13 @@ def test_build_sqlite_chat_response_precomputed_embedding_mode(monkeypatch, tmp_
     assert len(response.citations) == 1
     assert response.citations[0].title == "远程办公制度"
     assert response.citations[0].text == "员工可以远程办公。"
+
+
+def test_sqlite_llm_qa_service_uses_config_database_path():
+    source = Path("backend/services/sqlite_llm_qa_service.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "DATABASE_PATH" in source
+    assert "SQLITE_DATABASE_PATH" not in source
+    assert "week04.settings" not in source
