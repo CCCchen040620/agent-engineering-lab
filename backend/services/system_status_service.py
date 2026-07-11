@@ -1,9 +1,8 @@
 import json
 from urllib import request
 
-from backend.config import EMBEDDING_MODEL, LLM_MODEL, OLLAMA_BASE_URL
+from backend.config import DATABASE_PATH, EMBEDDING_MODEL, LLM_MODEL, OLLAMA_BASE_URL
 from backend.services.sqlite_document_repository import create_connection
-from week04.settings import SQLITE_DATABASE_PATH
 
 
 def fetch_ollama_model_names(base_url: str = OLLAMA_BASE_URL) -> list[str]:
@@ -22,7 +21,7 @@ def fetch_ollama_model_names(base_url: str = OLLAMA_BASE_URL) -> list[str]:
     return model_names
 
 
-def check_database_status(database_path: str = SQLITE_DATABASE_PATH) -> dict:
+def check_database_status(database_path: str = DATABASE_PATH) -> dict:
     try:
         connection = create_connection(database_path)
         cursor = connection.cursor()

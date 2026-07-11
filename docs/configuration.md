@@ -84,3 +84,5 @@ DATABASE_PATH=data/app.db
 ```
 
 后续旧 SQLite 代码会逐步从 `DATABASE_PATH` 读取数据库文件路径，而不是继续直接依赖写死路径。
+
+当前系统状态检查已经开始使用 `DATABASE_PATH` 读取 SQLite 数据库路径。

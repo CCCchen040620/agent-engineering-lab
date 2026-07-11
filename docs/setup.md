@@ -135,7 +135,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\migrate_sqlite.ps1
 当前稳定测试状态：
 
 ```text
-433 passed, 1 warning
+434 passed, 1 warning
 ```
 
 ## 6. 启动项目

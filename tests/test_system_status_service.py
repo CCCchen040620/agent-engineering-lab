@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from backend.services.system_status_service import (
     build_system_status,
     check_database_status,
@@ -59,3 +61,13 @@ def test_build_system_status_returns_degraded_when_dependency_fails():
     assert result["status"] == "degraded"
     assert result["database"]["status"] == "ok"
     assert result["ollama"]["status"] == "error"
+
+
+def test_system_status_uses_config_database_path():
+    service_source = Path("backend/services/system_status_service.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "DATABASE_PATH" in service_source
+    assert "SQLITE_DATABASE_PATH" not in service_source
+    assert "week04.settings" not in service_source
