@@ -548,6 +548,7 @@ python -m streamlit run frontend/streamlit_app.py
 
 - 这是第一版本地内存限流。
 - 后端重启后限流计数会清空。
+- 触发限流时，后端会记录 `rate_limit_exceeded path=... client=... retry_after=...` 日志，方便排查是不是请求太频繁。
 - 如果以后部署到多进程或多机器环境，可以升级为 Redis 或 API Gateway 限流。
 
 ## 16. 测试 LangGraph Memory Demo API

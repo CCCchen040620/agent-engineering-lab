@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import Depends, HTTPException, Request
 
 from backend.config import RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW_SECONDS
@@ -5,6 +7,8 @@ from backend.services.rate_limit_service import InMemoryRateLimiter
 
 
 RATE_LIMIT_ERROR_MESSAGE = "请求过于频繁，请稍后再试。"
+
+logger = logging.getLogger(__name__)
 
 
 heavy_request_rate_limiter = InMemoryRateLimiter(
@@ -30,6 +34,13 @@ def enforce_heavy_request_rate_limit(
     result = limiter.check(key)
 
     if not result["allowed"]:
+        logger.warning(
+            "rate_limit_exceeded path=%s client=%s retry_after=%s",
+            request.url.path,
+            client_host,
+            result["retry_after_seconds"],
+        )
+
         raise HTTPException(
             status_code=429,
             detail=RATE_LIMIT_ERROR_MESSAGE,

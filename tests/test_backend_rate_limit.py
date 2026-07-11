@@ -9,7 +9,7 @@ from backend.services.rate_limit_service import InMemoryRateLimiter
 client = TestClient(app)
 
 
-def test_heavy_endpoint_returns_429_when_rate_limited(tmp_path):
+def test_heavy_endpoint_returns_429_when_rate_limited(tmp_path, caplog):
     database_path = tmp_path / "test.db"
     limiter = InMemoryRateLimiter(
         max_requests=1,
@@ -36,3 +36,6 @@ def test_heavy_endpoint_returns_429_when_rate_limited(tmp_path):
     assert second_response.status_code == 429
     assert second_response.json()["detail"] == "请求过于频繁，请稍后再试。"
     assert second_response.headers["Retry-After"] == "60"
+    assert "rate_limit_exceeded" in caplog.text
+    assert "/api/v1/db/chat/llm" in caplog.text
+    assert "retry_after=60" in caplog.text
