@@ -29,3 +29,12 @@ def is_sqlite_database(database_url: str) -> bool:
 
 def is_postgresql_database(database_url: str) -> bool:
     return parse_database_url(database_url)["scheme"] == "postgresql"
+
+
+def get_sqlite_path_from_database_url(database_url: str) -> str:
+    parsed_database = parse_database_url(database_url)
+
+    if parsed_database["scheme"] != "sqlite":
+        raise ValueError("DATABASE_URL is not a SQLite URL.")
+
+    return parsed_database["path"]

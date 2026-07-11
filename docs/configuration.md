@@ -51,3 +51,25 @@ $env:MAX_UPLOAD_FILE_BYTES="1048576"
 $env:RATE_LIMIT_WINDOW_SECONDS="60"
 $env:RATE_LIMIT_MAX_REQUESTS="20"
 $env:SLOW_REQUEST_THRESHOLD_MS="1000"
+```
+
+## DATABASE_URL 说明
+
+当前 SQLite 默认地址：
+
+```text
+sqlite:///data/app.db
+```
+
+其中：
+
+- `sqlite` 表示数据库类型是 SQLite。
+- `data/app.db` 表示本地数据库文件路径。
+
+后续迁移 PostgreSQL 时，地址会变成类似：
+
+```text
+postgresql://agent_user:password@localhost:5432/agent_db
+```
+
+这一步目前只是把数据库地址配置化，并增加 URL 解析能力；项目主流程仍然使用 SQLite。

@@ -1,6 +1,7 @@
 import pytest
 
 from backend.services.database_url_service import (
+    get_sqlite_path_from_database_url,
     is_postgresql_database,
     is_sqlite_database,
     parse_database_url,
@@ -52,3 +53,18 @@ def test_parse_database_url_rejects_unknown_scheme():
         parse_database_url("mysql://user:secret@localhost/app")
 
     assert "Unsupported database scheme" in str(error.value)
+
+
+def test_get_sqlite_path_from_database_url():
+    path = get_sqlite_path_from_database_url("sqlite:///data/app.db")
+
+    assert path == "data/app.db"
+
+
+def test_get_sqlite_path_rejects_postgresql_url():
+    with pytest.raises(ValueError) as error:
+        get_sqlite_path_from_database_url(
+            "postgresql://user:secret@localhost:5432/agent_db"
+        )
+
+    assert "not a SQLite URL" in str(error.value)
