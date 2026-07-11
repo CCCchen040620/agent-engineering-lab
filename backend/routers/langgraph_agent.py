@@ -12,6 +12,7 @@ from backend.services.sqlite_conversation_repository import (
 )
 from backend.config import DEFAULT_MIN_SCORE, DEFAULT_TOP_K
 from backend.routers.db_documents import get_database_path
+from backend.routers.rate_limit import enforce_heavy_request_rate_limit
 from backend.services.langgraph_agent import run_langgraph_agent
 from backend.services.conversation_summary_service import (
     build_conversation_summary,
@@ -35,6 +36,7 @@ def langgraph_agent_chat(
     min_score: float = Query(default=DEFAULT_MIN_SCORE, ge=0, le=1),
     database_path: str = Depends(get_database_path),
     generator: Callable[[str], str] = Depends(get_langgraph_agent_generator),
+    _rate_limit: None = Depends(enforce_heavy_request_rate_limit),
 ):
     return run_langgraph_agent(
         question=request.question,
@@ -55,6 +57,7 @@ def langgraph_agent_conversation_chat(
     min_score: float = Query(default=DEFAULT_MIN_SCORE, ge=0, le=1),
     database_path: str = Depends(get_database_path),
     generator: Callable[[str], str] = Depends(get_langgraph_agent_generator),
+    _rate_limit: None = Depends(enforce_heavy_request_rate_limit),
 ):
     connection = create_connection(database_path)
 

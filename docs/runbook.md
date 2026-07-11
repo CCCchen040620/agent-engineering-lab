@@ -39,7 +39,7 @@ GET /api/v1/system/status
 当前稳定状态：
 
 ```text
-388 passed, 1 warning
+394 passed, 1 warning
 ```
 
 ## 2. 推荐启动脚本
@@ -525,6 +525,30 @@ PowerShell 示例：
 $env:DEFAULT_MIN_SCORE="0.8"
 python -m streamlit run frontend/streamlit_app.py
 ```
+
+### 15.1 基础内存限流
+
+当前项目对部分重型接口启用了基础内存限流，默认每个客户端在 60 秒内最多请求 20 次。
+
+受保护的接口包括：
+
+- `POST /api/v1/db/chat/llm`
+- `POST /api/v1/langgraph-agent/chat`
+- `POST /api/v1/langgraph-agent/conversations/{conversation_id}/chat`
+- `POST /api/v1/db/documents/with-content`
+- `POST /api/v1/db/documents/upload-text`
+
+超过限制时会返回：
+
+```text
+429 Too Many Requests
+```
+
+说明：
+
+- 这是第一版本地内存限流。
+- 后端重启后限流计数会清空。
+- 如果以后部署到多进程或多机器环境，可以升级为 Redis 或 API Gateway 限流。
 
 ## 16. 测试 LangGraph Memory Demo API
 

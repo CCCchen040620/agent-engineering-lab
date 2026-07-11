@@ -14,6 +14,7 @@ from backend.services.document_validation_service import (
 )
 from backend.services.sqlite_qa_service import build_sqlite_chat_response
 from backend.services.sqlite_llm_qa_service import build_sqlite_llm_chat_response
+from backend.routers.rate_limit import enforce_heavy_request_rate_limit
 from backend.services.sqlite_document_repository import (
     create_connection,
     create_documents_table,
@@ -91,6 +92,7 @@ def create_db_document(
 def create_db_document_with_content(
     request: DocumentCreateWithContentRequest,
     database_path: str = Depends(get_database_path),
+    _rate_limit: None = Depends(enforce_heavy_request_rate_limit),
 ):
     try:
         validate_document_title(request.title)
@@ -129,6 +131,7 @@ async def upload_text_document(
     file: UploadFile = File(...),
     title: str | None = Form(default=None),
     database_path: str = Depends(get_database_path),
+    _rate_limit: None = Depends(enforce_heavy_request_rate_limit),
 ):
     filename = file.filename or "uploaded.txt"
 
@@ -268,6 +271,7 @@ def sqlite_llm_chat(
     mode: str = "vector",
     min_score: float = Query(default=DEFAULT_MIN_SCORE, ge=0, le=1),
     database_path: str = Depends(get_database_path),
+    _rate_limit: None = Depends(enforce_heavy_request_rate_limit),
 ):
     return build_sqlite_llm_chat_response(
         request.question,

@@ -1180,6 +1180,7 @@ GET /api/v1/conversations/1/messages
 - `409 Conflict`：文档标题已存在
 - `422 Unprocessable Entity`：文档标题过长，或文档正文没有有效内容，无法切分出 chunks
 - `413 Payload Too Large`：文档正文过长，或上传文件过大
+- `429 Too Many Requests`：请求过于频繁，请稍后再试
 - `503 Service Unavailable`：文档索引失败，本地 Embedding 模型不可用
 
 ### Embedding 补索引

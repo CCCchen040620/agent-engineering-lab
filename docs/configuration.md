@@ -29,6 +29,8 @@ Copy-Item .env.example .env
 | `MAX_DOCUMENT_TITLE_CHARS` | `100` | 文档标题最大字符数 |
 | `MAX_DOCUMENT_CONTENT_CHARS` | `20000` | 手动新增文档正文最大字符数 |
 | `MAX_UPLOAD_FILE_BYTES` | `1048576` | txt 上传文件最大字节数，默认约 1MB |
+| `RATE_LIMIT_WINDOW_SECONDS` | `60` | 基础内存限流窗口秒数 |
+| `RATE_LIMIT_MAX_REQUESTS` | `20` | 每个重型接口在限流窗口内允许的最大请求数 |
 
 ## PowerShell 示例
 
@@ -43,3 +45,5 @@ $env:DEFAULT_MIN_SCORE="0.8"
 $env:MAX_DOCUMENT_TITLE_CHARS="100"
 $env:MAX_DOCUMENT_CONTENT_CHARS="20000"
 $env:MAX_UPLOAD_FILE_BYTES="1048576"
+$env:RATE_LIMIT_WINDOW_SECONDS="60"
+$env:RATE_LIMIT_MAX_REQUESTS="20"

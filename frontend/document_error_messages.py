@@ -17,4 +17,7 @@ def format_document_error_message(error_message: str) -> str:
     if "上传文件过大" in error_message:
         return "上传文件过大：当前最大支持 1MB 的 txt 文件。"
 
+    if "请求过于频繁" in error_message:
+        return "请求过于频繁：请稍等一会儿再重试。"
+
     return error_message

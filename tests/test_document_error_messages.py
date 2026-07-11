@@ -33,3 +33,9 @@ def test_format_document_error_message_explains_too_large_file():
     message = format_document_error_message("上传文件过大，最大支持 1048576 字节。")
 
     assert "1MB" in message
+
+
+def test_format_document_error_message_explains_rate_limit():
+    message = format_document_error_message("请求过于频繁，请稍后再试。")
+
+    assert "稍等一会儿" in message

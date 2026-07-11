@@ -41,3 +41,4 @@ def test_info_endpoint():
     assert "simple_agent_chat" in data["features"]
     assert "agent_tool_workflow" in data["features"]
     assert "system_status_diagnostics" in data["features"]
+    assert "basic_in_memory_rate_limiting" in data["features"]
