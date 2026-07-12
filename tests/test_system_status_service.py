@@ -4,6 +4,7 @@ from backend.services.system_status_service import (
     build_system_status,
     check_database_status,
     check_ollama_status,
+    check_postgresql_status,
 )
 
 
@@ -74,3 +75,40 @@ def test_system_status_uses_database_connection_service():
     assert "DATABASE_PATH" not in service_source
     assert "SQLITE_DATABASE_PATH" not in service_source
     assert "week04.settings" not in service_source
+
+
+def test_check_postgresql_status_skips_when_database_url_is_not_postgresql():
+    result = check_postgresql_status("sqlite:///data/app.db")
+
+    assert result["enabled"] is False
+    assert result["status"] == "skipped"
+
+
+def test_check_postgresql_status_checks_postgresql_database_url():
+    def fake_postgresql_checker(database_url: str):
+        return {
+            "status": "ok",
+            "database_url": database_url,
+        }
+
+    database_url = "postgresql://agent:secret@localhost:5432/agent_db"
+
+    result = check_postgresql_status(
+        database_url,
+        postgresql_checker=fake_postgresql_checker,
+    )
+
+    assert result["enabled"] is True
+    assert result["status"] == "ok"
+    assert result["database_url"] == database_url
+
+
+def test_build_system_status_includes_postgresql_status():
+    result = build_system_status(
+        database_checker=lambda: {"status": "ok"},
+        ollama_checker=lambda: {"status": "ok"},
+        postgresql_checker=lambda: {"enabled": False, "status": "skipped"},
+    )
+
+    assert result["status"] == "ok"
+    assert result["postgresql"]["status"] == "skipped"

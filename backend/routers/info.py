@@ -40,6 +40,7 @@ def get_info():
             "simple_agent_chat",
             "agent_tool_workflow",
             "system_status_diagnostics",
+            "postgresql_status_diagnostics",
             "basic_in_memory_rate_limiting",
         ],
     }

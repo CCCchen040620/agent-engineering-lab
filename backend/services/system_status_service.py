@@ -3,6 +3,8 @@ from urllib import request
 
 from backend.config import DATABASE_URL, EMBEDDING_MODEL, LLM_MODEL, OLLAMA_BASE_URL
 from backend.services.database_connection_service import create_database_connection
+from backend.services.postgresql_connection_service import check_postgresql_connection
+from backend.services.database_url_service import is_postgresql_database
 
 
 def fetch_ollama_model_names(base_url: str = OLLAMA_BASE_URL) -> list[str]:
@@ -78,12 +80,33 @@ def check_ollama_status(
         }
 
 
+def check_postgresql_status(
+    database_url: str = DATABASE_URL,
+    postgresql_checker=check_postgresql_connection,
+) -> dict:
+    if not is_postgresql_database(database_url):
+        return {
+            "enabled": False,
+            "status": "skipped",
+            "message": "DATABASE_URL is not PostgreSQL.",
+        }
+
+    result = postgresql_checker(database_url)
+
+    return {
+        "enabled": True,
+        **result,
+    }
+
+    
 def build_system_status(
     database_checker=check_database_status,
     ollama_checker=check_ollama_status,
+    postgresql_checker=check_postgresql_status,
 ) -> dict:
     database_status = database_checker()
     ollama_status = ollama_checker()
+    postgresql_status = postgresql_checker()
 
     system_status = "ok"
 
@@ -95,4 +118,5 @@ def build_system_status(
         "api": "ok",
         "database": database_status,
         "ollama": ollama_status,
+        "postgresql": postgresql_status,
     }
