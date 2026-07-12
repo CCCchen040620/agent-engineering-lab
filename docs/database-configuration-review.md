@@ -112,3 +112,11 @@ SQLITE_DATABASE_PATH
 - 先把 SQLite 路径统一起来，是后续 PostgreSQL / pgvector 迁移的前置准备。
 
 这一轮完成后，项目离“可配置、可部署、可迁移”的方向更近了一步。
+
+## 下一步连接层抽象
+
+当前新增了 `database_connection_service.py`，用于把 `DATABASE_URL` 转换成真实数据库连接。
+
+现阶段它只支持 SQLite；遇到 PostgreSQL 或其他数据库会明确报错。
+
+这样做的目的不是马上切换数据库，而是先把“根据数据库 URL 创建连接”的职责集中起来。
