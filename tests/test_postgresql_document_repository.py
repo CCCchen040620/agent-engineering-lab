@@ -1,0 +1,99 @@
+from backend.services.postgresql_document_repository import (
+    insert_document_to_postgresql,
+    list_documents_from_postgresql,
+    row_to_document,
+)
+
+
+class FakeCursor:
+    def __init__(self):
+        self.sql = ""
+        self.params = None
+        self.rows = []
+        self.row = None
+
+    def execute(self, sql: str, params=None):
+        self.sql = sql
+        self.params = params
+
+    def fetchall(self):
+        return self.rows
+
+    def fetchone(self):
+        return self.row
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+
+
+class FakeConnection:
+    def __init__(self):
+        self.cursor_instance = FakeCursor()
+        self.committed = False
+
+    def cursor(self):
+        return self.cursor_instance
+
+    def commit(self):
+        self.committed = True
+
+
+def test_row_to_document():
+    row = (1, "员工手册", "md", 12, True)
+
+    document = row_to_document(row)
+
+    assert document == {
+        "id": 1,
+        "title": "员工手册",
+        "file_type": "md",
+        "chunk_count": 12,
+        "is_indexed": True,
+    }
+
+
+def test_list_documents_from_postgresql():
+    connection = FakeConnection()
+    connection.cursor_instance.rows = [
+        (1, "员工手册", "md", 12, True),
+        (2, "报销制度", "pdf", 8, False),
+    ]
+
+    documents = list_documents_from_postgresql(connection)
+
+    assert len(documents) == 2
+    assert documents[0]["title"] == "员工手册"
+    assert documents[1]["is_indexed"] is False
+    assert "SELECT id, title, file_type, chunk_count, is_indexed" in (
+        connection.cursor_instance.sql
+    )
+
+
+def test_insert_document_to_postgresql():
+    connection = FakeConnection()
+    connection.cursor_instance.row = (1, "员工手册", "md", 12, True)
+
+    document = insert_document_to_postgresql(
+        connection,
+        title="员工手册",
+        file_type="md",
+        chunk_count=12,
+        is_indexed=True,
+    )
+
+    assert document["id"] == 1
+    assert document["title"] == "员工手册"
+    assert connection.cursor_instance.params == (
+        "员工手册",
+        "md",
+        12,
+        True,
+    )
+    assert "INSERT INTO documents" in connection.cursor_instance.sql
+    assert "RETURNING id, title, file_type, chunk_count, is_indexed" in (
+        connection.cursor_instance.sql
+    )
+    assert connection.committed is True
