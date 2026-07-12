@@ -10,3 +10,4 @@ htmlcov/
 dist/
 build/
 data/app.db
+*.egg-info/
