@@ -104,7 +104,27 @@ def render_system_status() -> None:
             return
 
         render_status_line("API", status["api"] == "ok")
-        render_status_line("SQLite", status["database"]["status"] == "ok")
+
+        database_status = status["database"]
+        database_url = database_status.get("database_url", "")
+
+        if database_url.startswith("postgresql://"):
+            database_label = "当前数据库：PostgreSQL"
+        else:
+            database_label = "当前数据库：SQLite"
+
+        render_status_line(database_label, database_status["status"] == "ok")
+
+        postgresql_status = status.get("postgresql", {})
+
+        if postgresql_status.get("enabled") is True:
+            render_status_line(
+                "PostgreSQL / pgvector",
+                postgresql_status.get("status") == "ok",
+            )
+        else:
+            st.caption("PostgreSQL / pgvector：当前未启用")
+
         render_status_line("Ollama", status["ollama"]["status"] == "ok")
 
         llm_model = status["ollama"]["llm_model"]
