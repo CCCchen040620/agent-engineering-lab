@@ -144,6 +144,80 @@ def test_search_knowledge_base_tool_returns_empty_result(tmp_path):
     assert result["snippets"] == []
 
 
+class FakePostgresqlConnection:
+    pass
+
+
+def test_search_knowledge_base_tool_can_use_unified_retriever(monkeypatch):
+    captured = {}
+
+    def fake_retrieve_rag_snippets(
+        question: str,
+        backend: str,
+        sqlite_database_path: str,
+        postgresql_connection,
+        top_k: int,
+        mode: str,
+        min_score: float,
+    ):
+        captured["question"] = question
+        captured["backend"] = backend
+        captured["sqlite_database_path"] = sqlite_database_path
+        captured["postgresql_connection"] = postgresql_connection
+        captured["top_k"] = top_k
+        captured["mode"] = mode
+        captured["min_score"] = min_score
+
+        return [
+            {
+                "title": "员工手册",
+                "path": "postgresql://chunk/2",
+                "text": "员工每天需要完成 8 小时工作。",
+                "score": 0.866,
+            }
+        ]
+
+    monkeypatch.setattr(
+        "backend.services.agent_tools.retrieve_rag_snippets",
+        fake_retrieve_rag_snippets,
+    )
+
+    connection = FakePostgresqlConnection()
+
+    result = search_knowledge_base_tool(
+        question="员工每天需要工作多久？",
+        retriever_backend="postgresql",
+        postgresql_connection=connection,
+        top_k=2,
+        mode="precomputed_embedding",
+        min_score=0.6,
+    )
+
+    assert captured == {
+        "question": "员工每天需要工作多久？",
+        "backend": "postgresql",
+        "sqlite_database_path": "data/app.db",
+        "postgresql_connection": connection,
+        "top_k": 2,
+        "mode": "precomputed_embedding",
+        "min_score": 0.6,
+    }
+
+    assert result == {
+        "question": "员工每天需要工作多久？",
+        "keyword": "员工每天需要工作多久？",
+        "snippets": [
+            {
+                "title": "员工手册",
+                "path": "postgresql://chunk/2",
+                "text": "员工每天需要完成 8 小时工作。",
+                "score": 0.866,
+            }
+        ],
+        "count": 1,
+    }
+
+    
 def test_answer_with_context_tool():
     snippets = [
         {

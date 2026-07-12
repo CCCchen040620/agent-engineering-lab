@@ -1,11 +1,10 @@
 """Agent tools for the knowledge base."""
 
 from typing import Callable
-
+from backend.services.rag_retriever_service import retrieve_rag_snippets
 from backend.config import DATABASE_PATH, DEFAULT_MIN_SCORE, DEFAULT_TOP_K
 from backend.services.ollama_service import generate_with_ollama
 from backend.services.prompt_service import build_rag_prompt
-from backend.services.sqlite_llm_qa_service import search_sqlite_snippets
 from backend.services.sqlite_document_repository import (
     create_chunks_table,
     create_connection,
@@ -14,6 +13,7 @@ from backend.services.sqlite_document_repository import (
     list_chunks_by_document_id,
     list_documents_from_db_filtered,
 )
+from week03.keyword_extractor import extract_keyword
 
 REFUSAL_ANSWER = "知识库中没有找到相关资料，暂时无法回答。"
 MODEL_UNAVAILABLE_ANSWER = "本地模型暂时不可用，请稍后再试。"
@@ -103,15 +103,21 @@ def search_knowledge_base_tool(
     top_k: int = DEFAULT_TOP_K,
     mode: str = "keyword",
     min_score: float = DEFAULT_MIN_SCORE,
+    retriever_backend: str = "sqlite",
+    postgresql_connection=None,
 ) -> dict:
     """根据用户问题搜索知识库片段。"""
-    keyword, snippets = search_sqlite_snippets(
+    snippets = retrieve_rag_snippets(
         question=question,
-        database_path=database_path,
+        backend=retriever_backend,
+        sqlite_database_path=database_path,
+        postgresql_connection=postgresql_connection,
         top_k=top_k,
         mode=mode,
         min_score=min_score,
     )
+
+    keyword = extract_keyword(question)
 
     return {
         "question": question,
