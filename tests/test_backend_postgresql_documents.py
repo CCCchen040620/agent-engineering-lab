@@ -233,3 +233,93 @@ def test_search_postgresql_chunks_by_vector_rejects_sqlite_url():
 
     assert response.status_code == 400
     assert "PostgreSQL URL" in response.json()["detail"]
+
+
+def test_search_postgresql_chunks_by_question_endpoint(monkeypatch):
+    captured = {}
+
+    def fake_connect(database_url: str):
+        captured["database_url"] = database_url
+        return FakeConnection()
+
+    def fake_initialize_schema(connection):
+        captured["schema_initialized"] = True
+
+    def fake_search_by_question(connection, question: str, top_k: int):
+        captured["question"] = question
+        captured["top_k"] = top_k
+
+        return {
+            "question": question,
+            "embedding_size": 1024,
+            "results": [
+                {
+                    "chunk_id": 1,
+                    "document_id": 3,
+                    "document_title": "员工手册",
+                    "text": "员工每天需要完成 8 小时工作。",
+                    "distance": 0.0,
+                    "score": 1.0,
+                }
+            ],
+        }
+
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.psycopg.connect",
+        fake_connect,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.initialize_postgresql_knowledge_schema",
+        fake_initialize_schema,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.search_postgresql_chunks_by_question",
+        fake_search_by_question,
+    )
+
+    app.dependency_overrides[get_postgresql_database_url] = lambda: (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+
+    response = client.post(
+        "/api/v1/postgresql/search/question",
+        json={
+            "question": "员工每天需要工作多久？",
+            "top_k": 2,
+        },
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert captured["database_url"] == (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+    assert captured["schema_initialized"] is True
+    assert captured["question"] == "员工每天需要工作多久？"
+    assert captured["top_k"] == 2
+
+    assert data["question"] == "员工每天需要工作多久？"
+    assert data["embedding_size"] == 1024
+    assert len(data["results"]) == 1
+    assert data["results"][0]["document_title"] == "员工手册"
+
+
+def test_search_postgresql_chunks_by_question_rejects_sqlite_url():
+    app.dependency_overrides[get_postgresql_database_url] = lambda: "sqlite:///data/app.db"
+
+    response = client.post(
+        "/api/v1/postgresql/search/question",
+        json={
+            "question": "员工每天需要工作多久？",
+            "top_k": 2,
+        },
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 400
+    assert "PostgreSQL URL" in response.json()["detail"]

@@ -81,3 +81,14 @@ class VectorSearchResult(BaseModel):
     text: str = Field(min_length=1)
     distance: float
     score: float
+
+
+class QuestionSearchRequest(BaseModel):
+    question: str = Field(min_length=1)
+    top_k: int = 3
+
+
+class QuestionSearchResponse(BaseModel):
+    question: str = Field(min_length=1)
+    embedding_size: int
+    results: list[VectorSearchResult]
