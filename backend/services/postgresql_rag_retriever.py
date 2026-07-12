@@ -16,6 +16,7 @@ def retrieve_postgresql_snippets(
     connection,
     question: str,
     top_k: int = 3,
+    min_score: float = 0.0,
 ) -> list[dict]:
     search_result = search_postgresql_chunks_by_question(
         connection,
@@ -26,6 +27,9 @@ def retrieve_postgresql_snippets(
     snippets = []
 
     for result in search_result["results"]:
-        snippets.append(result_to_snippet(result))
+        if result["score"] >= min_score:
+            snippets.append(result_to_snippet(result))
 
     return snippets
+
+
