@@ -1775,3 +1775,97 @@ Top1 片段： 差旅报销需要在出差结束后 7 天内提交。
 ```powershell
 Remove-Item Env:DATABASE_URL
 ```
+## 验证 PostgreSQL Retriever 接入 LangGraph Agent
+
+这一步用于验证 PostgreSQL/pgvector 已经接入 LangGraph Agent 的普通问答接口。
+
+完整链路是：
+
+```text
+用户问题 -> Ollama bge-m3 embedding -> PostgreSQL pgvector 检索 -> validate_context_node -> answer_node/refuse_node
+```
+
+先启动 PostgreSQL：
+
+```powershell
+docker compose up -d postgres
+.\scripts\check_postgres.ps1
+```
+
+确认 PostgreSQL 中已经有真实 chunk embeddings：
+
+```powershell
+$env:DATABASE_URL="postgresql://agent_user:agent_password@localhost:5432/agent_db"
+python -m week10.evaluate_postgresql_retrieval
+```
+
+如果评测没有命中预期片段，先回填 embedding：
+
+```powershell
+python -m week10.backfill_postgresql_chunk_embeddings
+```
+
+启动后端前，先设置当前 PowerShell 窗口的数据库地址：
+
+```powershell
+$env:DATABASE_URL="postgresql://agent_user:agent_password@localhost:5432/agent_db"
+```
+
+如果 8000 端口上有旧的 `uvicorn --reload` 进程，接口可能还在跑旧代码。可以临时换到 8001：
+
+```powershell
+python -m uvicorn backend.main:app --reload --port 8001
+```
+
+打开接口文档：
+
+```text
+http://127.0.0.1:8001/docs
+```
+
+请求接口：
+
+```text
+POST /api/v1/langgraph-agent/chat
+```
+
+查询参数：
+
+```text
+retriever_backend=postgresql
+top_k=2
+mode=precomputed_embedding
+min_score=0.6
+timeout_seconds=30
+```
+
+请求体：
+
+```json
+{
+  "question": "员工每天需要工作多久？"
+}
+```
+
+验收重点：
+
+```json
+{
+  "retriever_backend": "postgresql",
+  "has_valid_context": true
+}
+```
+
+引用来源中应出现类似：
+
+```text
+postgresql://chunk/2
+```
+
+如果返回中 `snippets` 已经命中正确片段，但 `has_valid_context=false`，优先检查后端是否加载了最新代码，必要时换端口重新启动。
+
+如果本次只是临时验收 PostgreSQL，结束后恢复当前 PowerShell 窗口的默认数据库配置：
+
+```powershell
+Remove-Item Env:DATABASE_URL
+```

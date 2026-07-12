@@ -1403,3 +1403,59 @@ python -m week10.backfill_postgresql_chunk_embeddings
 - `/search/vector` 适合调试“手动传 embedding”的底层 pgvector 检索能力。
 - `/search/question` 适合调试“自然语言问题 -> embedding -> pgvector 检索”的完整检索链路。
 - 当前接口仍然是 PostgreSQL 调试接口，还没有替代 SQLite/LangGraph Agent 主业务链路。
+## PostgreSQL Retriever 接入 LangGraph Agent
+
+`POST /api/v1/langgraph-agent/chat` 现在支持通过查询参数切换检索后端：
+
+```text
+retriever_backend=postgresql
+```
+
+这个模式会走：
+
+```text
+用户问题 -> Ollama bge-m3 embedding -> PostgreSQL pgvector 检索 -> LangGraph Agent 校验上下文 -> 生成带引用回答
+```
+
+使用前需要确认：
+
+- Docker Compose 中的 `postgres` 服务已经启动。
+- 当前后端进程使用 PostgreSQL 格式的 `DATABASE_URL`。
+- PostgreSQL schema 已初始化。
+- PostgreSQL `chunk_embeddings` 表中已经写入真实 embedding。
+- 本地 Ollama 已启动，并且存在 `bge-m3:latest` embedding 模型。
+
+请求示例：
+
+```text
+POST /api/v1/langgraph-agent/chat?retriever_backend=postgresql&top_k=2&mode=precomputed_embedding&min_score=0.6&timeout_seconds=30
+```
+
+请求体：
+
+```json
+{
+  "question": "员工每天需要工作多久？"
+}
+```
+
+成功返回中应重点检查：
+
+```json
+{
+  "retriever_backend": "postgresql",
+  "has_valid_context": true,
+  "citations": [
+    {
+      "path": "postgresql://chunk/2"
+    }
+  ]
+}
+```
+
+说明：
+
+- PostgreSQL retriever 返回的引用路径使用 `postgresql://chunk/{chunk_id}`。
+- 对于 PostgreSQL / pgvector 检索，`validate_context_node` 不只依赖关键词包含判断；当检索片段相似度分数足够高时，也可以判定为有效上下文。
+- 当前只有无会话版本 `POST /api/v1/langgraph-agent/chat` 支持 `retriever_backend=postgresql`。
+- `POST /api/v1/langgraph-agent/chat/stream` 和 `POST /api/v1/langgraph-agent/conversations/{conversation_id}/chat` 目前仍保护性禁用 PostgreSQL retriever，后续再逐步接入。
