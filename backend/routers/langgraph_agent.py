@@ -17,6 +17,7 @@ from backend.config import (
     DEFAULT_MIN_SCORE,
     DEFAULT_TOP_K,
     LANGGRAPH_AGENT_TIMEOUT_SECONDS,
+    RAG_RETRIEVER_BACKEND,
 )
 from backend.routers.db_documents import get_database_path
 from backend.routers.rate_limit import enforce_heavy_request_rate_limit
@@ -87,6 +88,7 @@ def langgraph_agent_chat(
         ge=1,
         le=120,
     ),
+    retriever_backend: str = Query(default=RAG_RETRIEVER_BACKEND),
     database_path: str = Depends(get_database_path),
     generator: Callable[[str], str] = Depends(get_langgraph_agent_generator),
     _rate_limit: None = Depends(enforce_heavy_request_rate_limit),
@@ -98,6 +100,7 @@ def langgraph_agent_chat(
         mode=mode,
         min_score=min_score,
         timeout_seconds=timeout_seconds,
+        retriever_backend=retriever_backend,
         generator=generator,
     )
 
@@ -113,6 +116,7 @@ def langgraph_agent_chat_stream(
         ge=1,
         le=120,
     ),
+    retriever_backend: str = Query(default=RAG_RETRIEVER_BACKEND),
     database_path: str = Depends(get_database_path),
     generator: Callable[[str], str] = Depends(get_langgraph_agent_generator),
     _rate_limit: None = Depends(enforce_heavy_request_rate_limit),
@@ -124,6 +128,7 @@ def langgraph_agent_chat_stream(
         mode=mode,
         min_score=min_score,
         timeout_seconds=timeout_seconds,
+        retriever_backend=retriever_backend,
         generator=generator,
     )
 
@@ -145,6 +150,7 @@ def langgraph_agent_conversation_chat(
         ge=1,
         le=120,
     ),
+    retriever_backend: str = Query(default=RAG_RETRIEVER_BACKEND),
     database_path: str = Depends(get_database_path),
     generator: Callable[[str], str] = Depends(get_langgraph_agent_generator),
     _rate_limit: None = Depends(enforce_heavy_request_rate_limit),
@@ -176,6 +182,7 @@ def langgraph_agent_conversation_chat(
         mode=mode,
         min_score=min_score,
         timeout_seconds=timeout_seconds,
+        retriever_backend=retriever_backend,
         generator=generator,
         messages=messages,
         conversation_summary=conversation["summary"],

@@ -217,6 +217,78 @@ def test_langgraph_agent_chat_endpoint_asks_clarification_when_title_missing(
     assert data["steps"][3]["tool"] == "ask_clarification_tool"
 
 
+def test_langgraph_agent_chat_endpoint_accepts_retriever_backend(monkeypatch):
+    captured = {}
+
+    def fake_run_langgraph_agent(**kwargs):
+        captured.update(kwargs)
+
+        return {
+            "question": kwargs["question"],
+            "intent": "answer_question",
+            "keyword": "安全培训",
+            "contextual_question": kwargs["question"],
+            "context_document_title": "",
+            "snippets": [
+                {
+                    "title": "员工手册",
+                    "path": "sqlite://1",
+                    "text": "新员工入职后需要在 30 天内完成安全培训。",
+                    "score": 0.9,
+                }
+            ],
+            "has_valid_context": True,
+            "document_title": "",
+            "document": None,
+            "document_match_type": None,
+            "missing_field": "",
+            "answer": "新员工需要在入职后 30 天内完成安全培训。",
+            "citations": [
+                {
+                    "title": "员工手册",
+                    "text": "新员工入职后需要在 30 天内完成安全培训。",
+                    "path": "sqlite://1",
+                }
+            ],
+            "steps": [],
+            "database_path": kwargs["database_path"],
+            "top_k": kwargs["top_k"],
+            "mode": kwargs["mode"],
+            "min_score": kwargs["min_score"],
+            "retriever_backend": kwargs["retriever_backend"],
+            "generator": {},
+            "timeout_seconds": kwargs["timeout_seconds"],
+            "is_timeout": False,
+            "is_fallback": False,
+        }
+
+    monkeypatch.setattr(
+        "backend.routers.langgraph_agent.run_langgraph_agent",
+        fake_run_langgraph_agent,
+    )
+
+    response = client.post(
+        "/api/v1/langgraph-agent/chat",
+        params={
+            "retriever_backend": "sqlite",
+            "top_k": 2,
+            "mode": "precomputed_embedding",
+            "min_score": 0.6,
+        },
+        json={"question": "新员工什么时候完成安全培训？"},
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert captured["retriever_backend"] == "sqlite"
+    assert captured["top_k"] == 2
+    assert captured["mode"] == "precomputed_embedding"
+    assert captured["min_score"] == 0.6
+    assert data["retriever_backend"] == "sqlite"
+
+    
 def test_langgraph_agent_conversation_chat_saves_messages(tmp_path):
     database_path = tmp_path / "test.db"
 
