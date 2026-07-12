@@ -49,6 +49,8 @@ class LangGraphAgentState(TypedDict):
     top_k: int
     mode: str
     min_score: float
+    retriever_backend: str
+    postgresql_connection: object | None
     generator: Callable[[str], str]
     started_at: float
     timeout_seconds: float
@@ -372,6 +374,8 @@ def search_knowledge_node(state: LangGraphAgentState) -> dict:
         top_k=state["top_k"],
         mode=state["mode"],
         min_score=state["min_score"],
+        retriever_backend=state["retriever_backend"],
+        postgresql_connection=state["postgresql_connection"],
     )
 
     snippets = filter_snippets_by_context_document(
@@ -398,6 +402,7 @@ def search_knowledge_node(state: LangGraphAgentState) -> dict:
                     "top_k": state["top_k"],
                     "mode": state["mode"],
                     "min_score": state["min_score"],
+                    "retriever_backend": state["retriever_backend"],
                 },
                 "observation": {
                     "keyword": tool_result["keyword"],
@@ -705,6 +710,8 @@ def run_langgraph_agent(
     messages: list[dict] | None = None,
     conversation_summary: str = "",
     timeout_seconds: float = LANGGRAPH_AGENT_TIMEOUT_SECONDS,
+    retriever_backend: str = "sqlite",
+    postgresql_connection=None,
 ) -> LangGraphAgentState:
     graph = build_langgraph_agent()
 
@@ -749,6 +756,8 @@ def run_langgraph_agent(
         "top_k": top_k,
         "mode": mode,
         "min_score": min_score,
+        "retriever_backend": retriever_backend,
+        "postgresql_connection": postgresql_connection,
         "generator": generator,
         "started_at": time.perf_counter(),
         "timeout_seconds": timeout_seconds,

@@ -685,3 +685,68 @@ def test_langgraph_agent_uses_config_database_path():
     assert "DATABASE_PATH" in source
     assert "SQLITE_DATABASE_PATH" not in source
     assert "week04.settings" not in source
+
+
+def test_run_langgraph_agent_passes_retriever_backend_to_search_tool(monkeypatch):
+    captured = {}
+
+    def fake_search_knowledge_base_tool(
+        question: str,
+        database_path: str,
+        top_k: int,
+        mode: str,
+        min_score: float,
+        retriever_backend: str,
+        postgresql_connection,
+    ):
+        captured["question"] = question
+        captured["database_path"] = database_path
+        captured["top_k"] = top_k
+        captured["mode"] = mode
+        captured["min_score"] = min_score
+        captured["retriever_backend"] = retriever_backend
+        captured["postgresql_connection"] = postgresql_connection
+
+        return {
+            "question": question,
+            "keyword": "安全培训",
+            "snippets": [
+                {
+                    "title": "员工手册",
+                    "path": "postgresql://chunk/2",
+                    "text": "新员工入职后需要在 30 天内完成安全培训。",
+                    "score": 0.9,
+                }
+            ],
+            "count": 1,
+        }
+
+    monkeypatch.setattr(
+        "backend.services.langgraph_agent.search_knowledge_base_tool",
+        fake_search_knowledge_base_tool,
+    )
+
+    connection = object()
+
+    result = run_langgraph_agent(
+        question="新员工什么时候完成安全培训？",
+        database_path="data/app.db",
+        top_k=2,
+        mode="precomputed_embedding",
+        min_score=0.6,
+        retriever_backend="postgresql",
+        postgresql_connection=connection,
+        generator=lambda prompt: "新员工需要在入职后 30 天内完成安全培训。",
+    )
+
+    assert captured["question"] == "新员工什么时候完成安全培训？"
+    assert captured["database_path"] == "data/app.db"
+    assert captured["top_k"] == 2
+    assert captured["mode"] == "precomputed_embedding"
+    assert captured["min_score"] == 0.6
+    assert captured["retriever_backend"] == "postgresql"
+    assert captured["postgresql_connection"] == connection
+
+    assert result["answer"] == "新员工需要在入职后 30 天内完成安全培训。"
+    assert result["snippets"][0]["path"] == "postgresql://chunk/2"
+    assert result["steps"][2]["input"]["retriever_backend"] == "postgresql"
