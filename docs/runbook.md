@@ -1271,3 +1271,60 @@ Remove-Item Env:DATABASE_URL
 ```
 
 当前项目仍然默认使用 SQLite。PostgreSQL/pgvector 目前是工程化准备能力，后续才会逐步迁移业务表和向量检索。
+
+## 初始化 PostgreSQL 知识库表结构
+
+这一步会在 PostgreSQL 中创建知识库核心表：
+
+- `documents`
+- `chunks`
+- `chunk_embeddings`
+
+它只负责建表，不会把当前 SQLite 里的业务数据迁移过去。
+
+先确认 PostgreSQL 已经启动：
+
+```powershell
+docker compose up -d postgres
+```
+
+临时设置当前 PowerShell 窗口的数据库地址：
+
+```powershell
+$env:DATABASE_URL="postgresql://agent_user:agent_password@localhost:5432/agent_db"
+```
+
+运行初始化脚本：
+
+```powershell
+python -m week10.init_postgresql_schema
+```
+
+预期输出类似：
+
+```text
+PostgreSQL knowledge schema initialized.
+{'vector_extension_ready': True, 'documents_table_ready': True, 'chunks_table_ready': True, 'chunk_embeddings_table_ready': True}
+```
+
+然后检查 PostgreSQL 中是否真的创建了表：
+
+```powershell
+docker compose exec postgres psql -U agent_user -d agent_db -c "\dt"
+```
+
+预期可以看到：
+
+```text
+public | chunk_embeddings | table | agent_user
+public | chunks           | table | agent_user
+public | documents        | table | agent_user
+```
+
+验收完成后恢复当前 PowerShell 窗口的环境变量：
+
+```powershell
+Remove-Item Env:DATABASE_URL
+```
+
+注意：当前后端主业务仍然默认使用 SQLite。PostgreSQL 表结构已经准备好，但文档增删查、Agent 检索、对话记忆等业务链路还没有切换到 PostgreSQL。
