@@ -1,8 +1,8 @@
 import json
 from urllib import request
 
-from backend.config import DATABASE_PATH, EMBEDDING_MODEL, LLM_MODEL, OLLAMA_BASE_URL
-from backend.services.sqlite_document_repository import create_connection
+from backend.config import DATABASE_URL, EMBEDDING_MODEL, LLM_MODEL, OLLAMA_BASE_URL
+from backend.services.database_connection_service import create_database_connection
 
 
 def fetch_ollama_model_names(base_url: str = OLLAMA_BASE_URL) -> list[str]:
@@ -21,9 +21,9 @@ def fetch_ollama_model_names(base_url: str = OLLAMA_BASE_URL) -> list[str]:
     return model_names
 
 
-def check_database_status(database_path: str = DATABASE_PATH) -> dict:
+def check_database_status(database_url: str = DATABASE_URL) -> dict:
     try:
-        connection = create_connection(database_path)
+        connection = create_database_connection(database_url)
         cursor = connection.cursor()
         cursor.execute("SELECT 1")
         cursor.fetchone()
@@ -31,12 +31,12 @@ def check_database_status(database_path: str = DATABASE_PATH) -> dict:
 
         return {
             "status": "ok",
-            "path": database_path,
+            "database_url": database_url,
         }
     except Exception as error:
         return {
             "status": "error",
-            "path": database_path,
+            "database_url": database_url,
             "message": str(error),
         }
 

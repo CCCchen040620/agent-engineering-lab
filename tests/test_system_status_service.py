@@ -9,11 +9,12 @@ from backend.services.system_status_service import (
 
 def test_check_database_status_returns_ok(tmp_path):
     database_path = tmp_path / "app.db"
+    database_url = f"sqlite:///{database_path}"
 
-    result = check_database_status(str(database_path))
+    result = check_database_status(database_url)
 
     assert result["status"] == "ok"
-    assert result["path"] == str(database_path)
+    assert result["database_url"] == database_url
 
 
 def test_check_ollama_status_reports_available_models():
@@ -63,11 +64,13 @@ def test_build_system_status_returns_degraded_when_dependency_fails():
     assert result["ollama"]["status"] == "error"
 
 
-def test_system_status_uses_config_database_path():
+def test_system_status_uses_database_connection_service():
     service_source = Path("backend/services/system_status_service.py").read_text(
         encoding="utf-8"
     )
 
-    assert "DATABASE_PATH" in service_source
+    assert "create_database_connection" in service_source
+    assert "create_connection" not in service_source
+    assert "DATABASE_PATH" not in service_source
     assert "SQLITE_DATABASE_PATH" not in service_source
     assert "week04.settings" not in service_source
