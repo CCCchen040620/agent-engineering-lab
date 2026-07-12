@@ -27,6 +27,11 @@ ollama list
   - `普通 RAG 问答`：调用 `POST /api/v1/db/chat/llm`
   - `Simple Agent 问答`：调用 `POST /api/v1/agent/chat`
   - `LangGraph Agent 问答`：默认调用 `POST /api/v1/langgraph-agent/chat`
+- 可切换检索后端：
+  - `SQLite（默认）`：使用本地 SQLite 知识库，是当前默认模式
+  - `PostgreSQL / pgvector（本地实验）`：调用 LangGraph Agent 普通问答接口，并通过 `retriever_backend=postgresql` 使用 PostgreSQL/pgvector 检索
+- 当选择 `PostgreSQL / pgvector（本地实验）` 时，页面会提示需要先启动 postgres，并用 PostgreSQL `DATABASE_URL` 启动后端。
+- PostgreSQL / pgvector 模式当前只支持普通 LangGraph Agent 问答；页面会自动关闭学习版流式输出和会话保存，避免调用尚未支持 PostgreSQL retriever 的接口。
 - Simple Agent 会先判断用户意图，再选择工具：
   - 文档列表类问题会调用 `list_documents_tool`
   - 读取文档类问题会调用 `find_document_by_title_tool` 和 `read_document_chunks_tool`
@@ -86,6 +91,58 @@ ollama list
 - txt 上传会调用 FastAPI 后端接口 `POST /api/v1/db/documents/upload-text`，因此使用该功能前需要先启动后端服务。
 - 当前 txt 上传要求文件使用 UTF-8 编码；如果编码不兼容，后端会返回上传失败提示。
 - 上传文件后可自动使用文件名作为文档标题
+
+### 系统状态诊断
+
+侧边栏的系统状态诊断会显示当前后端依赖状态。
+
+数据库状态会根据后端当前 `DATABASE_URL` 自动区分：
+
+- SQLite 模式下显示 `当前数据库：SQLite`
+- PostgreSQL 模式下显示 `当前数据库：PostgreSQL`
+
+如果 PostgreSQL 已启用，页面还会额外显示 `PostgreSQL / pgvector` 的连接状态。这样可以避免在 PostgreSQL 验收时误把 SQLite 显示为异常。
+
+### PostgreSQL / pgvector 前端验收
+
+使用前请先确认：
+
+```powershell
+docker compose up -d postgres
+.\scripts\check_postgres.ps1
+$env:DATABASE_URL="postgresql://agent_user:agent_password@localhost:5432/agent_db"
+python -m uvicorn backend.main:app --reload --port 8001
+```
+
+如果后端使用 8001，请在启动 Streamlit 前设置：
+
+```powershell
+$env:BACKEND_API_BASE_URL="http://127.0.0.1:8001"
+python -m streamlit run frontend/streamlit_app.py
+```
+
+页面选择：
+
+```text
+问答引擎：LangGraph Agent 问答
+检索后端：PostgreSQL / pgvector（本地实验）
+检索模式：precomputed_embedding
+top_k：2
+min_score：0.6
+```
+
+验收问题：
+
+```text
+员工每天需要工作多久？
+```
+
+预期结果：
+
+- 回答能说明员工每天需要工作 8 小时
+- `检索后端` 显示为 PostgreSQL
+- Agent 步骤中 `search_knowledge_base_tool` 命中数量为 1
+- 引用来源包含 `PostgreSQL 向量检索测试文档`
 
 ### 会话保存
 
