@@ -2,7 +2,10 @@ import os
 
 from dotenv import find_dotenv, load_dotenv
 
-from backend.services.database_url_service import get_sqlite_path_from_database_url
+from backend.services.database_url_service import (
+    get_sqlite_path_from_database_url,
+    is_sqlite_database,
+)
 
 
 load_dotenv(find_dotenv(usecwd=True))
@@ -29,8 +32,10 @@ def get_float_env(name: str, default: float) -> float:
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 BACKEND_API_BASE_URL = os.getenv("BACKEND_API_BASE_URL", "http://127.0.0.1:8000")
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///data/app.db")
-DATABASE_PATH = get_sqlite_path_from_database_url(DATABASE_URL)
-
+if is_sqlite_database(DATABASE_URL):
+    DATABASE_PATH = get_sqlite_path_from_database_url(DATABASE_URL)
+else:
+    DATABASE_PATH = ""
 LLM_MODEL = os.getenv("LLM_MODEL", "qwen3.6:latest")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "bge-m3:latest")
 

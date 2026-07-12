@@ -164,3 +164,20 @@ def test_default_database_url():
 
     assert DATABASE_URL == "sqlite:///data/app.db"
     assert DATABASE_PATH == "data/app.db"
+
+
+def test_config_can_read_postgresql_database_url(monkeypatch):
+    monkeypatch.setenv(
+        "DATABASE_URL",
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db",
+    )
+
+    reloaded_config = importlib.reload(config)
+
+    assert reloaded_config.DATABASE_URL == (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+    assert reloaded_config.DATABASE_PATH == ""
+
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    importlib.reload(config)
