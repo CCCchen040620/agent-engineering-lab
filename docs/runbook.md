@@ -1416,3 +1416,72 @@ Remove-Item Env:DATABASE_URL
 ```
 
 注意：当前主业务仍然默认使用 SQLite。PostgreSQL/pgvector 已经完成存储和检索闭环验证，但还没有接入 FastAPI 业务接口和 LangGraph Agent 主链路。
+
+## 验证 PostgreSQL documents 调试接口
+
+当前项目提供了一个 PostgreSQL 调试接口：
+
+```text
+GET /api/v1/postgresql/documents
+```
+
+这个接口只读取 PostgreSQL `documents` 表，用于确认 FastAPI 可以通过 PostgreSQL repository 读取数据。它不会替代当前 SQLite 主业务接口。
+
+先启动 PostgreSQL：
+
+```powershell
+docker compose up -d postgres
+```
+
+临时设置当前 PowerShell 窗口的数据库地址：
+
+```powershell
+$env:DATABASE_URL="postgresql://agent_user:agent_password@localhost:5432/agent_db"
+```
+
+启动后端：
+
+```powershell
+python -m uvicorn backend.main:app --reload
+```
+
+打开接口文档：
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+执行：
+
+```text
+GET /api/v1/postgresql/documents
+```
+
+如果之前运行过 PostgreSQL demo，预期可以看到类似：
+
+```json
+[
+  {
+    "id": 1,
+    "title": "PostgreSQL 测试文档",
+    "file_type": "md",
+    "chunk_count": 0,
+    "is_indexed": false
+  },
+  {
+    "id": 2,
+    "title": "PostgreSQL RAG 存储测试文档",
+    "file_type": "md",
+    "chunk_count": 1,
+    "is_indexed": true
+  }
+]
+```
+
+验收完成后恢复当前 PowerShell 窗口的环境变量：
+
+```powershell
+Remove-Item Env:DATABASE_URL
+```
+
+注意：这个接口是 PostgreSQL 调试接口。当前 `/api/v1/db/documents` 仍然是 SQLite 主业务文档接口。

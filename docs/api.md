@@ -1214,3 +1214,65 @@ GET /api/v1/conversations/1/messages
 
 ```powershell
 python -m week08.backfill_chunk_embeddings
+```
+
+## PostgreSQL 调试接口
+
+> 说明：这组接口用于验证 PostgreSQL/pgvector 接入情况。当前主业务仍然默认使用 SQLite，PostgreSQL 接口暂时只作为学习和调试入口。
+
+### GET /api/v1/postgresql/documents
+
+从 PostgreSQL `documents` 表读取文档列表。
+
+使用前需要确保：
+
+- Docker Compose 中的 `postgres` 服务已经启动
+- 当前后端进程使用 PostgreSQL 格式的 `DATABASE_URL`
+- PostgreSQL schema 已经初始化
+
+本地临时启动示例：
+
+```powershell
+docker compose up -d postgres
+$env:DATABASE_URL="postgresql://agent_user:agent_password@localhost:5432/agent_db"
+python -m uvicorn backend.main:app --reload
+```
+
+请求示例：
+
+```text
+GET /api/v1/postgresql/documents
+```
+
+返回示例：
+
+```json
+[
+  {
+    "id": 1,
+    "title": "PostgreSQL 测试文档",
+    "file_type": "md",
+    "chunk_count": 0,
+    "is_indexed": false
+  },
+  {
+    "id": 2,
+    "title": "PostgreSQL RAG 存储测试文档",
+    "file_type": "md",
+    "chunk_count": 1,
+    "is_indexed": true
+  }
+]
+```
+
+如果当前 `DATABASE_URL` 仍然是 SQLite，会返回：
+
+```text
+400 Bad Request
+```
+
+说明：
+
+- 该接口只读 PostgreSQL，不会修改数据。
+- 该接口不会替代 `/api/v1/db/documents`。
+- 当前 SQLite 文档接口仍然是主业务接口。
