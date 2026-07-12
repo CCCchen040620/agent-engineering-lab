@@ -107,3 +107,23 @@ def list_chunks_by_document_from_postgresql(
         chunks.append(row_to_chunk(row))
 
     return chunks
+
+
+def list_all_chunks_from_postgresql(connection) -> list[dict]:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT id, document_id, text, chunk_index
+            FROM chunks
+            ORDER BY id
+            """
+        )
+
+        rows = cursor.fetchall()
+
+    chunks = []
+
+    for row in rows:
+        chunks.append(row_to_chunk(row))
+
+    return chunks
