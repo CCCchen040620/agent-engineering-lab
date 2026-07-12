@@ -1,6 +1,8 @@
 import psycopg
 from fastapi import APIRouter, Depends, HTTPException
-
+from backend.services.postgresql_vector_search_repository import (
+    search_chunks_by_vector_from_postgresql,
+)
 from backend.config import DATABASE_URL
 from backend.services.database_url_service import is_postgresql_database
 from backend.services.postgresql_document_repository import (
@@ -10,7 +12,7 @@ from backend.services.postgresql_document_repository import (
 from backend.services.postgresql_schema_service import (
     initialize_postgresql_knowledge_schema,
 )
-from week05.models import Chunk, Document
+from week05.models import Chunk, Document, VectorSearchRequest, VectorSearchResult
 
 
 router = APIRouter(prefix="/api/v1/postgresql")
@@ -56,3 +58,25 @@ def list_postgresql_document_chunks(
         )
 
     return chunks
+
+
+@router.post("/search/vector", response_model=list[VectorSearchResult])
+def search_postgresql_chunks_by_vector(
+    request: VectorSearchRequest,
+    database_url: str = Depends(get_postgresql_database_url),
+):
+    if not is_postgresql_database(database_url):
+        raise HTTPException(
+            status_code=400,
+            detail="DATABASE_URL must be a PostgreSQL URL.",
+        )
+
+    with psycopg.connect(database_url) as connection:
+        initialize_postgresql_knowledge_schema(connection)
+        results = search_chunks_by_vector_from_postgresql(
+            connection,
+            query_embedding=request.embedding,
+            top_k=request.top_k,
+        )
+
+    return results

@@ -67,3 +67,17 @@ class ConversationCreateRequest(BaseModel):
 class MessageCreateRequest(BaseModel):
     role: str = Field(min_length=1)
     content: str = Field(min_length=1)
+
+
+class VectorSearchRequest(BaseModel):
+    embedding: list[float]
+    top_k: int = 3
+
+
+class VectorSearchResult(BaseModel):
+    chunk_id: int
+    document_id: int
+    document_title: str = Field(min_length=1)
+    text: str = Field(min_length=1)
+    distance: float
+    score: float

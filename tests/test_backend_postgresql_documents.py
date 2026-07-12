@@ -149,3 +149,87 @@ def test_list_postgresql_document_chunks_rejects_sqlite_url():
 
     assert response.status_code == 400
     assert "PostgreSQL URL" in response.json()["detail"]
+
+
+def test_search_postgresql_chunks_by_vector_endpoint(monkeypatch):
+    captured = {}
+
+    def fake_connect(database_url: str):
+        captured["database_url"] = database_url
+        return FakeConnection()
+
+    def fake_initialize_schema(connection):
+        captured["schema_initialized"] = True
+
+    def fake_search_chunks(connection, query_embedding: list[float], top_k: int):
+        captured["query_embedding"] = query_embedding
+        captured["top_k"] = top_k
+
+        return [
+            {
+                "chunk_id": 1,
+                "document_id": 2,
+                "document_title": "PostgreSQL RAG 存储测试文档",
+                "text": "这是一条写入 PostgreSQL pgvector 的测试片段。",
+                "distance": 0.0,
+                "score": 1.0,
+            }
+        ]
+
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.psycopg.connect",
+        fake_connect,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.initialize_postgresql_knowledge_schema",
+        fake_initialize_schema,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.search_chunks_by_vector_from_postgresql",
+        fake_search_chunks,
+    )
+
+    app.dependency_overrides[get_postgresql_database_url] = lambda: (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+
+    response = client.post(
+        "/api/v1/postgresql/search/vector",
+        json={
+            "embedding": [0.1, 0.2, 0.3],
+            "top_k": 2,
+        },
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert captured["database_url"] == (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+    assert captured["schema_initialized"] is True
+    assert captured["query_embedding"] == [0.1, 0.2, 0.3]
+    assert captured["top_k"] == 2
+    assert len(data) == 1
+    assert data[0]["chunk_id"] == 1
+    assert data[0]["score"] == 1.0
+
+
+def test_search_postgresql_chunks_by_vector_rejects_sqlite_url():
+    app.dependency_overrides[get_postgresql_database_url] = lambda: "sqlite:///data/app.db"
+
+    response = client.post(
+        "/api/v1/postgresql/search/vector",
+        json={
+            "embedding": [0.1, 0.2, 0.3],
+            "top_k": 2,
+        },
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 400
+    assert "PostgreSQL URL" in response.json()["detail"]
