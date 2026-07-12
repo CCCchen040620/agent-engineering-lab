@@ -1485,3 +1485,37 @@ Remove-Item Env:DATABASE_URL
 ```
 
 注意：这个接口是 PostgreSQL 调试接口。当前 `/api/v1/db/documents` 仍然是 SQLite 主业务文档接口。
+
+## 验证 PostgreSQL document chunks 调试接口
+
+当前项目也提供了 PostgreSQL chunks 调试接口：
+
+```text
+GET /api/v1/postgresql/documents/{document_id}/chunks
+```
+
+这个接口只读取 PostgreSQL `chunks` 表，用于确认 FastAPI 可以按文档 id 读取 PostgreSQL 中的文档片段。
+
+确认后端已经用 PostgreSQL `DATABASE_URL` 启动后，在接口文档中执行：
+
+```text
+GET /api/v1/postgresql/documents/2/chunks
+```
+
+如果之前运行过 PostgreSQL RAG 存储 demo，预期可以看到类似：
+
+```json
+[
+  {
+    "id": 1,
+    "document_id": 2,
+    "text": "这是一条写入 PostgreSQL pgvector 的测试片段。"
+  }
+]
+```
+
+说明：
+
+- 当前接口返回复用 `Chunk` 模型，所以只显示 `id`、`document_id` 和 `text`。
+- PostgreSQL 表里的 `chunk_index` 暂时不会显示在接口返回里。
+- 这个接口是 PostgreSQL 调试接口。当前 `/api/v1/db/documents/{document_id}/chunks` 仍然是 SQLite 主业务 chunks 接口。

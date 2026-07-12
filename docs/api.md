@@ -1276,3 +1276,32 @@ GET /api/v1/postgresql/documents
 - 该接口只读 PostgreSQL，不会修改数据。
 - 该接口不会替代 `/api/v1/db/documents`。
 - 当前 SQLite 文档接口仍然是主业务接口。
+
+### GET /api/v1/postgresql/documents/{document_id}/chunks
+
+从 PostgreSQL `chunks` 表读取某个文档的片段列表。
+
+请求示例：
+
+```text
+GET /api/v1/postgresql/documents/2/chunks
+```
+
+返回示例：
+
+```json
+[
+  {
+    "id": 1,
+    "document_id": 2,
+    "text": "这是一条写入 PostgreSQL pgvector 的测试片段。"
+  }
+]
+```
+
+说明：
+
+- 该接口只读 PostgreSQL，不会修改数据。
+- 当前返回复用 `Chunk` 模型，所以只包含 `id`、`document_id` 和 `text`。
+- PostgreSQL 表中的 `chunk_index` 暂时不会出现在接口返回里。
+- 该接口不会替代 `/api/v1/db/documents/{document_id}/chunks`。
