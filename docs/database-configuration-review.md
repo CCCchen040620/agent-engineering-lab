@@ -120,3 +120,5 @@ SQLITE_DATABASE_PATH
 现阶段它只支持 SQLite；遇到 PostgreSQL 或其他数据库会明确报错。
 
 这样做的目的不是马上切换数据库，而是先把“根据数据库 URL 创建连接”的职责集中起来。
+
+连接层现在可以识别 PostgreSQL URL，但会明确提示 PostgreSQL connection is not implemented yet，避免误以为已经支持 PostgreSQL。
