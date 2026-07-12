@@ -36,6 +36,14 @@ def get_langgraph_agent_generator() -> Callable[[str], str]:
     return generate_with_ollama
 
 
+def ensure_supported_retriever_backend(retriever_backend: str):
+    if retriever_backend == "postgresql":
+        raise HTTPException(
+            status_code=400,
+            detail="PostgreSQL retriever is not enabled for this endpoint yet.",
+        )
+
+
 def split_text_for_stream(text: str, chunk_size: int = 20) -> list[str]:
     chunks = []
 
@@ -93,6 +101,8 @@ def langgraph_agent_chat(
     generator: Callable[[str], str] = Depends(get_langgraph_agent_generator),
     _rate_limit: None = Depends(enforce_heavy_request_rate_limit),
 ):
+    ensure_supported_retriever_backend(retriever_backend)
+
     return run_langgraph_agent(
         question=request.question,
         database_path=database_path,
@@ -121,6 +131,8 @@ def langgraph_agent_chat_stream(
     generator: Callable[[str], str] = Depends(get_langgraph_agent_generator),
     _rate_limit: None = Depends(enforce_heavy_request_rate_limit),
 ):
+    ensure_supported_retriever_backend(retriever_backend)
+
     result = run_langgraph_agent(
         question=request.question,
         database_path=database_path,
@@ -174,7 +186,8 @@ def langgraph_agent_conversation_chat(
         connection,
         conversation_id=conversation_id,
     )
-
+    ensure_supported_retriever_backend(retriever_backend)
+    
     result = run_langgraph_agent(
         question=request.question,
         database_path=database_path,

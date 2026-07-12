@@ -49,6 +49,19 @@ def test_langgraph_agent_chat_endpoint_rejects_invalid_timeout_seconds():
     assert response.status_code == 422
 
 
+def test_langgraph_agent_chat_endpoint_rejects_postgresql_retriever_backend():
+    response = client.post(
+        "/api/v1/langgraph-agent/chat",
+        params={"retriever_backend": "postgresql"},
+        json={"question": "员工每天需要工作多久？"},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == (
+        "PostgreSQL retriever is not enabled for this endpoint yet."
+    )
+
+    
 def test_langgraph_agent_chat_endpoint_answers_with_context(tmp_path):
     database_path = tmp_path / "test.db"
     connection = create_connection(str(database_path))
@@ -288,7 +301,7 @@ def test_langgraph_agent_chat_endpoint_accepts_retriever_backend(monkeypatch):
     assert captured["min_score"] == 0.6
     assert data["retriever_backend"] == "sqlite"
 
-    
+
 def test_langgraph_agent_conversation_chat_saves_messages(tmp_path):
     database_path = tmp_path / "test.db"
 
