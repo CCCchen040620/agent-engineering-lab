@@ -126,3 +126,5 @@ SQLITE_DATABASE_PATH
 Docker Compose 已增加 PostgreSQL/pgvector 服务，但后端主业务仍然默认使用 SQLite；这是为后续 PostgreSQL 连接测试和 pgvector 表结构设计做准备。
 
 项目已声明 `psycopg[binary]` 作为 PostgreSQL Python 驱动依赖，但当前连接层仍然没有真正连接 PostgreSQL。
+
+项目已新增 PostgreSQL 连接健康检查服务，用于验证 PostgreSQL URL 能否执行最小查询 `SELECT 1`；当前它还没有接入主业务链路。
