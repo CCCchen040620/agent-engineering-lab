@@ -428,11 +428,27 @@ def is_context_valid(keyword: str, snippets: list[dict]) -> bool:
     return False
 
 
+def is_high_score_context_valid(
+    snippets: list[dict],
+    minimum_score: float = 0.8,
+) -> bool:
+    for snippet in snippets:
+        if snippet.get("score", 0) >= minimum_score:
+            return True
+
+    return False
+
+
 def validate_context_node(state: LangGraphAgentState) -> dict:
     has_valid_context = is_context_valid(
         keyword=state["keyword"],
         snippets=state["snippets"],
     )
+
+    if not has_valid_context and state["retriever_backend"] == "postgresql":
+        has_valid_context = is_high_score_context_valid(
+            snippets=state["snippets"],
+        )
 
     if not has_valid_context:
         has_valid_context = is_contextual_context_valid(
@@ -767,12 +783,11 @@ def run_langgraph_agent(
 
     result = graph.invoke(initial_state)
 
+    result.pop("postgresql_connection", None)
+    result.pop("generator", None)
+
     logger.info(
-        "langgraph_agent_finished intent=%s keyword=%s has_valid_context=%s citation_count=%s",
-        result.get("intent"),
-        result.get("keyword"),
-        result.get("has_valid_context"),
-        len(result.get("citations", [])),
+        ...
     )
 
     return result
