@@ -1574,3 +1574,150 @@ HTTP API -> FastAPI -> PostgreSQL -> pgvector -> 返回检索结果
 - 它要求调用方直接传入 embedding，不会自动把自然语言问题转换成向量。
 - 后续自然语言问答接口会负责调用 embedding 模型，再复用 PostgreSQL/pgvector 检索能力。
 - 当前 SQLite/LangGraph 主业务链路仍然没有切换到 PostgreSQL。
+
+## 回填 PostgreSQL chunk embeddings
+
+如果 PostgreSQL 中的 `chunk_embeddings` 是 demo fake embedding，自然语言问题检索结果可能会跑偏。
+
+原因是：
+
+```text
+真实问题 embedding -> 匹配 fake chunk embedding -> 语义结果不可靠
+```
+
+因此在验证自然语言检索前，需要用 Ollama 的 `bge-m3` 给 PostgreSQL 中已有 chunks 生成真实 embedding。
+
+先确认 PostgreSQL 正在运行：
+
+```powershell
+docker compose ps
+```
+
+如果 `postgres` 没有运行：
+
+```powershell
+docker compose up -d postgres
+```
+
+确认本地有 embedding 模型：
+
+```powershell
+ollama list
+```
+
+应能看到：
+
+```text
+bge-m3:latest
+```
+
+设置当前 PowerShell 窗口的数据库地址：
+
+```powershell
+$env:DATABASE_URL="postgresql://agent_user:agent_password@localhost:5432/agent_db"
+```
+
+执行回填：
+
+```powershell
+python -m week10.backfill_postgresql_chunk_embeddings
+```
+
+一次实际验收输出：
+
+```text
+PostgreSQL chunk embedding 回填完成。
+总 chunks 数量： 3
+更新 embedding 数量： 3
+模型： bge-m3:latest
+```
+
+说明：
+
+- 该脚本会扫描 PostgreSQL 中所有 chunks。
+- 每个 chunk 会调用 Ollama `bge-m3` 生成 1024 维 embedding。
+- 写入时使用 upsert：没有 embedding 就新增，已有 embedding 就更新。
+- 所以它可以把之前 demo 写入的 fake embedding 覆盖成真实 embedding。
+
+## 验证 PostgreSQL 自然语言检索接口
+
+当前项目提供了自然语言检索调试接口：
+
+```text
+POST /api/v1/postgresql/search/question
+```
+
+这个接口会完成：
+
+```text
+用户问题 -> Ollama bge-m3 生成 embedding -> PostgreSQL pgvector 检索 -> 返回 chunks
+```
+
+先用 PostgreSQL `DATABASE_URL` 启动后端：
+
+```powershell
+$env:DATABASE_URL="postgresql://agent_user:agent_password@localhost:5432/agent_db"
+python -m uvicorn backend.main:app --reload
+```
+
+打开接口文档：
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+执行：
+
+```text
+POST /api/v1/postgresql/search/question
+```
+
+请求示例：
+
+```json
+{
+  "question": "员工每天需要工作多久？",
+  "top_k": 2
+}
+```
+
+一次实际验收结果：
+
+```json
+{
+  "question": "员工每天需要工作多久？",
+  "embedding_size": 1024,
+  "results": [
+    {
+      "chunk_id": 2,
+      "document_id": 3,
+      "document_title": "PostgreSQL 向量检索测试文档",
+      "text": "员工每天需要完成 8 小时工作。",
+      "distance": 0.1337358951568357,
+      "score": 0.8662641048431643
+    },
+    {
+      "chunk_id": 3,
+      "document_id": 3,
+      "document_title": "PostgreSQL 向量检索测试文档",
+      "text": "差旅报销需要在出差结束后 7 天内提交。",
+      "distance": 0.5026384153670818,
+      "score": 0.49736158463291824
+    }
+  ]
+}
+```
+
+验收重点：
+
+- `embedding_size` 应该是 `1024`。
+- 第一条结果应该命中相关片段：`员工每天需要完成 8 小时工作。`
+- 第一条结果分数明显高于后续不相关片段。
+
+验收结束后恢复当前 PowerShell 窗口的环境变量：
+
+```powershell
+Remove-Item Env:DATABASE_URL
+```
+
+注意：这个接口已经打通 PostgreSQL 版 RAG 检索链路，但当前 SQLite/LangGraph Agent 主业务链路仍然没有切换到 PostgreSQL。

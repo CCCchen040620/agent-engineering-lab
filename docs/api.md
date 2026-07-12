@@ -1346,3 +1346,60 @@ python -m week10.postgresql_vector_search_api_demo
 - 它要求调用方直接传入 embedding，不会自动把自然语言问题转换成向量。
 - 最终自然语言问答接口后续会由后端调用 embedding 模型生成向量，再复用这类检索能力。
 - 该接口不会替代当前 SQLite 问答接口。
+
+### POST /api/v1/postgresql/search/question
+
+使用自然语言问题搜索 PostgreSQL/pgvector 中的 chunks。
+
+这个接口会在后端完成两步：
+
+```text
+用户问题 -> Ollama bge-m3 生成 embedding -> PostgreSQL pgvector 相似度检索
+```
+
+请求示例：
+
+```json
+{
+  "question": "员工每天需要工作多久？",
+  "top_k": 2
+}
+```
+
+返回示例：
+
+```json
+{
+  "question": "员工每天需要工作多久？",
+  "embedding_size": 1024,
+  "results": [
+    {
+      "chunk_id": 2,
+      "document_id": 3,
+      "document_title": "PostgreSQL 向量检索测试文档",
+      "text": "员工每天需要完成 8 小时工作。",
+      "distance": 0.1337358951568357,
+      "score": 0.8662641048431643
+    }
+  ]
+}
+```
+
+使用前需要确保：
+
+- PostgreSQL 服务已经启动。
+- 当前后端进程使用 PostgreSQL 格式的 `DATABASE_URL`。
+- Ollama 已经启动，并且本地存在 `bge-m3:latest` embedding 模型。
+- PostgreSQL `chunk_embeddings` 表中已经写入真实 embedding。
+
+如果之前写入过 demo fake embedding，需要先运行真实 embedding 回填脚本：
+
+```powershell
+python -m week10.backfill_postgresql_chunk_embeddings
+```
+
+说明：
+
+- `/search/vector` 适合调试“手动传 embedding”的底层 pgvector 检索能力。
+- `/search/question` 适合调试“自然语言问题 -> embedding -> pgvector 检索”的完整检索链路。
+- 当前接口仍然是 PostgreSQL 调试接口，还没有替代 SQLite/LangGraph Agent 主业务链路。
