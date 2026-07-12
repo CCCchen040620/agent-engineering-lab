@@ -1,9 +1,11 @@
 from backend.services.postgresql_document_repository import (
+    insert_chunk_to_postgresql,
     insert_document_to_postgresql,
+    list_chunks_by_document_from_postgresql,
     list_documents_from_postgresql,
+    row_to_chunk,
     row_to_document,
 )
-
 
 class FakeCursor:
     def __init__(self):
@@ -97,3 +99,69 @@ def test_insert_document_to_postgresql():
         connection.cursor_instance.sql
     )
     assert connection.committed is True
+
+
+def test_row_to_chunk():
+    row = (1, 10, "员工每天需要完成 8 小时工作。", 0)
+
+    chunk = row_to_chunk(row)
+
+    assert chunk == {
+        "id": 1,
+        "document_id": 10,
+        "text": "员工每天需要完成 8 小时工作。",
+        "chunk_index": 0,
+    }
+
+
+def test_insert_chunk_to_postgresql():
+    connection = FakeConnection()
+    connection.cursor_instance.row = (
+        1,
+        10,
+        "员工每天需要完成 8 小时工作。",
+        0,
+    )
+
+    chunk = insert_chunk_to_postgresql(
+        connection,
+        document_id=10,
+        text="员工每天需要完成 8 小时工作。",
+        chunk_index=0,
+    )
+
+    assert chunk["id"] == 1
+    assert chunk["document_id"] == 10
+    assert chunk["text"] == "员工每天需要完成 8 小时工作。"
+    assert chunk["chunk_index"] == 0
+    assert connection.cursor_instance.params == (
+        10,
+        "员工每天需要完成 8 小时工作。",
+        0,
+    )
+    assert "INSERT INTO chunks" in connection.cursor_instance.sql
+    assert "RETURNING id, document_id, text, chunk_index" in (
+        connection.cursor_instance.sql
+    )
+    assert connection.committed is True
+
+
+def test_list_chunks_by_document_from_postgresql():
+    connection = FakeConnection()
+    connection.cursor_instance.rows = [
+        (1, 10, "片段1", 0),
+        (2, 10, "片段2", 1),
+    ]
+
+    chunks = list_chunks_by_document_from_postgresql(
+        connection,
+        document_id=10,
+    )
+
+    assert len(chunks) == 2
+    assert chunks[0]["text"] == "片段1"
+    assert chunks[1]["chunk_index"] == 1
+    assert connection.cursor_instance.params == (10,)
+    assert "FROM chunks" in connection.cursor_instance.sql
+    assert "WHERE document_id = %s" in connection.cursor_instance.sql
+    assert "ORDER BY chunk_index, id" in connection.cursor_instance.sql
