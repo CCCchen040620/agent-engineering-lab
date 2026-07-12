@@ -2,7 +2,10 @@ from fastapi.testclient import TestClient
 
 from backend.main import app
 from backend.routers.db_documents import get_database_path
-from backend.routers.langgraph_agent import get_langgraph_agent_generator
+from backend.routers.langgraph_agent import (
+    get_langgraph_agent_generator,
+    get_langgraph_postgresql_database_url,
+)
 from backend.services.sqlite_document_repository import (
     create_chunks_table,
     create_connection,
@@ -49,19 +52,25 @@ def test_langgraph_agent_chat_endpoint_rejects_invalid_timeout_seconds():
     assert response.status_code == 422
 
 
-def test_langgraph_agent_chat_endpoint_rejects_postgresql_retriever_backend():
+def test_langgraph_agent_chat_endpoint_rejects_postgresql_retriever_when_database_url_is_not_postgresql():
+    app.dependency_overrides[get_langgraph_postgresql_database_url] = lambda: (
+        "sqlite:///data/app.db"
+    )
+
     response = client.post(
         "/api/v1/langgraph-agent/chat",
         params={"retriever_backend": "postgresql"},
         json={"question": "员工每天需要工作多久？"},
     )
 
+    app.dependency_overrides.clear()
+
     assert response.status_code == 400
     assert response.json()["detail"] == (
-        "PostgreSQL retriever is not enabled for this endpoint yet."
+        "DATABASE_URL must be a PostgreSQL URL to use PostgreSQL retriever."
     )
 
-    
+
 def test_langgraph_agent_chat_endpoint_answers_with_context(tmp_path):
     database_path = tmp_path / "test.db"
     connection = create_connection(str(database_path))
@@ -924,3 +933,106 @@ def test_langgraph_agent_stream_endpoint_returns_sse(monkeypatch, tmp_path):
     assert "这是流式回答" in text or "当前知识库文档" in text
     assert 'data: {"type": "metadata"' in text
     assert 'data: {"type": "done"}' in text
+
+
+class FakePostgresqlConnection:
+    def __init__(self):
+        self.closed = False
+
+    def close(self):
+        self.closed = True
+
+
+def test_langgraph_agent_chat_endpoint_passes_postgresql_connection(
+    monkeypatch,
+    tmp_path,
+):
+    database_path = tmp_path / "test.db"
+    fake_connection = FakePostgresqlConnection()
+    captured = {}
+
+    def fake_connect(database_url: str):
+        captured["database_url"] = database_url
+        return fake_connection
+
+    def fake_run_langgraph_agent(**kwargs):
+        captured["question"] = kwargs["question"]
+        captured["database_path"] = kwargs["database_path"]
+        captured["retriever_backend"] = kwargs["retriever_backend"]
+        captured["postgresql_connection"] = kwargs["postgresql_connection"]
+
+        return {
+            "question": kwargs["question"],
+            "intent": "answer_question",
+            "keyword": "安全培训",
+            "contextual_question": kwargs["question"],
+            "context_document_title": "",
+            "snippets": [
+                {
+                    "title": "员工手册",
+                    "path": "postgresql://chunk/2",
+                    "text": "新员工入职后需要在 30 天内完成安全培训。",
+                    "score": 0.9,
+                }
+            ],
+            "has_valid_context": True,
+            "document_title": "",
+            "document": None,
+            "document_match_type": None,
+            "missing_field": "",
+            "answer": "新员工需要在入职后 30 天内完成安全培训。",
+            "citations": [
+                {
+                    "title": "员工手册",
+                    "text": "新员工入职后需要在 30 天内完成安全培训。",
+                    "path": "postgresql://chunk/2",
+                }
+            ],
+            "steps": [],
+            "database_path": kwargs["database_path"],
+            "top_k": kwargs["top_k"],
+            "mode": kwargs["mode"],
+            "min_score": kwargs["min_score"],
+            "retriever_backend": kwargs["retriever_backend"],
+            "timeout_seconds": kwargs["timeout_seconds"],
+            "is_timeout": False,
+            "is_fallback": False,
+        }
+
+    monkeypatch.setattr(
+        "backend.routers.langgraph_agent.psycopg.connect",
+        fake_connect,
+    )
+    monkeypatch.setattr(
+        "backend.routers.langgraph_agent.run_langgraph_agent",
+        fake_run_langgraph_agent,
+    )
+
+    app.dependency_overrides[get_database_path] = lambda: str(database_path)
+    app.dependency_overrides[get_langgraph_postgresql_database_url] = lambda: (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+
+    response = client.post(
+        "/api/v1/langgraph-agent/chat",
+        params={"retriever_backend": "postgresql"},
+        json={"question": "新员工什么时候完成安全培训？"},
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert captured["database_url"] == (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+    assert captured["question"] == "新员工什么时候完成安全培训？"
+    assert captured["database_path"] == str(database_path)
+    assert captured["retriever_backend"] == "postgresql"
+    assert captured["postgresql_connection"] == fake_connection
+    assert fake_connection.closed is True
+
+    assert data["retriever_backend"] == "postgresql"
+    assert data["snippets"][0]["path"] == "postgresql://chunk/2"

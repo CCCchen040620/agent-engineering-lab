@@ -1,4 +1,5 @@
 import json
+import psycopg
 
 from typing import Callable
 
@@ -14,6 +15,7 @@ from backend.services.sqlite_conversation_repository import (
     update_conversation_summary,
 )
 from backend.config import (
+    DATABASE_URL,
     DEFAULT_MIN_SCORE,
     DEFAULT_TOP_K,
     LANGGRAPH_AGENT_TIMEOUT_SECONDS,
@@ -26,6 +28,7 @@ from backend.services.conversation_summary_service import (
     build_conversation_summary,
 )
 from backend.services.ollama_service import generate_with_ollama
+from backend.services.database_url_service import is_postgresql_database
 from week05.models import ChatRequest
 
 
@@ -36,13 +39,34 @@ def get_langgraph_agent_generator() -> Callable[[str], str]:
     return generate_with_ollama
 
 
+def get_langgraph_postgresql_database_url() -> str:
+    return DATABASE_URL
+
+
 def ensure_supported_retriever_backend(retriever_backend: str):
-    if retriever_backend == "postgresql":
+    if retriever_backend not in ["sqlite", "postgresql"]:
         raise HTTPException(
             status_code=400,
-            detail="PostgreSQL retriever is not enabled for this endpoint yet.",
+            detail="Unsupported retriever_backend.",
         )
 
+
+def create_postgresql_connection_for_retriever(
+    retriever_backend: str,
+    database_url: str,
+):
+    ensure_supported_retriever_backend(retriever_backend)
+
+    if retriever_backend != "postgresql":
+        return None
+
+    if not is_postgresql_database(database_url):
+        raise HTTPException(
+            status_code=400,
+            detail="DATABASE_URL must be a PostgreSQL URL to use PostgreSQL retriever.",
+        )
+
+    return psycopg.connect(database_url)
 
 def split_text_for_stream(text: str, chunk_size: int = 20) -> list[str]:
     chunks = []
@@ -98,21 +122,30 @@ def langgraph_agent_chat(
     ),
     retriever_backend: str = Query(default=RAG_RETRIEVER_BACKEND),
     database_path: str = Depends(get_database_path),
+    postgresql_database_url: str = Depends(get_langgraph_postgresql_database_url),
     generator: Callable[[str], str] = Depends(get_langgraph_agent_generator),
     _rate_limit: None = Depends(enforce_heavy_request_rate_limit),
 ):
-    ensure_supported_retriever_backend(retriever_backend)
-
-    return run_langgraph_agent(
-        question=request.question,
-        database_path=database_path,
-        top_k=top_k,
-        mode=mode,
-        min_score=min_score,
-        timeout_seconds=timeout_seconds,
+    postgresql_connection = create_postgresql_connection_for_retriever(
         retriever_backend=retriever_backend,
-        generator=generator,
+        database_url=postgresql_database_url,
     )
+
+    try:
+        return run_langgraph_agent(
+            question=request.question,
+            database_path=database_path,
+            top_k=top_k,
+            mode=mode,
+            min_score=min_score,
+            timeout_seconds=timeout_seconds,
+            retriever_backend=retriever_backend,
+            postgresql_connection=postgresql_connection,
+            generator=generator,
+        )
+    finally:
+        if postgresql_connection is not None:
+            postgresql_connection.close()
 
 
 @router.post("/chat/stream")
@@ -131,7 +164,7 @@ def langgraph_agent_chat_stream(
     generator: Callable[[str], str] = Depends(get_langgraph_agent_generator),
     _rate_limit: None = Depends(enforce_heavy_request_rate_limit),
 ):
-    ensure_supported_retriever_backend(retriever_backend)
+    ensure_postgresql_retriever_not_enabled_for_endpoint(retriever_backend)
 
     result = run_langgraph_agent(
         question=request.question,
@@ -186,8 +219,8 @@ def langgraph_agent_conversation_chat(
         connection,
         conversation_id=conversation_id,
     )
-    ensure_supported_retriever_backend(retriever_backend)
-    
+    ensure_postgresql_retriever_not_enabled_for_endpoint(retriever_backend)
+
     result = run_langgraph_agent(
         question=request.question,
         database_path=database_path,
@@ -251,3 +284,13 @@ def langgraph_agent_conversation_chat(
     ]
 
     return result
+
+
+def ensure_postgresql_retriever_not_enabled_for_endpoint(
+    retriever_backend: str,
+):
+    if retriever_backend == "postgresql":
+        raise HTTPException(
+            status_code=400,
+            detail="PostgreSQL retriever is not enabled for this endpoint yet.",
+        )
