@@ -122,3 +122,9 @@ def test_postgres_check_validates_postgres_service_health():
     assert "State.Health.Status" in script
     assert "docker compose up postgres" in script
     assert "PostgreSQL check completed successfully." in script
+
+
+def test_pyproject_declares_postgresql_driver_dependency():
+    pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
+
+    assert '"psycopg[binary]>=3.2,<4"' in pyproject
