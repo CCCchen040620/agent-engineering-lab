@@ -62,6 +62,36 @@ def insert_chunk_embedding_to_postgresql(
     return row_to_chunk_embedding(row)
 
 
+def upsert_chunk_embedding_to_postgresql(
+    connection,
+    chunk_id: int,
+    embedding: list[float],
+    model: str,
+) -> dict:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO chunk_embeddings (chunk_id, embedding, model)
+            VALUES (%s, %s::vector, %s)
+            ON CONFLICT (chunk_id) DO UPDATE
+            SET embedding = EXCLUDED.embedding,
+                model = EXCLUDED.model
+            RETURNING id, chunk_id, embedding::text, model
+            """,
+            (
+                chunk_id,
+                embedding_to_postgresql_vector(embedding),
+                model,
+            ),
+        )
+
+        row = cursor.fetchone()
+
+    connection.commit()
+
+    return row_to_chunk_embedding(row)
+
+    
 def find_chunk_embedding_by_chunk_id_from_postgresql(
     connection,
     chunk_id: int,

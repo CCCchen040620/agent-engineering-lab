@@ -4,6 +4,7 @@ from backend.services.postgresql_embedding_repository import (
     insert_chunk_embedding_to_postgresql,
     postgresql_vector_to_embedding,
     row_to_chunk_embedding,
+    upsert_chunk_embedding_to_postgresql,
 )
 
 
@@ -114,3 +115,34 @@ def test_find_chunk_embedding_by_chunk_id_returns_none_when_missing():
     )
 
     assert result is None
+
+
+def test_upsert_chunk_embedding_to_postgresql():
+    connection = FakeConnection()
+    connection.cursor_instance.row = (1, 10, "[0.1,0.2,-0.3]", "bge-m3:latest")
+
+    result = upsert_chunk_embedding_to_postgresql(
+        connection,
+        chunk_id=10,
+        embedding=[0.1, 0.2, -0.3],
+        model="bge-m3:latest",
+    )
+
+    assert result == {
+        "id": 1,
+        "chunk_id": 10,
+        "embedding": [0.1, 0.2, -0.3],
+        "model": "bge-m3:latest",
+    }
+
+    assert "ON CONFLICT (chunk_id) DO UPDATE" in connection.cursor_instance.sql
+    assert "RETURNING id, chunk_id, embedding::text, model" in (
+        connection.cursor_instance.sql
+    )
+
+    assert connection.cursor_instance.params == (
+        10,
+        "[0.1,0.2,-0.3]",
+        "bge-m3:latest",
+    )
+    assert connection.committed is True
