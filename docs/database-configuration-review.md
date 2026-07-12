@@ -123,8 +123,10 @@ SQLITE_DATABASE_PATH
 
 连接层现在可以识别 PostgreSQL URL，但会明确提示 PostgreSQL connection is not implemented yet，避免误以为已经支持 PostgreSQL。
 
-Docker Compose 已增加 PostgreSQL/pgvector 服务，但后端主业务仍然默认使用 SQLite；这是为后续 PostgreSQL 连接测试和 pgvector 表结构设计做准备。
+Docker Compose 已增加 PostgreSQL/pgvector 服务，但后端主业务仍然默认使用 SQLite；这是为后续 PostgreSQL 表结构迁移和 pgvector 向量检索做准备。
 
-项目已声明 `psycopg[binary]` 作为 PostgreSQL Python 驱动依赖，但当前连接层仍然没有真正连接 PostgreSQL。
+项目已声明 `psycopg[binary]` 作为 PostgreSQL Python 驱动依赖。
 
-项目已新增 PostgreSQL 连接健康检查服务，用于验证 PostgreSQL URL 能否执行最小查询 `SELECT 1`；当前它还没有接入主业务链路。
+项目已新增 PostgreSQL 连接健康检查服务，用于验证 PostgreSQL URL 能否执行最小查询 `SELECT 1`。本地已经通过 `DATABASE_URL=postgresql://...` 验证后端代码可以连上 Docker Compose 中的 PostgreSQL。
+
+当前 PostgreSQL 仍然没有接入主业务链路。也就是说，项目已经具备 PostgreSQL 连接验收能力，但文档、chunks、embeddings、conversations 等业务数据暂时仍然走 SQLite。

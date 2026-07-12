@@ -1196,4 +1196,78 @@ python -m uvicorn backend.main:app --reload
 启动 PostgreSQL：
 
 ```powershell
-docker compose up postgres
+docker compose up -d postgres
+```
+
+查看服务状态：
+
+```powershell
+docker compose ps
+```
+
+预期结果：
+
+- `postgres` 服务处于 `Up` 状态
+- 状态中包含 `healthy`
+- 端口映射包含 `5432->5432`
+
+也可以运行项目脚本做快速检查：
+
+```powershell
+.\scripts\check_postgres.ps1
+```
+
+预期输出：
+
+```text
+PostgreSQL check completed successfully.
+```
+
+如果需要确认 pgvector 扩展已经可用，可以进入 PostgreSQL 后执行：
+
+```sql
+SELECT extname FROM pg_extension WHERE extname = 'vector';
+```
+
+预期结果中应该包含：
+
+```text
+vector
+```
+
+## 验证后端代码可以连接 PostgreSQL
+
+这一步只是验证“后端代码能连上 PostgreSQL”，不代表主业务已经切换到 PostgreSQL。
+
+先临时设置当前 PowerShell 窗口里的数据库地址：
+
+```powershell
+$env:DATABASE_URL="postgresql://agent_user:agent_password@localhost:5432/agent_db"
+```
+
+然后运行 PostgreSQL 状态检查：
+
+```powershell
+python -c "from backend.services.system_status_service import check_postgresql_status; print(check_postgresql_status())"
+```
+
+预期结果类似：
+
+```text
+{'enabled': True, 'status': 'ok', 'database_url': 'postgresql://agent_user:agent_password@localhost:5432/agent_db'}
+```
+
+重点看：
+
+```text
+'enabled': True
+'status': 'ok'
+```
+
+验收完成后，恢复当前 PowerShell 窗口的环境变量：
+
+```powershell
+Remove-Item Env:DATABASE_URL
+```
+
+当前项目仍然默认使用 SQLite。PostgreSQL/pgvector 目前是工程化准备能力，后续才会逐步迁移业务表和向量检索。
