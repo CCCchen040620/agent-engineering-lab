@@ -1328,3 +1328,91 @@ Remove-Item Env:DATABASE_URL
 ```
 
 注意：当前后端主业务仍然默认使用 SQLite。PostgreSQL 表结构已经准备好，但文档增删查、Agent 检索、对话记忆等业务链路还没有切换到 PostgreSQL。
+
+## 验证 PostgreSQL/pgvector RAG 存储与检索
+
+当前已经有两个学习 demo 可以验证 PostgreSQL/pgvector 的核心链路。
+
+### 验证 RAG 存储链路
+
+这个 demo 会写入：
+
+- 1 条 document
+- 1 条 chunk
+- 1 条 1024 维 fake embedding
+
+运行前先确认 PostgreSQL 已经启动，并设置当前 PowerShell 窗口的数据库地址：
+
+```powershell
+docker compose up -d postgres
+$env:DATABASE_URL="postgresql://agent_user:agent_password@localhost:5432/agent_db"
+```
+
+运行：
+
+```powershell
+python -m week10.postgresql_rag_storage_demo
+```
+
+预期结果中应该看到：
+
+```text
+新增文档：
+新增片段：
+新增 embedding：
+embedding_size: 1024
+查询到的 embedding 维度： 1024
+```
+
+这说明 PostgreSQL 已经可以保存完整的 RAG 数据链路：
+
+```text
+document -> chunk -> embedding(vector 1024)
+```
+
+### 验证 pgvector 相似度检索
+
+这个 demo 会写入两个测试片段和两个 fake embedding，然后用 query embedding 做向量检索：
+
+```powershell
+python -m week10.postgresql_vector_search_demo
+```
+
+预期第一条结果是：
+
+```text
+员工每天需要完成 8 小时工作。
+```
+
+并且第一条结果通常会显示：
+
+```text
+距离： 0.0
+分数： 1.0
+```
+
+这里使用的是 pgvector 的余弦距离运算：
+
+```sql
+embedding <=> query_vector
+```
+
+距离越小表示越相似。代码里会转换成更直观的分数：
+
+```text
+score = 1 - distance
+```
+
+### fake embedding 的局限
+
+这些 demo 使用的是 fake embedding，目的是验证 PostgreSQL/pgvector 的存储和检索链路，不代表真实语义效果。
+
+例如，如果 fake embedding 只有第一维不同，两个向量方向可能非常接近，分数也会非常接近 1。真实语义检索需要使用 Ollama 的 `bge-m3` 等 embedding 模型生成 1024 维语义向量。
+
+验收完成后恢复当前 PowerShell 窗口的环境变量：
+
+```powershell
+Remove-Item Env:DATABASE_URL
+```
+
+注意：当前主业务仍然默认使用 SQLite。PostgreSQL/pgvector 已经完成存储和检索闭环验证，但还没有接入 FastAPI 业务接口和 LangGraph Agent 主链路。
