@@ -1519,3 +1519,58 @@ GET /api/v1/postgresql/documents/2/chunks
 - 当前接口返回复用 `Chunk` 模型，所以只显示 `id`、`document_id` 和 `text`。
 - PostgreSQL 表里的 `chunk_index` 暂时不会显示在接口返回里。
 - 这个接口是 PostgreSQL 调试接口。当前 `/api/v1/db/documents/{document_id}/chunks` 仍然是 SQLite 主业务 chunks 接口。
+
+## 验证 PostgreSQL vector search 调试接口
+
+当前项目提供了 PostgreSQL/pgvector 向量检索调试接口：
+
+```text
+POST /api/v1/postgresql/search/vector
+```
+
+这个接口接收一个 embedding 数组，然后用 pgvector 从 PostgreSQL 中搜索最相似的 chunks。
+
+注意：PostgreSQL 表中使用的是 `vector(1024)`，所以实际请求必须传入 1024 维 embedding。Swagger 页面不适合手动填写 1024 个数字，推荐使用 demo 脚本验收。
+
+先确认后端已经用 PostgreSQL `DATABASE_URL` 启动：
+
+```powershell
+$env:DATABASE_URL="postgresql://agent_user:agent_password@localhost:5432/agent_db"
+python -m uvicorn backend.main:app --reload
+```
+
+然后另开一个 PowerShell 窗口运行：
+
+```powershell
+python -m week10.postgresql_vector_search_api_demo
+```
+
+预期输出类似：
+
+```text
+状态码： 200
+返回结果：
+[
+  {
+    "chunk_id": 2,
+    "document_id": 3,
+    "document_title": "PostgreSQL 向量检索测试文档",
+    "text": "员工每天需要完成 8 小时工作。",
+    "distance": 0.0,
+    "score": 1.0
+  }
+]
+```
+
+这说明已经打通：
+
+```text
+HTTP API -> FastAPI -> PostgreSQL -> pgvector -> 返回检索结果
+```
+
+说明：
+
+- 该接口是调试接口，不是最终用户问答接口。
+- 它要求调用方直接传入 embedding，不会自动把自然语言问题转换成向量。
+- 后续自然语言问答接口会负责调用 embedding 模型，再复用 PostgreSQL/pgvector 检索能力。
+- 当前 SQLite/LangGraph 主业务链路仍然没有切换到 PostgreSQL。

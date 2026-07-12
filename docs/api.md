@@ -1305,3 +1305,44 @@ GET /api/v1/postgresql/documents/2/chunks
 - 当前返回复用 `Chunk` 模型，所以只包含 `id`、`document_id` 和 `text`。
 - PostgreSQL 表中的 `chunk_index` 暂时不会出现在接口返回里。
 - 该接口不会替代 `/api/v1/db/documents/{document_id}/chunks`。
+
+### POST /api/v1/postgresql/search/vector
+
+使用 PostgreSQL/pgvector 按向量相似度搜索 chunks。
+
+请求示例：
+
+```json
+{
+  "embedding": [1.0, 0.0, 0.0],
+  "top_k": 2
+}
+```
+
+注意：真实 PostgreSQL 表使用的是 `vector(1024)`，所以实际请求中的 `embedding` 需要是 1024 维。Swagger 页面不适合手动填写 1024 个数字，建议使用 demo 脚本验收：
+
+```powershell
+python -m week10.postgresql_vector_search_api_demo
+```
+
+返回示例：
+
+```json
+[
+  {
+    "chunk_id": 2,
+    "document_id": 3,
+    "document_title": "PostgreSQL 向量检索测试文档",
+    "text": "员工每天需要完成 8 小时工作。",
+    "distance": 0.0,
+    "score": 1.0
+  }
+]
+```
+
+说明：
+
+- 该接口是 PostgreSQL/pgvector 调试接口。
+- 它要求调用方直接传入 embedding，不会自动把自然语言问题转换成向量。
+- 最终自然语言问答接口后续会由后端调用 embedding 模型生成向量，再复用这类检索能力。
+- 该接口不会替代当前 SQLite 问答接口。
