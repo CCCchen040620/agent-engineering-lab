@@ -1,4 +1,9 @@
-from backend.config import DATABASE_PATH, DEFAULT_MIN_SCORE, DEFAULT_TOP_K
+from backend.config import (
+    DATABASE_PATH,
+    DEFAULT_MIN_SCORE,
+    DEFAULT_TOP_K,
+    RAG_RETRIEVER_BACKEND,
+)
 from backend.services.postgresql_rag_retriever import (
     retrieve_postgresql_snippets,
 )
@@ -6,8 +11,8 @@ from backend.services.sqlite_llm_qa_service import search_sqlite_snippets
 
 
 def retrieve_rag_snippets(
-    backend: str,
     question: str,
+    backend: str = RAG_RETRIEVER_BACKEND,
     sqlite_database_path: str = DATABASE_PATH,
     postgresql_connection=None,
     top_k: int = DEFAULT_TOP_K,
