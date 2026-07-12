@@ -81,7 +81,7 @@ GET /api/v1/system/status
 当前稳定状态：
 
 ```text
-448 passed, 1 warning
+449 passed, 1 warning
 ```
 
 GitHub Actions 当前包含两个检查：
@@ -1191,3 +1191,9 @@ python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
 ```powershell
 python -m uvicorn backend.main:app --reload
 ```
+## 检查 PostgreSQL 服务
+
+启动 PostgreSQL：
+
+```powershell
+docker compose up postgres

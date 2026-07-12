@@ -11,6 +11,7 @@ def test_required_project_scripts_exist():
         "scripts/migrate_sqlite.ps1",
         "scripts/start_backend.ps1",
         "scripts/start_frontend.ps1",
+        "scripts/check_postgres.ps1",
     ]
 
     for script_path in required_scripts:
@@ -111,3 +112,13 @@ def test_pyproject_defines_package_discovery():
     assert '"frontend*"' in pyproject
     assert '"week*"' in pyproject
     assert '"tests*"' in pyproject
+
+
+def test_postgres_check_validates_postgres_service_health():
+    script = Path("scripts/check_postgres.ps1").read_text(encoding="utf-8")
+
+    assert "docker compose ps -q postgres" in script
+    assert "docker inspect" in script
+    assert "State.Health.Status" in script
+    assert "docker compose up postgres" in script
+    assert "PostgreSQL check completed successfully." in script
