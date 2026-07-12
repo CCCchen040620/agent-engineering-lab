@@ -132,6 +132,25 @@ with st.sidebar:
         index=0,
     )
 
+    retriever_backend_label = st.radio(
+    "检索后端",
+    ["SQLite（默认）", "PostgreSQL / pgvector（本地实验）"],
+    index=0,
+    )
+
+    if retriever_backend_label == "PostgreSQL / pgvector（本地实验）":
+        retriever_backend = "postgresql"
+    else:
+        retriever_backend = "sqlite"
+
+    if retriever_backend == "postgresql":
+        st.info(
+            "PostgreSQL / pgvector 模式需要先启动 postgres，并用 PostgreSQL DATABASE_URL 启动后端。"
+        )
+        chat_engine = "LangGraph Agent 问答"
+        use_streaming = False
+        save_to_conversation = False
+
     mode = st.radio(
         "检索模式",
         ["precomputed_embedding", "embedding", "vector", "keyword"],
@@ -172,6 +191,14 @@ with st.sidebar:
         "保存 LangGraph Agent 问答到会话",
         value=False,
     )
+
+    if retriever_backend == "postgresql":
+        st.info(
+            "PostgreSQL / pgvector 模式当前只支持普通 LangGraph Agent 问答；已自动关闭流式输出和会话保存。"
+        )
+        chat_engine = "LangGraph Agent 问答"
+        use_streaming = False
+        save_to_conversation = False
 
     conversation_id = st.number_input(
         "conversation_id",
@@ -352,6 +379,7 @@ if st.button("提问"):
                             mode=mode,
                             min_score=min_score,
                             timeout_seconds=timeout_seconds,
+                            retriever_backend=retriever_backend,
                         )
             else:
                 response, error_message = chat_with_llm_api(
@@ -367,6 +395,7 @@ if st.button("提问"):
         else:
             history_item = response.copy()
             history_item["engine"] = chat_engine
+            history_item["retriever_backend"] = retriever_backend
             history_item["feedback"] = None
             history_item["feedback_id"] = None
             st.session_state["chat_history"].append(history_item)
@@ -390,6 +419,7 @@ if st.button("提问"):
 
             st.caption(f"检索关键词：{response['keyword']}")
             st.caption(f"问答引擎：{chat_engine}")
+            st.caption(f"检索后端：{retriever_backend}")
 
             if "conversation_id" in response:
                 st.caption(f"已保存到会话：{response['conversation_id']}")
@@ -423,6 +453,7 @@ if st.session_state["chat_history"] != []:
             st.write(item["answer"])
             caption_text = (
                 f"引擎：{item.get('engine', '普通 RAG 问答')} "
+                f"| 检索后端：{item.get('retriever_backend', 'sqlite')} "
                 f"| 关键词：{item['keyword']} "
                 f"| 引用数量：{len(item['citations'])}"
             )
