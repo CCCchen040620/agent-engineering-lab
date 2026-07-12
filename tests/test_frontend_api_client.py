@@ -317,7 +317,7 @@ def test_chat_with_agent_api_handles_network_failure(monkeypatch):
     assert error_message == "后端服务暂时不可用，请确认 FastAPI 已启动。"
 
 
-def test_chat_with_langgraph_agent_api_sends_timeout_seconds(monkeypatch):
+def test_chat_with_langgraph_agent_api_sends_timeout_and_retriever_backend(monkeypatch):
     captured = {}
 
     def fake_post(url, params, json, timeout):
@@ -346,11 +346,13 @@ def test_chat_with_langgraph_agent_api_sends_timeout_seconds(monkeypatch):
         mode="precomputed_embedding",
         min_score=0.8,
         timeout_seconds=30,
+        retriever_backend="postgresql",
     )
 
     assert error_message is None
     assert data["answer"] == "30 天内完成安全培训。"
     assert captured["params"]["timeout_seconds"] == 30
+    assert captured["params"]["retriever_backend"] == "postgresql"
 
 
 def test_submit_feedback_api_posts_feedback(monkeypatch):

@@ -84,6 +84,7 @@ def chat_with_langgraph_agent_api(
     mode: str,
     min_score: float,
     timeout_seconds: int,
+    retriever_backend: str = "sqlite",
 ) -> tuple[dict | None, str | None]:
     """Ask the FastAPI LangGraph Agent endpoint and return data or an error."""
     try:
@@ -94,6 +95,7 @@ def chat_with_langgraph_agent_api(
                 "mode": mode,
                 "min_score": min_score,
                 "timeout_seconds": timeout_seconds,
+                "retriever_backend": retriever_backend,
             },
             json={"question": question},
             timeout=300,
