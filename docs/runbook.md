@@ -1973,6 +1973,85 @@ postgresql://chunk/2
 Remove-Item Env:DATABASE_URL
 ```
 
+## SQLite 到 PostgreSQL 批量迁移流程
+
+这一步用于把当前 SQLite 知识库文档批量迁移到 PostgreSQL/pgvector。迁移脚本默认不会执行写入，必须显式加 `--confirm` 才会真正迁移。
+
+先启动 PostgreSQL 并设置当前 PowerShell 窗口的数据库地址：
+
+```powershell
+docker compose up -d postgres
+$env:DATABASE_URL="postgresql://agent_user:agent_password@localhost:5432/agent_db"
+```
+
+迁移前先预览影响范围：
+
+```powershell
+.\.venv\Scripts\python.exe -m week10.preview_sqlite_to_postgresql_migration
+```
+
+重点确认：
+
+```text
+预计迁移文档数量
+预计迁移 chunks 数量
+预计生成 embeddings 数量
+```
+
+默认运行批量迁移脚本不会写入 PostgreSQL：
+
+```powershell
+.\.venv\Scripts\python.exe -m week10.migrate_sqlite_documents_to_postgresql
+```
+
+预期输出：
+
+```text
+未确认执行批量迁移，已停止。
+如需执行，请使用 --confirm
+```
+
+确认无误后再执行真实迁移：
+
+```powershell
+.\.venv\Scripts\python.exe -m week10.migrate_sqlite_documents_to_postgresql --confirm
+```
+
+迁移完成后，必须运行 Agent 验收脚本：
+
+```powershell
+.\.venv\Scripts\python.exe -m week10.evaluate_postgresql_migrated_documents_batch
+```
+
+理想输出：
+
+```text
+问题数量： 5
+通过数量： 5
+通过率： 1.0
+```
+
+最后再跑一次迁移预览，确认没有剩余待迁移文档：
+
+```powershell
+.\.venv\Scripts\python.exe -m week10.preview_sqlite_to_postgresql_migration
+```
+
+理想输出：
+
+```text
+预计迁移文档数量： 0
+预计迁移 chunks 数量： 0
+预计生成 embeddings 数量： 0
+```
+
+注意：
+
+- 不带 `--confirm` 时不会执行迁移。
+- 迁移后必须运行 Agent 验收脚本，不能只看写入数量。
+- 如果 Agent 验收不是 5/5，先查看失败问题的 TopK 引用来源，再判断是迁移问题还是检索排序问题。
+- 迁移写入的文档默认使用 `source=migration`。
+
 ## 清理 PostgreSQL evaluation 评测数据
 
 PostgreSQL 文档支持用 `source` 区分数据来源：
