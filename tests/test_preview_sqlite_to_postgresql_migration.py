@@ -61,5 +61,28 @@ def test_preview_sqlite_to_postgresql_migration():
         "sqlite_chunk_count": 3,
         "postgresql_document_count": 1,
         "postgresql_chunk_count": 2,
+        "sqlite_is_empty": False,
+        "message": "",
         "missing_document_titles": ["请假制度"],
     }
+
+
+class EmptySqliteRepository:
+    def list_documents(self):
+        return []
+
+    def list_all_chunks(self):
+        return []
+
+
+def test_preview_sqlite_to_postgresql_migration_reports_empty_sqlite():
+    preview = preview_sqlite_to_postgresql_migration(
+        sqlite_repository=EmptySqliteRepository(),
+        postgresql_repository=FakePostgresqlRepository(),
+    )
+
+    assert preview["sqlite_document_count"] == 0
+    assert preview["sqlite_chunk_count"] == 0
+    assert preview["sqlite_is_empty"] is True
+    assert preview["message"] == "SQLite 中暂无可迁移文档。"
+    assert preview["missing_document_titles"] == []
