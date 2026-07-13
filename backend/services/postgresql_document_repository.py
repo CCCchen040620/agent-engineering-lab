@@ -214,6 +214,34 @@ def delete_documents_by_source_from_postgresql(
     return len(rows)
 
 
+def summarize_document_sources_from_postgresql(connection) -> list[dict]:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT
+                COALESCE(source, 'production') AS source,
+                COUNT(*) AS document_count
+            FROM documents
+            GROUP BY COALESCE(source, 'production')
+            ORDER BY source
+            """
+        )
+
+        rows = cursor.fetchall()
+
+    summaries = []
+
+    for row in rows:
+        summaries.append(
+            {
+                "source": row[0],
+                "document_count": row[1],
+            }
+        )
+
+    return summaries
+
+
 def summarize_documents_by_source_from_postgresql(
     connection,
     source: str,
