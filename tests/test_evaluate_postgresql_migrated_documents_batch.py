@@ -40,7 +40,7 @@ def test_evaluate_batch_migrated_document_case_passes_when_expected_document_is_
     assert evaluation["top_citation_matched"] is True
 
 
-def test_evaluate_batch_migrated_document_case_fails_when_expected_document_is_not_top1():
+def test_evaluate_batch_migrated_document_case_passes_when_expected_document_is_in_top_k():
     case = {
         "question": "新员工什么时候完成安全培训？",
         "expected_title": "员工手册",
@@ -66,11 +66,37 @@ def test_evaluate_batch_migrated_document_case_fails_when_expected_document_is_n
 
     evaluation = evaluate_batch_migrated_document_case(case, result)
 
-    assert evaluation["passed"] is False
+    assert evaluation["passed"] is True
     assert evaluation["retrieved_expected_document"] is True
     assert evaluation["top_snippet_matched"] is False
 
 
+def test_evaluate_batch_migrated_document_case_fails_when_expected_document_is_missing():
+    case = {
+        "question": "员工可以远程办公吗？",
+        "expected_title": "远程办公制度",
+    }
+    result = {
+        "answer": "模型回答",
+        "has_valid_context": True,
+        "is_fallback": False,
+        "snippets": [
+            {
+                "title": "混合标点制度",
+                "text": "员工可以远程办公吗。",
+                "path": "postgresql://chunk/22",
+            }
+        ],
+        "citations": [],
+    }
+
+    evaluation = evaluate_batch_migrated_document_case(case, result)
+
+    assert evaluation["passed"] is False
+    assert evaluation["retrieved_expected_document"] is False
+    assert evaluation["cited_expected_document"] is False
+
+    
 class FakeConnection:
     pass
 

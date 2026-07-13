@@ -57,7 +57,9 @@ def evaluate_batch_migrated_document_case(case: dict, result: dict) -> dict:
     )
     has_valid_context = result.get("has_valid_context") is True
 
-    passed = has_valid_context and (top_snippet_matched or top_citation_matched)
+    passed = has_valid_context and (
+        retrieved_expected_document or cited_expected_document
+    )
 
     return {
         "question": case["question"],
