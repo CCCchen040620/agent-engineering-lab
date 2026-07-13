@@ -64,6 +64,23 @@ def test_preview_sqlite_to_postgresql_migration():
         "sqlite_is_empty": False,
         "message": "",
         "missing_document_titles": ["请假制度"],
+        "pending_document_count": 1,
+        "pending_chunk_count": 1,
+        "pending_embedding_count": 1,
+        "document_previews": [
+            {
+                "title": "员工手册",
+                "sqlite_chunk_count": 2,
+                "exists_in_postgresql": True,
+                "will_migrate": False,
+            },
+            {
+                "title": "请假制度",
+                "sqlite_chunk_count": 1,
+                "exists_in_postgresql": False,
+                "will_migrate": True,
+            },
+        ],
     }
 
 
@@ -86,3 +103,7 @@ def test_preview_sqlite_to_postgresql_migration_reports_empty_sqlite():
     assert preview["sqlite_is_empty"] is True
     assert preview["message"] == "SQLite 中暂无可迁移文档。"
     assert preview["missing_document_titles"] == []
+    assert preview["pending_document_count"] == 0
+    assert preview["pending_chunk_count"] == 0
+    assert preview["pending_embedding_count"] == 0
+    assert preview["document_previews"] == []
