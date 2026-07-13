@@ -149,9 +149,13 @@ def render_sqlite_embedding_tools() -> None:
 
 
 def render_chunks(
+    title: str,
     backend: str,
     info: dict | None,
+    key_prefix: str,
 ) -> None:
+    st.subheader(title)
+
     if not backend_supports(info, backend, "chunk_listing"):
         st.warning("当前后端暂不支持查看 chunks。")
         return
@@ -160,9 +164,10 @@ def render_chunks(
         "请输入文档 ID",
         min_value=1,
         step=1,
+        key=f"{key_prefix}_document_id",
     )
 
-    if st.button("查看 chunks"):
+    if st.button("查看 chunks", key=f"{key_prefix}_view_chunks"):
         chunks, error_message = list_document_chunks_api(
             base_url=BACKEND_API_BASE_URL,
             document_id=int(document_id),
@@ -179,6 +184,32 @@ def render_chunks(
             for chunk in chunks:
                 with st.expander(f"Chunk #{chunk['id']}"):
                     st.write(chunk["text"])
+
+
+def render_chunks_overview(info: dict | None) -> None:
+    st.subheader("查看文档 chunks")
+
+    sqlite_column, postgresql_column = st.columns(2)
+
+    with sqlite_column:
+        render_chunks(
+            title="SQLite chunks",
+            backend="sqlite",
+            info=info,
+            key_prefix="sqlite_chunks",
+        )
+
+    with postgresql_column:
+        st.info(
+            "PostgreSQL / pgvector chunks 查看需要先启动 postgres，"
+            "并用 PostgreSQL DATABASE_URL 启动后端。"
+        )
+        render_chunks(
+            title="PostgreSQL chunks",
+            backend="postgresql",
+            info=info,
+            key_prefix="postgresql_chunks",
+        )
 
 
 st.set_page_config(
@@ -198,23 +229,7 @@ if info_error is not None:
 render_document_overview(info)
 
 st.divider()
-st.subheader("查看文档 chunks")
-
-chunk_backend_label = st.radio(
-    "chunks 来源",
-    [SQLITE_BACKEND_LABEL, POSTGRESQL_BACKEND_LABEL],
-    index=0,
-    horizontal=True,
-)
-chunk_backend = backend_label_to_backend(chunk_backend_label)
-
-if chunk_backend == "postgresql":
-    st.info(
-        "PostgreSQL / pgvector chunks 查看需要先启动 postgres，"
-        "并用 PostgreSQL DATABASE_URL 启动后端。"
-    )
-
-render_chunks(backend=chunk_backend, info=info)
+render_chunks_overview(info)
 
 st.divider()
 render_sqlite_embedding_tools()
