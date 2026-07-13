@@ -451,3 +451,53 @@ def test_create_postgresql_document_with_content_rejects_sqlite_url():
 
     assert response.status_code == 400
     assert "PostgreSQL URL" in response.json()["detail"]
+
+
+def test_create_postgresql_document_with_content_returns_409_when_not_created(
+    monkeypatch,
+):
+    def fake_connect(database_url: str):
+        return FakeConnection()
+
+    def fake_initialize_schema(connection):
+        pass
+
+    def fake_create_document(
+        connection,
+        title: str,
+        file_type: str,
+        content: str,
+    ):
+        return None
+
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.psycopg.connect",
+        fake_connect,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.initialize_postgresql_knowledge_schema",
+        fake_initialize_schema,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents."
+        "create_postgresql_document_with_chunks_and_embeddings",
+        fake_create_document,
+    )
+
+    app.dependency_overrides[get_postgresql_database_url] = lambda: (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+
+    response = client.post(
+        "/api/v1/postgresql/documents/with-content",
+        json={
+            "title": "重复文档",
+            "file_type": "md",
+            "content": "员工每天需要完成 8 小时工作。",
+        },
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 409
+    assert "文档创建失败" in response.json()["detail"]

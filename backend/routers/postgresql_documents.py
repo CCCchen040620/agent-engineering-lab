@@ -98,9 +98,15 @@ def create_postgresql_document_with_content(
             content=request.content,
         )
 
+    if result is None:
+        raise HTTPException(
+            status_code=409,
+            detail="文档创建失败，可能是标题重复或内容为空。",
+        )
+
     return result["document"]
 
-    
+
 @router.post("/search/vector", response_model=list[VectorSearchResult])
 def search_postgresql_chunks_by_vector(
     request: VectorSearchRequest,
