@@ -12,6 +12,32 @@ from backend.services.postgresql_embedding_repository import (
 )
 
 
+POSTGRESQL_INDEXING_ERROR_MESSAGE = (
+    "PostgreSQL 文档索引失败：Embedding 模型不可用，请确认 Ollama 和 bge-m3 已启动。"
+)
+
+
+class PostgreSQLDocumentIndexingError(Exception):
+    pass
+
+
+def create_embeddings_for_chunks(
+    chunks: list[str],
+    embedder: Callable[[str], list[float]],
+) -> list[list[float]]:
+    embeddings = []
+
+    for chunk in chunks:
+        try:
+            embeddings.append(embedder(chunk))
+        except Exception as error:
+            raise PostgreSQLDocumentIndexingError(
+                POSTGRESQL_INDEXING_ERROR_MESSAGE
+            ) from error
+
+    return embeddings
+
+
 def create_postgresql_document_with_chunks_and_embeddings(
     connection,
     title: str,
@@ -27,6 +53,8 @@ def create_postgresql_document_with_chunks_and_embeddings(
 
     if chunks == []:
         return None
+
+    embeddings = create_embeddings_for_chunks(chunks, embedder)
 
     document = insert_document_to_postgresql(
         connection,
@@ -47,12 +75,10 @@ def create_postgresql_document_with_chunks_and_embeddings(
             chunk_index=chunk_index,
         )
 
-        embedding = embedder(chunk_text)
-
         chunk_embedding = insert_chunk_embedding_to_postgresql(
             connection,
             chunk_id=chunk["id"],
-            embedding=embedding,
+            embedding=embeddings[chunk_index],
             model=embedding_model,
         )
 
