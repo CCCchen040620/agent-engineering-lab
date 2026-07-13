@@ -7,6 +7,7 @@ from langgraph.graph import END, START, StateGraph
 
 from backend.services.agent_tools import (
     MODEL_UNAVAILABLE_ANSWER,
+    REFUSAL_ANSWER,
     answer_with_context_tool,
     ask_clarification_tool,
     find_document_by_title_tool,
@@ -493,7 +494,7 @@ def route_by_context(
 
 def build_fallback_answer(snippets: list[dict]) -> str:
     lines = [
-        "本地模型暂时不可用，以下是根据知识库检索结果整理的基础回答："
+        "已检索到相关资料，但模型生成回答失败。请查看引用内容："
     ]
 
     for index, snippet in enumerate(snippets, start=1):
@@ -559,10 +560,10 @@ def answer_node(state: LangGraphAgentState) -> dict:
             generator=state["generator"],
         )
 
-        if tool_result["answer"] == MODEL_UNAVAILABLE_ANSWER:
+        if tool_result["answer"] in [MODEL_UNAVAILABLE_ANSWER, REFUSAL_ANSWER]:
             return build_fallback_answer_result(
                 state=state,
-                error_message=MODEL_UNAVAILABLE_ANSWER,
+                error_message=tool_result["answer"],
             )
 
         return {
