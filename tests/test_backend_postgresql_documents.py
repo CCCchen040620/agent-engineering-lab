@@ -433,3 +433,21 @@ def test_create_postgresql_document_with_content_endpoint(monkeypatch):
         "chunk_count": 2,
         "is_indexed": True,
     }
+
+
+def test_create_postgresql_document_with_content_rejects_sqlite_url():
+    app.dependency_overrides[get_postgresql_database_url] = lambda: "sqlite:///data/app.db"
+
+    response = client.post(
+        "/api/v1/postgresql/documents/with-content",
+        json={
+            "title": "远程办公制度",
+            "file_type": "md",
+            "content": "员工每周可以申请一天远程办公。",
+        },
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 400
+    assert "PostgreSQL URL" in response.json()["detail"]
