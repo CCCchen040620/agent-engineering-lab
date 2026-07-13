@@ -5,6 +5,7 @@ from frontend.api_client import (
     chat_with_llm_api,
     chat_with_langgraph_agent_api,
     create_document_with_content_api,
+    create_postgresql_document_with_content_api,
     get_error_detail,
     get_system_status_api,
     submit_feedback_api,
@@ -494,6 +495,88 @@ def test_create_document_with_content_api_handles_network_failure(monkeypatch):
     monkeypatch.setattr(requests, "post", fake_post)
 
     data, error_message = create_document_with_content_api(
+        base_url="http://127.0.0.1:8000",
+        title="远程办公制度",
+        file_type="md",
+        content="员工每周可以申请一天远程办公。",
+    )
+
+    assert data is None
+    assert error_message == "后端服务暂时不可用，请确认 FastAPI 已启动。"
+
+
+def test_create_postgresql_document_with_content_api_posts_document(monkeypatch):
+    captured = {}
+
+    def fake_post(url, json, timeout):
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+
+        return FakeResponse(
+            201,
+            {
+                "id": 1,
+                "title": "远程办公制度",
+                "file_type": "md",
+                "chunk_count": 2,
+                "is_indexed": True,
+            },
+        )
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    data, error_message = create_postgresql_document_with_content_api(
+        base_url="http://127.0.0.1:8000",
+        title="远程办公制度",
+        file_type="md",
+        content="员工每周可以申请一天远程办公。",
+    )
+
+    assert error_message is None
+    assert data["title"] == "远程办公制度"
+    assert data["chunk_count"] == 2
+
+    assert captured["url"] == (
+        "http://127.0.0.1:8000"
+        "/api/v1/postgresql/documents/with-content"
+    )
+    assert captured["json"] == {
+        "title": "远程办公制度",
+        "file_type": "md",
+        "content": "员工每周可以申请一天远程办公。",
+    }
+    assert captured["timeout"] == 300
+
+
+def test_create_postgresql_document_with_content_api_returns_backend_error(
+    monkeypatch,
+):
+    def fake_post(url, json, timeout):
+        return FakeResponse(409, {"detail": "文档创建失败。"})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    data, error_message = create_postgresql_document_with_content_api(
+        base_url="http://127.0.0.1:8000",
+        title="远程办公制度",
+        file_type="md",
+        content="员工每周可以申请一天远程办公。",
+    )
+
+    assert data is None
+    assert error_message == "文档创建失败。"
+
+
+def test_create_postgresql_document_with_content_api_handles_network_failure(
+    monkeypatch,
+):
+    def fake_post(url, json, timeout):
+        raise requests.RequestException
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    data, error_message = create_postgresql_document_with_content_api(
         base_url="http://127.0.0.1:8000",
         title="远程办公制度",
         file_type="md",
