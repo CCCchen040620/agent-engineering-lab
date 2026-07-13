@@ -1,6 +1,7 @@
 import requests
 
 from frontend.api_client import (
+    backfill_postgresql_embeddings_api,
     chat_with_agent_api,
     chat_with_llm_api,
     chat_with_langgraph_agent_api,
@@ -350,6 +351,70 @@ def test_list_postgresql_document_embedding_status_api_returns_backend_error(
 
     assert data is None
     assert error_message == "DATABASE_URL must be a PostgreSQL URL."
+
+
+def test_backfill_postgresql_embeddings_api_posts_request(monkeypatch):
+    captured = {}
+
+    def fake_post(url, timeout):
+        captured["url"] = url
+        captured["timeout"] = timeout
+
+        return FakeResponse(
+            200,
+            {
+                "total_chunks": 3,
+                "updated": 1,
+                "skipped": 2,
+                "model": "bge-m3:latest",
+            },
+        )
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    data, error_message = backfill_postgresql_embeddings_api(
+        "http://127.0.0.1:8000",
+    )
+
+    assert error_message is None
+    assert data == {
+        "total_chunks": 3,
+        "updated": 1,
+        "skipped": 2,
+        "model": "bge-m3:latest",
+    }
+    assert captured["url"] == (
+        "http://127.0.0.1:8000/api/v1/postgresql/embeddings/backfill"
+    )
+    assert captured["timeout"] == 300
+
+
+def test_backfill_postgresql_embeddings_api_returns_backend_error(monkeypatch):
+    def fake_post(url, timeout):
+        return FakeResponse(503, {"detail": "PostgreSQL embedding 回填失败"})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    data, error_message = backfill_postgresql_embeddings_api(
+        "http://127.0.0.1:8000",
+    )
+
+    assert data is None
+    assert error_message == "PostgreSQL embedding 回填失败"
+
+
+def test_backfill_postgresql_embeddings_api_handles_network_failure(monkeypatch):
+    def fake_post(url, timeout):
+        raise requests.RequestException
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    data, error_message = backfill_postgresql_embeddings_api(
+        "http://127.0.0.1:8000",
+    )
+
+    assert data is None
+    assert error_message == "后端服务暂时不可用，请确认 FastAPI 已启动。"
 
 
 def test_list_documents_api_returns_backend_error(monkeypatch):

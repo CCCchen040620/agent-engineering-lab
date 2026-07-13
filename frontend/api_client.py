@@ -118,6 +118,24 @@ def list_postgresql_document_embedding_status_api(
     return None, get_error_detail(response)
 
 
+def backfill_postgresql_embeddings_api(
+    base_url: str,
+) -> tuple[dict | None, str | None]:
+    """Backfill missing PostgreSQL chunk embeddings through the backend."""
+    try:
+        response = requests.post(
+            base_url + "/api/v1/postgresql/embeddings/backfill",
+            timeout=300,
+        )
+    except requests.RequestException:
+        return None, "后端服务暂时不可用，请确认 FastAPI 已启动。"
+
+    if response.status_code == 200:
+        return response.json(), None
+
+    return None, get_error_detail(response)
+
+
 def get_system_status_api(base_url: str) -> tuple[dict | None, str | None]:
     """Get backend, database, Ollama, and model status."""
     try:

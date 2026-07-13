@@ -11,6 +11,7 @@ from backend.services.sqlite_embedding_repository import (
     summarize_document_embedding_status,
 )
 from frontend.api_client import (
+    backfill_postgresql_embeddings_api,
     get_info_api,
     list_document_chunks_api,
     list_documents_api,
@@ -145,7 +146,7 @@ def render_sqlite_embedding_status() -> None:
         st.dataframe(embedding_statuses, use_container_width=True)
 
 
-def render_postgresql_embedding_status() -> None:
+def render_postgresql_embedding_status(info: dict | None) -> None:
     st.subheader("PostgreSQL Embedding 索引状态")
 
     st.caption("需要先启动 postgres，并用 PostgreSQL DATABASE_URL 启动后端。")
@@ -159,6 +160,35 @@ def render_postgresql_embedding_status() -> None:
     else:
         st.dataframe(embedding_statuses, use_container_width=True)
 
+    st.subheader("补齐 PostgreSQL Embedding 索引")
+
+    if not backend_supports(info, "postgresql", "embedding_backfill"):
+        st.warning("当前后端暂不支持 PostgreSQL embedding 回填。")
+        return
+
+    st.write(
+        "这个操作会调用 Ollama / bge-m3，只补齐缺失的 PostgreSQL embeddings，"
+        "可能需要等待一段时间。"
+    )
+
+    if st.button(
+        "补齐 PostgreSQL 缺失 embeddings",
+        key="postgresql_embedding_backfill",
+    ):
+        with st.spinner("正在补齐 PostgreSQL 缺失 embeddings..."):
+            result, backfill_error = backfill_postgresql_embeddings_api(
+                base_url=BACKEND_API_BASE_URL,
+            )
+
+        if backfill_error is not None:
+            st.error(backfill_error)
+        else:
+            st.success("PostgreSQL embedding 回填完成")
+            st.write("总 chunks 数量：", result["total_chunks"])
+            st.write("更新 embedding 数量：", result["updated"])
+            st.write("已存在跳过数量：", result["skipped"])
+            st.write("模型：", result["model"])
+
 
 def render_embedding_status_overview() -> None:
     st.subheader("Embedding 索引状态总览")
@@ -169,7 +199,7 @@ def render_embedding_status_overview() -> None:
         render_sqlite_embedding_status()
 
     with postgresql_column:
-        render_postgresql_embedding_status()
+        render_postgresql_embedding_status(info)
 
 
 def render_sqlite_embedding_backfill() -> None:
