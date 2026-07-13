@@ -101,24 +101,6 @@ def print_migration_preview(preview: dict):
         print("-", title)
 
 
-def print_migration_preview(preview: dict):
-    print("SQLite -> PostgreSQL 迁移预览")
-    print("SQLite 文档数量：", preview["sqlite_document_count"])
-    print("SQLite chunks 数量：", preview["sqlite_chunk_count"])
-    print("PostgreSQL 文档数量：", preview["postgresql_document_count"])
-    print("PostgreSQL chunks 数量：", preview["postgresql_chunk_count"])
-    print("-" * 50)
-
-    if len(preview["missing_document_titles"]) == 0:
-        print("SQLite 中没有发现尚未出现在 PostgreSQL 的文档。")
-        return
-
-    print("SQLite 中尚未出现在 PostgreSQL 的文档：")
-
-    for title in preview["missing_document_titles"]:
-        print("-", title)
-
-
 def main():
     if not is_postgresql_database(DATABASE_URL):
         print("DATABASE_URL 不是 PostgreSQL 地址，已停止。")
