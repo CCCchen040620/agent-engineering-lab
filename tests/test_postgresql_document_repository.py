@@ -8,6 +8,7 @@ from backend.services.postgresql_document_repository import (
     row_to_document,
     update_document_source_by_title_from_postgresql,
     delete_documents_by_source_from_postgresql,
+    summarize_documents_by_source_from_postgresql,
 )
 
 
@@ -306,3 +307,30 @@ def test_delete_documents_by_source_from_postgresql():
     assert "DELETE FROM documents" in connection.cursor_instance.sql
     assert "WHERE source = %s" in connection.cursor_instance.sql
     assert connection.committed is True
+
+
+def test_summarize_documents_by_source_from_postgresql():
+    connection = FakeConnection()
+    connection.cursor_instance.rows = [
+        (1, "Evaluation Doc", 2, 2),
+    ]
+
+    summary = summarize_documents_by_source_from_postgresql(
+        connection,
+        source="evaluation",
+    )
+
+    assert summary == {
+        "source": "evaluation",
+        "document_count": 1,
+        "chunk_count": 2,
+        "embedding_count": 2,
+        "documents": [
+            {
+                "id": 1,
+                "title": "Evaluation Doc",
+            }
+        ],
+    }
+    assert connection.cursor_instance.params == ("evaluation",)
+    assert "WHERE documents.source = %s" in connection.cursor_instance.sql

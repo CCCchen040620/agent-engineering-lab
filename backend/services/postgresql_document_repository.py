@@ -212,3 +212,52 @@ def delete_documents_by_source_from_postgresql(
     connection.commit()
 
     return len(rows)
+
+
+def summarize_documents_by_source_from_postgresql(
+    connection,
+    source: str,
+) -> dict:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT
+                documents.id,
+                documents.title,
+                COUNT(DISTINCT chunks.id) AS chunk_count,
+                COUNT(DISTINCT chunk_embeddings.id) AS embedding_count
+            FROM documents
+            LEFT JOIN chunks
+                ON chunks.document_id = documents.id
+            LEFT JOIN chunk_embeddings
+                ON chunk_embeddings.chunk_id = chunks.id
+            WHERE documents.source = %s
+            GROUP BY documents.id, documents.title
+            ORDER BY documents.id
+            """,
+            (source,),
+        )
+
+        rows = cursor.fetchall()
+
+    documents = []
+    chunk_count = 0
+    embedding_count = 0
+
+    for row in rows:
+        documents.append(
+            {
+                "id": row[0],
+                "title": row[1],
+            }
+        )
+        chunk_count += row[2]
+        embedding_count += row[3]
+
+    return {
+        "source": source,
+        "document_count": len(documents),
+        "chunk_count": chunk_count,
+        "embedding_count": embedding_count,
+        "documents": documents,
+    }

@@ -864,3 +864,61 @@ def test_delete_postgresql_evaluation_documents_requires_confirm(monkeypatch):
 
     assert response.status_code == 400
     assert "confirm=true" in response.json()["detail"]
+
+
+def test_preview_postgresql_evaluation_documents_cleanup_endpoint(monkeypatch):
+    captured = {}
+
+    def fake_connect(database_url: str):
+        captured["database_url"] = database_url
+        return FakeConnection()
+
+    def fake_initialize_schema(connection):
+        captured["schema_initialized"] = True
+
+    def fake_summarize_documents(connection, source: str):
+        captured["source"] = source
+        return {
+            "source": source,
+            "document_count": 1,
+            "chunk_count": 2,
+            "embedding_count": 2,
+            "documents": [
+                {
+                    "id": 1,
+                    "title": "Evaluation Doc",
+                }
+            ],
+        }
+
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.psycopg.connect",
+        fake_connect,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.initialize_postgresql_knowledge_schema",
+        fake_initialize_schema,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.summarize_documents_by_source_from_postgresql",
+        fake_summarize_documents,
+    )
+
+    app.dependency_overrides[get_postgresql_database_url] = lambda: (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+
+    response = client.get("/api/v1/postgresql/documents/evaluation/cleanup-preview")
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert captured["source"] == "evaluation"
+    assert data["source"] == "evaluation"
+    assert data["document_count"] == 1
+    assert data["chunk_count"] == 2
+    assert data["embedding_count"] == 2
+    assert data["documents"][0]["title"] == "Evaluation Doc"
