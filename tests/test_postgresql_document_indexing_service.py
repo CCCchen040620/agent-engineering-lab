@@ -1,0 +1,92 @@
+from backend.services.postgresql_document_indexing_service import (
+    create_postgresql_document_with_chunks_and_embeddings,
+)
+
+
+def test_create_postgresql_document_with_chunks_and_embeddings(monkeypatch):
+    connection = object()
+
+    inserted_chunks = []
+    inserted_embeddings = []
+
+    def fake_insert_document(
+        connection,
+        title,
+        file_type,
+        chunk_count,
+        is_indexed,
+    ):
+        return {
+            "id": 1,
+            "title": title,
+            "file_type": file_type,
+            "chunk_count": chunk_count,
+            "is_indexed": is_indexed,
+        }
+
+    def fake_insert_chunk(connection, document_id, text, chunk_index):
+        chunk = {
+            "id": len(inserted_chunks) + 1,
+            "document_id": document_id,
+            "text": text,
+            "chunk_index": chunk_index,
+        }
+
+        inserted_chunks.append(chunk)
+
+        return chunk
+
+    def fake_insert_embedding(connection, chunk_id, embedding, model):
+        chunk_embedding = {
+            "id": len(inserted_embeddings) + 1,
+            "chunk_id": chunk_id,
+            "embedding": embedding,
+            "model": model,
+        }
+
+        inserted_embeddings.append(chunk_embedding)
+
+        return chunk_embedding
+
+    def fake_embedder(text):
+        return [1.0, 0.0, 0.0]
+
+    monkeypatch.setattr(
+        "backend.services.postgresql_document_indexing_service."
+        "insert_document_to_postgresql",
+        fake_insert_document,
+    )
+    monkeypatch.setattr(
+        "backend.services.postgresql_document_indexing_service."
+        "insert_chunk_to_postgresql",
+        fake_insert_chunk,
+    )
+    monkeypatch.setattr(
+        "backend.services.postgresql_document_indexing_service."
+        "insert_chunk_embedding_to_postgresql",
+        fake_insert_embedding,
+    )
+
+    result = create_postgresql_document_with_chunks_and_embeddings(
+        connection,
+        title="PostgreSQL 入库测试文档",
+        file_type="md",
+        content="员工每天需要完成 8 小时工作。新员工需要完成安全培训。",
+        embedder=fake_embedder,
+        embedding_model="fake-model",
+    )
+
+    assert result["document"]["title"] == "PostgreSQL 入库测试文档"
+    assert result["document"]["chunk_count"] == 2
+    assert result["document"]["is_indexed"] is True
+
+    assert len(result["chunks"]) == 2
+    assert result["chunks"][0]["text"] == "员工每天需要完成 8 小时工作。"
+    assert result["chunks"][0]["chunk_index"] == 0
+    assert result["chunks"][1]["text"] == "新员工需要完成安全培训。"
+    assert result["chunks"][1]["chunk_index"] == 1
+
+    assert len(result["embeddings"]) == 2
+    assert result["embeddings"][0]["chunk_id"] == 1
+    assert result["embeddings"][0]["embedding"] == [1.0, 0.0, 0.0]
+    assert result["embeddings"][0]["model"] == "fake-model"
