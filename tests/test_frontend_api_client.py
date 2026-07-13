@@ -13,6 +13,7 @@ from frontend.api_client import (
     get_system_status_api,
     list_document_chunks_api,
     list_documents_api,
+    list_postgresql_document_source_summary_api,
     list_postgresql_document_embedding_status_api,
     rag_backend_supports_feature,
     submit_feedback_api,
@@ -346,6 +347,67 @@ def test_list_postgresql_document_embedding_status_api_returns_backend_error(
     monkeypatch.setattr(requests, "get", fake_get)
 
     data, error_message = list_postgresql_document_embedding_status_api(
+        "http://127.0.0.1:8000",
+    )
+
+    assert data is None
+    assert error_message == "DATABASE_URL must be a PostgreSQL URL."
+
+
+def test_list_postgresql_document_source_summary_api(monkeypatch):
+    captured = {}
+
+    def fake_get(url, timeout):
+        captured["url"] = url
+        captured["timeout"] = timeout
+
+        return FakeResponse(
+            200,
+            [
+                {
+                    "source": "migration",
+                    "document_count": 8,
+                },
+                {
+                    "source": "production",
+                    "document_count": 5,
+                },
+            ],
+        )
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    data, error_message = list_postgresql_document_source_summary_api(
+        "http://127.0.0.1:8000",
+    )
+
+    assert error_message is None
+    assert data == [
+        {
+            "source": "migration",
+            "document_count": 8,
+        },
+        {
+            "source": "production",
+            "document_count": 5,
+        },
+    ]
+    assert captured["url"] == (
+        "http://127.0.0.1:8000"
+        "/api/v1/postgresql/documents/source-summary"
+    )
+    assert captured["timeout"] == 30
+
+
+def test_list_postgresql_document_source_summary_api_returns_backend_error(
+    monkeypatch,
+):
+    def fake_get(url, timeout):
+        return FakeResponse(400, {"detail": "DATABASE_URL must be a PostgreSQL URL."})
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    data, error_message = list_postgresql_document_source_summary_api(
         "http://127.0.0.1:8000",
     )
 

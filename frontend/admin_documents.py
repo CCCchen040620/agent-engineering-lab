@@ -15,6 +15,7 @@ from frontend.api_client import (
     get_info_api,
     list_document_chunks_api,
     list_documents_api,
+    list_postgresql_document_source_summary_api,
     list_postgresql_document_embedding_status_api,
     rag_backend_supports_feature,
 )
@@ -87,6 +88,40 @@ def load_postgresql_embedding_statuses() -> tuple[list[dict], str | None]:
     return statuses or [], None
 
 
+def load_postgresql_document_source_summary() -> tuple[list[dict], str | None]:
+    summaries, error_message = list_postgresql_document_source_summary_api(
+        base_url=BACKEND_API_BASE_URL,
+    )
+
+    if error_message is not None:
+        return [], error_message
+
+    return summaries or [], None
+
+
+def render_postgresql_document_source_summary() -> None:
+    st.caption("PostgreSQL 文档来源分布")
+
+    summaries, error_message = load_postgresql_document_source_summary()
+
+    if error_message is not None:
+        st.error(error_message)
+        return
+
+    if summaries == []:
+        st.info("暂无 PostgreSQL 文档来源统计。")
+        return
+
+    columns = st.columns(len(summaries))
+
+    for index, summary in enumerate(summaries):
+        with columns[index]:
+            st.metric(
+                label=summary["source"],
+                value=summary["document_count"],
+            )
+
+
 def render_backend_documents(
     title: str,
     documents: list[dict],
@@ -128,6 +163,7 @@ def render_document_overview(info: dict | None) -> None:
         )
 
     with postgresql_column:
+        render_postgresql_document_source_summary()
         render_backend_documents(
             title="PostgreSQL 文档列表",
             documents=postgresql_documents,
