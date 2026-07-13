@@ -1,4 +1,5 @@
 from backend.services.postgresql_document_repository import (
+    find_document_by_title_from_postgresql,
     insert_chunk_to_postgresql,
     insert_document_to_postgresql,
     list_chunks_by_document_from_postgresql,
@@ -165,3 +166,37 @@ def test_list_chunks_by_document_from_postgresql():
     assert "FROM chunks" in connection.cursor_instance.sql
     assert "WHERE document_id = %s" in connection.cursor_instance.sql
     assert "ORDER BY chunk_index, id" in connection.cursor_instance.sql
+
+
+def test_find_document_by_title_from_postgresql():
+    connection = FakeConnection()
+    connection.cursor_instance.row = (1, "员工手册", "md", 12, True)
+
+    document = find_document_by_title_from_postgresql(
+        connection,
+        title="员工手册",
+    )
+
+    assert document == {
+        "id": 1,
+        "title": "员工手册",
+        "file_type": "md",
+        "chunk_count": 12,
+        "is_indexed": True,
+    }
+    assert connection.cursor_instance.params == ("员工手册",)
+    assert "FROM documents" in connection.cursor_instance.sql
+    assert "WHERE title = %s" in connection.cursor_instance.sql
+
+
+def test_find_document_by_title_from_postgresql_returns_none_when_not_found():
+    connection = FakeConnection()
+    connection.cursor_instance.row = None
+
+    document = find_document_by_title_from_postgresql(
+        connection,
+        title="不存在的文档",
+    )
+
+    assert document is None
+    assert connection.cursor_instance.params == ("不存在的文档",)

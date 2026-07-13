@@ -37,6 +37,28 @@ def list_documents_from_postgresql(connection) -> list[dict]:
     return documents
 
 
+def find_document_by_title_from_postgresql(
+    connection,
+    title: str,
+) -> dict | None:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT id, title, file_type, chunk_count, is_indexed
+            FROM documents
+            WHERE title = %s
+            """,
+            (title,),
+        )
+
+        row = cursor.fetchone()
+
+    if row is None:
+        return None
+
+    return row_to_document(row)
+
+    
 def insert_document_to_postgresql(
     connection,
     title: str,
