@@ -14,6 +14,7 @@ from frontend.api_client import (
     get_info_api,
     list_document_chunks_api,
     list_documents_api,
+    list_postgresql_document_embedding_status_api,
     rag_backend_supports_feature,
 )
 from week08.backfill_chunk_embeddings import backfill_chunk_embeddings
@@ -74,6 +75,17 @@ def load_embedding_statuses() -> list[dict]:
     return statuses
 
 
+def load_postgresql_embedding_statuses() -> tuple[list[dict], str | None]:
+    statuses, error_message = list_postgresql_document_embedding_status_api(
+        base_url=BACKEND_API_BASE_URL,
+    )
+
+    if error_message is not None:
+        return [], error_message
+
+    return statuses or [], None
+
+
 def render_backend_documents(
     title: str,
     documents: list[dict],
@@ -122,7 +134,7 @@ def render_document_overview(info: dict | None) -> None:
         )
 
 
-def render_sqlite_embedding_tools() -> None:
+def render_sqlite_embedding_status() -> None:
     st.subheader("SQLite Embedding 索引状态")
 
     embedding_statuses = load_embedding_statuses()
@@ -132,6 +144,35 @@ def render_sqlite_embedding_tools() -> None:
     else:
         st.dataframe(embedding_statuses, use_container_width=True)
 
+
+def render_postgresql_embedding_status() -> None:
+    st.subheader("PostgreSQL Embedding 索引状态")
+
+    st.caption("需要先启动 postgres，并用 PostgreSQL DATABASE_URL 启动后端。")
+
+    embedding_statuses, error_message = load_postgresql_embedding_statuses()
+
+    if error_message is not None:
+        st.error(error_message)
+    elif embedding_statuses == []:
+        st.info("暂无 embedding 索引状态。")
+    else:
+        st.dataframe(embedding_statuses, use_container_width=True)
+
+
+def render_embedding_status_overview() -> None:
+    st.subheader("Embedding 索引状态总览")
+
+    sqlite_column, postgresql_column = st.columns(2)
+
+    with sqlite_column:
+        render_sqlite_embedding_status()
+
+    with postgresql_column:
+        render_postgresql_embedding_status()
+
+
+def render_sqlite_embedding_backfill() -> None:
     st.subheader("补齐 SQLite Embedding 索引")
 
     st.write(
@@ -232,4 +273,7 @@ st.divider()
 render_chunks_overview(info)
 
 st.divider()
-render_sqlite_embedding_tools()
+render_embedding_status_overview()
+
+st.divider()
+render_sqlite_embedding_backfill()

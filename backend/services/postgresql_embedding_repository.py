@@ -112,3 +112,42 @@ def find_chunk_embedding_by_chunk_id_from_postgresql(
         return None
 
     return row_to_chunk_embedding(row)
+
+
+def summarize_document_embedding_status_from_postgresql(connection) -> list[dict]:
+    """统计每份 PostgreSQL 文档的 chunks 是否已经完成 embedding 索引。"""
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT
+                documents.id,
+                documents.title,
+                documents.chunk_count,
+                COUNT(chunk_embeddings.id) AS embedding_count
+            FROM documents
+            LEFT JOIN chunks ON chunks.document_id = documents.id
+            LEFT JOIN chunk_embeddings ON chunk_embeddings.chunk_id = chunks.id
+            GROUP BY documents.id, documents.title, documents.chunk_count
+            ORDER BY documents.id
+            """
+        )
+
+        rows = cursor.fetchall()
+
+    results = []
+
+    for row in rows:
+        chunk_count = row[2]
+        embedding_count = row[3]
+
+        results.append(
+            {
+                "document_id": row[0],
+                "title": row[1],
+                "chunk_count": chunk_count,
+                "embedding_count": embedding_count,
+                "is_embedding_complete": chunk_count == embedding_count,
+            }
+        )
+
+    return results

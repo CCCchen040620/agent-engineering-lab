@@ -100,6 +100,24 @@ def list_document_chunks_api(
     return None, get_error_detail(response)
 
 
+def list_postgresql_document_embedding_status_api(
+    base_url: str,
+) -> tuple[list[dict] | None, str | None]:
+    """List PostgreSQL document embedding status from the backend."""
+    try:
+        response = requests.get(
+            base_url + "/api/v1/postgresql/documents/embedding-status",
+            timeout=30,
+        )
+    except requests.RequestException:
+        return None, "后端服务暂时不可用，请确认 FastAPI 已启动。"
+
+    if response.status_code == 200:
+        return response.json(), None
+
+    return None, get_error_detail(response)
+
+
 def get_system_status_api(base_url: str) -> tuple[dict | None, str | None]:
     """Get backend, database, Ollama, and model status."""
     try:

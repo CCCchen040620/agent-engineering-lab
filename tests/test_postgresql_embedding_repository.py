@@ -4,6 +4,7 @@ from backend.services.postgresql_embedding_repository import (
     insert_chunk_embedding_to_postgresql,
     postgresql_vector_to_embedding,
     row_to_chunk_embedding,
+    summarize_document_embedding_status_from_postgresql,
     upsert_chunk_embedding_to_postgresql,
 )
 
@@ -13,6 +14,7 @@ class FakeCursor:
         self.sql = ""
         self.params = None
         self.row = None
+        self.rows = []
 
     def execute(self, sql: str, params=None):
         self.sql = sql
@@ -20,6 +22,9 @@ class FakeCursor:
 
     def fetchone(self):
         return self.row
+
+    def fetchall(self):
+        return self.rows
 
     def __enter__(self):
         return self
@@ -146,3 +151,33 @@ def test_upsert_chunk_embedding_to_postgresql():
         "bge-m3:latest",
     )
     assert connection.committed is True
+
+
+def test_summarize_document_embedding_status_from_postgresql():
+    connection = FakeConnection()
+    connection.cursor_instance.rows = [
+        (1, "员工手册", 2, 2),
+        (2, "报销制度", 3, 1),
+    ]
+
+    result = summarize_document_embedding_status_from_postgresql(connection)
+
+    assert result == [
+        {
+            "document_id": 1,
+            "title": "员工手册",
+            "chunk_count": 2,
+            "embedding_count": 2,
+            "is_embedding_complete": True,
+        },
+        {
+            "document_id": 2,
+            "title": "报销制度",
+            "chunk_count": 3,
+            "embedding_count": 1,
+            "is_embedding_complete": False,
+        },
+    ]
+
+    assert "LEFT JOIN chunks" in connection.cursor_instance.sql
+    assert "LEFT JOIN chunk_embeddings" in connection.cursor_instance.sql

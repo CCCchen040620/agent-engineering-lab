@@ -12,6 +12,9 @@ from backend.services.postgresql_document_repository import (
     list_chunks_by_document_from_postgresql,
     list_documents_from_postgresql,
 )
+from backend.services.postgresql_embedding_repository import (
+    summarize_document_embedding_status_from_postgresql,
+)
 from backend.services.postgresql_schema_service import (
     initialize_postgresql_knowledge_schema,
 )
@@ -73,6 +76,25 @@ def list_postgresql_document_chunks(
         )
 
     return chunks
+
+
+@router.get("/documents/embedding-status")
+def list_postgresql_embedding_status(
+    database_url: str = Depends(get_postgresql_database_url),
+):
+    if not is_postgresql_database(database_url):
+        raise HTTPException(
+            status_code=400,
+            detail="DATABASE_URL must be a PostgreSQL URL.",
+        )
+
+    with psycopg.connect(database_url) as connection:
+        initialize_postgresql_knowledge_schema(connection)
+        statuses = summarize_document_embedding_status_from_postgresql(
+            connection,
+        )
+
+    return statuses
 
 
 @router.post(

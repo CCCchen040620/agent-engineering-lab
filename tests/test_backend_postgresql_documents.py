@@ -153,6 +153,79 @@ def test_list_postgresql_document_chunks_rejects_sqlite_url():
     assert "PostgreSQL URL" in response.json()["detail"]
 
 
+def test_list_postgresql_embedding_status_endpoint(monkeypatch):
+    captured = {}
+
+    def fake_connect(database_url: str):
+        captured["database_url"] = database_url
+        return FakeConnection()
+
+    def fake_initialize_schema(connection):
+        captured["schema_initialized"] = True
+
+    def fake_summarize_embedding_status(connection):
+        return [
+            {
+                "document_id": 1,
+                "title": "PostgreSQL 测试文档",
+                "chunk_count": 2,
+                "embedding_count": 2,
+                "is_embedding_complete": True,
+            }
+        ]
+
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.psycopg.connect",
+        fake_connect,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.initialize_postgresql_knowledge_schema",
+        fake_initialize_schema,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents."
+        "summarize_document_embedding_status_from_postgresql",
+        fake_summarize_embedding_status,
+    )
+
+    app.dependency_overrides[get_postgresql_database_url] = lambda: (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+
+    response = client.get("/api/v1/postgresql/documents/embedding-status")
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert captured["database_url"] == (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+    assert captured["schema_initialized"] is True
+    assert data == [
+        {
+            "document_id": 1,
+            "title": "PostgreSQL 测试文档",
+            "chunk_count": 2,
+            "embedding_count": 2,
+            "is_embedding_complete": True,
+        }
+    ]
+
+
+def test_list_postgresql_embedding_status_rejects_sqlite_url():
+    app.dependency_overrides[get_postgresql_database_url] = lambda: "sqlite:///data/app.db"
+
+    response = client.get("/api/v1/postgresql/documents/embedding-status")
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 400
+    assert "PostgreSQL URL" in response.json()["detail"]
+
+
 def test_search_postgresql_chunks_by_vector_endpoint(monkeypatch):
     captured = {}
 

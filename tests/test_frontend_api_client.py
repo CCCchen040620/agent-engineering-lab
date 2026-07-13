@@ -12,6 +12,7 @@ from frontend.api_client import (
     get_system_status_api,
     list_document_chunks_api,
     list_documents_api,
+    list_postgresql_document_embedding_status_api,
     rag_backend_supports_feature,
     submit_feedback_api,
     upload_text_document_api,
@@ -298,6 +299,57 @@ def test_list_document_chunks_api_uses_selected_backend(monkeypatch):
     assert captured["url"] == (
         "http://127.0.0.1:8000/api/v1/postgresql/documents/2/chunks"
     )
+
+
+def test_list_postgresql_document_embedding_status_api(monkeypatch):
+    captured = {}
+
+    def fake_get(url, timeout):
+        captured["url"] = url
+        captured["timeout"] = timeout
+
+        return FakeResponse(
+            200,
+            [
+                {
+                    "document_id": 1,
+                    "title": "PostgreSQL 测试文档",
+                    "chunk_count": 2,
+                    "embedding_count": 2,
+                    "is_embedding_complete": True,
+                }
+            ],
+        )
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    data, error_message = list_postgresql_document_embedding_status_api(
+        "http://127.0.0.1:8000",
+    )
+
+    assert error_message is None
+    assert data[0]["title"] == "PostgreSQL 测试文档"
+    assert captured["url"] == (
+        "http://127.0.0.1:8000"
+        "/api/v1/postgresql/documents/embedding-status"
+    )
+    assert captured["timeout"] == 30
+
+
+def test_list_postgresql_document_embedding_status_api_returns_backend_error(
+    monkeypatch,
+):
+    def fake_get(url, timeout):
+        return FakeResponse(400, {"detail": "DATABASE_URL must be a PostgreSQL URL."})
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    data, error_message = list_postgresql_document_embedding_status_api(
+        "http://127.0.0.1:8000",
+    )
+
+    assert data is None
+    assert error_message == "DATABASE_URL must be a PostgreSQL URL."
 
 
 def test_list_documents_api_returns_backend_error(monkeypatch):
