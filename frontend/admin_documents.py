@@ -1,6 +1,6 @@
 import streamlit as st
 
-from backend.config import BACKEND_API_BASE_URL
+from backend.config import BACKEND_API_BASE_URL, SQLITE_ADMIN_DATABASE_PATH
 from backend.services.sqlite_document_repository import (
     create_chunks_table,
     create_connection,
@@ -16,7 +16,6 @@ from frontend.api_client import (
     list_documents_api,
     rag_backend_supports_feature,
 )
-from week04.settings import SQLITE_DATABASE_PATH
 from week08.backfill_chunk_embeddings import backfill_chunk_embeddings
 
 
@@ -43,8 +42,26 @@ def backend_supports(
     )
 
 
+def load_documents_for_backend(
+    backend: str,
+    info: dict | None,
+) -> tuple[list[dict], str | None]:
+    if not backend_supports(info, backend, "document_listing"):
+        return [], "当前后端暂不支持文档列表。"
+
+    documents, error_message = list_documents_api(
+        base_url=BACKEND_API_BASE_URL,
+        backend=backend,
+    )
+
+    if error_message is not None:
+        return [], error_message
+
+    return documents or [], None
+
+
 def load_embedding_statuses() -> list[dict]:
-    connection = create_connection(SQLITE_DATABASE_PATH)
+    connection = create_connection(SQLITE_ADMIN_DATABASE_PATH)
 
     create_documents_table(connection)
     create_chunks_table(connection)
@@ -57,17 +74,65 @@ def load_embedding_statuses() -> list[dict]:
     return statuses
 
 
-def render_sqlite_embedding_tools() -> None:
-    embedding_statuses = load_embedding_statuses()
+def render_backend_documents(
+    title: str,
+    documents: list[dict],
+    error_message: str | None,
+) -> None:
+    st.subheader(title)
 
-    st.subheader("Embedding 索引状态")
+    if error_message is not None:
+        st.error(error_message)
+        return
+
+    if documents == []:
+        st.info("暂无文档。")
+        return
+
+    st.caption(f"共 {len(documents)} 份文档")
+    st.dataframe(documents, use_container_width=True)
+
+
+def render_document_overview(info: dict | None) -> None:
+    st.subheader("文档列表总览")
+
+    sqlite_documents, sqlite_error = load_documents_for_backend(
+        backend="sqlite",
+        info=info,
+    )
+    postgresql_documents, postgresql_error = load_documents_for_backend(
+        backend="postgresql",
+        info=info,
+    )
+
+    sqlite_column, postgresql_column = st.columns(2)
+
+    with sqlite_column:
+        render_backend_documents(
+            title="SQLite 文档列表",
+            documents=sqlite_documents,
+            error_message=sqlite_error,
+        )
+
+    with postgresql_column:
+        render_backend_documents(
+            title="PostgreSQL 文档列表",
+            documents=postgresql_documents,
+            error_message=postgresql_error,
+        )
+
+
+def render_sqlite_embedding_tools() -> None:
+    st.subheader("SQLite Embedding 索引状态")
+
+    embedding_statuses = load_embedding_statuses()
 
     if embedding_statuses == []:
         st.info("暂无 embedding 索引状态。")
     else:
         st.dataframe(embedding_statuses, use_container_width=True)
 
-    st.subheader("补齐 Embedding 索引")
+    st.subheader("补齐 SQLite Embedding 索引")
 
     st.write(
         "如果某些 SQLite 文档的 embedding 未完成，可以点击下面按钮补齐缺失索引。"
@@ -83,21 +148,10 @@ def render_sqlite_embedding_tools() -> None:
         st.write("已存在跳过数量：", result["skipped"])
 
 
-def render_documents(documents: list[dict]) -> None:
-    st.subheader("文档列表")
-
-    if documents == []:
-        st.info("暂无文档。")
-    else:
-        st.dataframe(documents, use_container_width=True)
-
-
 def render_chunks(
     backend: str,
     info: dict | None,
 ) -> None:
-    st.subheader("查看文档 chunks")
-
     if not backend_supports(info, backend, "chunk_listing"):
         st.warning("当前后端暂不支持查看 chunks。")
         return
@@ -134,44 +188,33 @@ st.set_page_config(
 )
 
 st.title("文档管理")
-st.write("查看企业知识库中的文档和切分片段。")
+st.write("同时查看 SQLite 与 PostgreSQL / pgvector 中的文档和切分片段。")
 
 info, info_error = get_info_api(base_url=BACKEND_API_BASE_URL)
 
 if info_error is not None:
     st.warning("暂时无法读取后端能力矩阵，页面将使用默认交互规则。")
 
-backend_label = st.radio(
-    "文档后端",
+render_document_overview(info)
+
+st.divider()
+st.subheader("查看文档 chunks")
+
+chunk_backend_label = st.radio(
+    "chunks 来源",
     [SQLITE_BACKEND_LABEL, POSTGRESQL_BACKEND_LABEL],
     index=0,
+    horizontal=True,
 )
-backend = backend_label_to_backend(backend_label)
+chunk_backend = backend_label_to_backend(chunk_backend_label)
 
-if backend == "postgresql":
+if chunk_backend == "postgresql":
     st.info(
-        "PostgreSQL / pgvector 文档管理需要先启动 postgres，"
+        "PostgreSQL / pgvector chunks 查看需要先启动 postgres，"
         "并用 PostgreSQL DATABASE_URL 启动后端。"
     )
 
-if backend_supports(info, backend, "document_listing"):
-    documents, error_message = list_documents_api(
-        base_url=BACKEND_API_BASE_URL,
-        backend=backend,
-    )
+render_chunks(backend=chunk_backend, info=info)
 
-    if error_message is not None:
-        st.error(error_message)
-        documents = []
-else:
-    st.warning("当前后端暂不支持文档列表。")
-    documents = []
-
-render_documents(documents)
-
-if backend == "sqlite":
-    render_sqlite_embedding_tools()
-else:
-    st.info("PostgreSQL 的 embedding 状态和补齐操作后续再接入管理页。")
-
-render_chunks(backend=backend, info=info)
+st.divider()
+render_sqlite_embedding_tools()
