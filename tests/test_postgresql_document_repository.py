@@ -6,6 +6,7 @@ from backend.services.postgresql_document_repository import (
     list_documents_from_postgresql,
     row_to_chunk,
     row_to_document,
+    update_document_source_by_title_from_postgresql,
 )
 
 class FakeCursor:
@@ -204,6 +205,55 @@ def test_find_document_by_title_from_postgresql():
     assert connection.cursor_instance.params == ("员工手册",)
     assert "FROM documents" in connection.cursor_instance.sql
     assert "WHERE title = %s" in connection.cursor_instance.sql
+
+
+def test_update_document_source_by_title_from_postgresql():
+    connection = FakeConnection()
+    connection.cursor_instance.row = (
+        1,
+        "PostgreSQL Agent 端到端验收文档",
+        "md",
+        2,
+        True,
+        "evaluation",
+    )
+
+    document = update_document_source_by_title_from_postgresql(
+        connection,
+        title="PostgreSQL Agent 端到端验收文档",
+        source="evaluation",
+    )
+
+    assert document == {
+        "id": 1,
+        "title": "PostgreSQL Agent 端到端验收文档",
+        "file_type": "md",
+        "chunk_count": 2,
+        "is_indexed": True,
+        "source": "evaluation",
+    }
+    assert connection.cursor_instance.params == (
+        "evaluation",
+        "PostgreSQL Agent 端到端验收文档",
+    )
+    assert "UPDATE documents" in connection.cursor_instance.sql
+    assert "SET source = %s" in connection.cursor_instance.sql
+    assert "WHERE title = %s" in connection.cursor_instance.sql
+    assert connection.committed is True
+
+
+def test_update_document_source_by_title_from_postgresql_returns_none_when_not_found():
+    connection = FakeConnection()
+    connection.cursor_instance.row = None
+
+    document = update_document_source_by_title_from_postgresql(
+        connection,
+        title="不存在的文档",
+        source="evaluation",
+    )
+
+    assert document is None
+    assert connection.committed is True
 
 
 def test_find_document_by_title_from_postgresql_returns_none_when_not_found():

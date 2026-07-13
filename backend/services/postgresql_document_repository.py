@@ -59,6 +59,32 @@ def find_document_by_title_from_postgresql(
 
     return row_to_document(row)
 
+
+def update_document_source_by_title_from_postgresql(
+    connection,
+    title: str,
+    source: str,
+) -> dict | None:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE documents
+            SET source = %s
+            WHERE title = %s
+            RETURNING id, title, file_type, chunk_count, is_indexed, source
+            """,
+            (source, title),
+        )
+
+        row = cursor.fetchone()
+
+    connection.commit()
+
+    if row is None:
+        return None
+
+    return row_to_document(row)
+
     
 def insert_document_to_postgresql(
     connection,

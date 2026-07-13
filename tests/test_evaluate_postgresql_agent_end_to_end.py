@@ -23,6 +23,7 @@ def test_ensure_end_to_end_document_reuses_existing_document(monkeypatch):
         "file_type": "md",
         "chunk_count": 2,
         "is_indexed": True,
+        "source": "evaluation",
     }
 
     def fake_find_document(connection, title):
@@ -41,12 +42,77 @@ def test_ensure_end_to_end_document_reuses_existing_document(monkeypatch):
         "create_postgresql_document_with_chunks_and_embeddings",
         fake_create_document,
     )
+    monkeypatch.setattr(
+        "week10.evaluate_postgresql_agent_end_to_end."
+        "update_document_source_by_title_from_postgresql",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("来源已经正确时不应该更新")
+        ),
+    )
 
     result = ensure_end_to_end_document(connection)
 
     assert result == {
         "created": False,
+        "source_updated": False,
         "document": existing_document,
+    }
+
+
+def test_ensure_end_to_end_document_updates_existing_document_source(monkeypatch):
+    connection = FakeConnection()
+
+    existing_document = {
+        "id": 1,
+        "title": END_TO_END_DOCUMENT_TITLE,
+        "file_type": "md",
+        "chunk_count": 2,
+        "is_indexed": True,
+        "source": "production",
+    }
+    updated_document = {
+        **existing_document,
+        "source": "evaluation",
+    }
+    captured = {}
+
+    def fake_find_document(connection, title):
+        return existing_document
+
+    def fake_update_source(connection, title, source):
+        captured["title"] = title
+        captured["source"] = source
+        return updated_document
+
+    def fake_create_document(*args, **kwargs):
+        raise AssertionError("不应该重复创建已存在的验收文档")
+
+    monkeypatch.setattr(
+        "week10.evaluate_postgresql_agent_end_to_end."
+        "find_document_by_title_from_postgresql",
+        fake_find_document,
+    )
+    monkeypatch.setattr(
+        "week10.evaluate_postgresql_agent_end_to_end."
+        "update_document_source_by_title_from_postgresql",
+        fake_update_source,
+    )
+    monkeypatch.setattr(
+        "week10.evaluate_postgresql_agent_end_to_end."
+        "create_postgresql_document_with_chunks_and_embeddings",
+        fake_create_document,
+    )
+
+    result = ensure_end_to_end_document(connection)
+
+    assert result == {
+        "created": False,
+        "source_updated": True,
+        "document": updated_document,
+    }
+    assert captured == {
+        "title": END_TO_END_DOCUMENT_TITLE,
+        "source": "evaluation",
     }
 
 
@@ -103,6 +169,7 @@ def test_ensure_end_to_end_document_creates_missing_document(monkeypatch):
     )
 
     assert result["created"] is True
+    assert result["source_updated"] is False
     assert result["document"]["title"] == END_TO_END_DOCUMENT_TITLE
     assert result["document"]["is_indexed"] is True
     assert result["document"]["source"] == "evaluation"
@@ -264,12 +331,14 @@ def test_evaluate_postgresql_agent_end_to_end(monkeypatch):
     ):
         return {
             "created": True,
+            "source_updated": False,
             "document": {
                 "id": 3,
                 "title": title,
                 "file_type": "md",
                 "chunk_count": 2,
                 "is_indexed": True,
+                "source": source,
             },
         }
 
@@ -307,7 +376,9 @@ def test_evaluate_postgresql_agent_end_to_end(monkeypatch):
 
     assert result["passed"] is True
     assert result["document_created"] is True
+    assert result["document_source_updated"] is False
     assert result["document"]["title"] == END_TO_END_DOCUMENT_TITLE
+    assert result["document"]["source"] == "evaluation"
     assert result["question"] == END_TO_END_QUESTION
     assert result["retriever_backend"] == "postgresql"
     assert result["cited_expected_document"] is True

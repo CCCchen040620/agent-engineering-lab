@@ -10,6 +10,7 @@ from backend.services.postgresql_document_indexing_service import (
 )
 from backend.services.postgresql_document_repository import (
     find_document_by_title_from_postgresql,
+    update_document_source_by_title_from_postgresql,
 )
 from week10.evaluate_postgresql_agent import is_postgresql_citation
 
@@ -33,8 +34,22 @@ def ensure_end_to_end_document(
     existing_document = find_document_by_title_from_postgresql(connection, title)
 
     if existing_document is not None:
+        if existing_document.get("source") != source:
+            updated_document = update_document_source_by_title_from_postgresql(
+                connection,
+                title=title,
+                source=source,
+            )
+
+            return {
+                "created": False,
+                "source_updated": updated_document is not None,
+                "document": updated_document,
+            }
+
         return {
             "created": False,
+            "source_updated": False,
             "document": existing_document,
         }
 
@@ -51,11 +66,13 @@ def ensure_end_to_end_document(
     if created is None:
         return {
             "created": False,
+            "source_updated": False,
             "document": None,
         }
 
     return {
         "created": True,
+        "source_updated": False,
         "document": created["document"],
     }
 
@@ -137,6 +154,7 @@ def evaluate_postgresql_agent_end_to_end(
         return {
             "passed": False,
             "document_created": False,
+            "document_source_updated": document_result["source_updated"],
             "document": None,
             "question": question,
             "answer": "",
@@ -167,6 +185,7 @@ def evaluate_postgresql_agent_end_to_end(
     return {
         "passed": evaluation["passed"],
         "document_created": document_result["created"],
+        "document_source_updated": document_result["source_updated"],
         "document": document_result["document"],
         "question": question,
         "top_k": top_k,
@@ -189,6 +208,7 @@ def main():
     print("PostgreSQL Agent 端到端业务验收完成。")
     print("是否通过：", result["passed"])
     print("是否新建文档：", result["document_created"])
+    print("是否修正文档来源：", result["document_source_updated"])
     print("文档标题：", result["document"]["title"] if result["document"] else "")
     print("文档来源：", result["document"].get("source", "") if result["document"] else "")
     print("问题：", result["question"])
