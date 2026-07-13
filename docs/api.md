@@ -1306,6 +1306,50 @@ GET /api/v1/postgresql/documents/2/chunks
 - PostgreSQL 表中的 `chunk_index` 暂时不会出现在接口返回里。
 - 该接口不会替代 `/api/v1/db/documents/{document_id}/chunks`。
 
+### POST /api/v1/postgresql/documents/with-content
+
+把文档内容写入 PostgreSQL，并自动完成：
+
+```text
+正文内容 -> 切分 chunks -> Ollama bge-m3 生成 embedding -> 写入 pgvector
+```
+
+请求示例：
+
+```json
+{
+  "title": "远程办公制度",
+  "file_type": "md",
+  "content": "员工每周可以申请一天远程办公。远程办公需要提前提交申请。"
+}
+```
+
+成功返回：
+
+```json
+{
+  "id": 1,
+  "title": "远程办公制度",
+  "file_type": "md",
+  "chunk_count": 2,
+  "is_indexed": true
+}
+```
+
+状态码说明：
+
+- `201 Created`：文档创建成功，并已写入 chunks 和 embeddings。
+- `400 Bad Request`：当前 `DATABASE_URL` 不是 PostgreSQL URL。
+- `409 Conflict`：文档创建失败，常见原因是标题重复或内容无法切出有效 chunks。
+- `503 Service Unavailable`：Embedding 模型不可用，例如 Ollama 或 `bge-m3` 没有正常工作。
+
+说明：
+
+- 该接口会修改 PostgreSQL 数据。
+- 重复运行相同标题会返回 `409`。
+- 当前接口用于 PostgreSQL/pgvector 入库链路验收，还没有替代 SQLite 文档上传入口。
+- 可用 `week10/postgresql_document_indexing_api_demo.py` 验证“入库后立刻自然语言检索”的完整闭环。
+
 ### POST /api/v1/postgresql/search/vector
 
 使用 PostgreSQL/pgvector 按向量相似度搜索 chunks。

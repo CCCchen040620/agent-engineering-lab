@@ -1722,6 +1722,78 @@ Remove-Item Env:DATABASE_URL
 
 注意：这个接口已经打通 PostgreSQL 版 RAG 检索链路，但当前 SQLite/LangGraph Agent 主业务链路仍然没有切换到 PostgreSQL。
 
+## 验证 PostgreSQL 文档入库接口
+
+当前项目提供了 PostgreSQL/pgvector 文档入库接口：
+
+```text
+POST /api/v1/postgresql/documents/with-content
+```
+
+这个接口会完成：
+
+```text
+文档正文 -> 切分 chunks -> Ollama bge-m3 生成 embedding -> 写入 PostgreSQL/pgvector
+```
+
+先确认 PostgreSQL 已经启动：
+
+```powershell
+docker compose up -d postgres
+.\scripts\check_postgres.ps1
+```
+
+确认 Ollama 已启动，并且本地有 `bge-m3:latest`：
+
+```powershell
+ollama list
+```
+
+用 PostgreSQL `DATABASE_URL` 启动后端。建议使用项目虚拟环境里的 Python，避免系统 Python 缺少 `uvicorn`：
+
+```powershell
+$env:DATABASE_URL="postgresql://agent_user:agent_password@localhost:5432/agent_db"
+.\.venv\Scripts\python.exe -m uvicorn backend.main:app --reload --port 8001
+```
+
+另开一个 PowerShell 窗口，运行验收脚本：
+
+```powershell
+.\.venv\Scripts\python.exe week10\postgresql_document_indexing_api_demo.py
+```
+
+预期输出应包含：
+
+```text
+创建状态码： 201
+检索状态码： 200
+```
+
+创建返回中应能看到：
+
+```text
+title: PostgreSQL API 入库验收文档
+chunk_count: 2
+is_indexed: True
+```
+
+检索结果 Top 结果应命中新入库文档，例如：
+
+```text
+PostgreSQL API 入库验收文档
+员工参加外部培训需要提前提交申请。
+```
+
+注意：
+
+- 重复运行同一个标题会返回 `409`，这是重复标题保护。
+- 如果 Ollama 或 `bge-m3` 不可用，接口会返回 `503`。
+- 如果只是临时验收，结束后可以清理当前 PowerShell 窗口的数据库环境变量：
+
+```powershell
+Remove-Item Env:DATABASE_URL
+```
+
 ## 验证 PostgreSQL 检索评测脚本
 
 完成真实 embedding 回填和自然语言检索接口验收后，可以运行 PostgreSQL 检索评测脚本：
