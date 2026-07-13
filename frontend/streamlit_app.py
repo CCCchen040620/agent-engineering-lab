@@ -8,6 +8,7 @@ from frontend.api_client import (
     chat_with_langgraph_agent_conversation_api,
     chat_with_llm_api,
     create_document_with_content_api,
+    create_postgresql_document_with_content_api,
     get_conversation_api,
     get_system_status_api,
     submit_feedback_api,
@@ -48,6 +49,19 @@ def save_document_with_content(
     content: str,
 ) -> tuple[dict | None, str | None]:
     return create_document_with_content_api(
+        base_url=BACKEND_API_BASE_URL,
+        title=title,
+        file_type=file_type,
+        content=content,
+    )
+
+
+def save_postgresql_document_with_content(
+    title: str,
+    file_type: str,
+    content: str,
+) -> tuple[dict | None, str | None]:
+    return create_postgresql_document_with_content_api(
         base_url=BACKEND_API_BASE_URL,
         title=title,
         file_type=file_type,
@@ -249,6 +263,17 @@ with st.sidebar:
     st.divider()
     st.header("新增知识文档")
 
+    document_storage_backend = st.selectbox(
+        "入库后端",
+        ["SQLite（默认）", "PostgreSQL / pgvector（本地实验）"],
+    )
+
+    if document_storage_backend == "PostgreSQL / pgvector（本地实验）":
+        st.info(
+            "PostgreSQL / pgvector 入库需要后端使用 PostgreSQL DATABASE_URL 启动，"
+            "并确保 Ollama 和 bge-m3 可用。"
+        )
+
     document_title = st.text_input("文档标题")
     document_file_type = st.selectbox("文件类型", ["md", "txt", "pdf"])
     document_content = st.text_area("文档正文", height=160)
@@ -268,29 +293,45 @@ with st.sidebar:
 
     if st.button("新增并索引"):
         if uploaded_file is not None:
-            with st.spinner("正在通过后端上传 txt 文档并生成 embeddings..."):
-                document, error_message = upload_text_document_api(
-                    base_url=BACKEND_API_BASE_URL,
-                    file_name=uploaded_file.name,
-                    content=uploaded_file.getvalue(),
-                    title=document_title.strip(),
-            )
-
-            if error_message is not None:
-                st.error(format_document_error_message(error_message))
-            else:
-                st.success(
-                    f"已新增文档：{document['title']}，切分片段数：{document['chunk_count']}"
+            if document_storage_backend == "PostgreSQL / pgvector（本地实验）":
+                st.warning(
+                    "PostgreSQL / pgvector 入库暂不支持 txt 文件上传，"
+                    "请把文本粘贴到“文档正文”后再新增。"
                 )
+            else:
+                with st.spinner("正在通过后端上传 txt 文档并生成 embeddings..."):
+                    document, error_message = upload_text_document_api(
+                        base_url=BACKEND_API_BASE_URL,
+                        file_name=uploaded_file.name,
+                        content=uploaded_file.getvalue(),
+                        title=document_title.strip(),
+                )
+
+                if error_message is not None:
+                    st.error(format_document_error_message(error_message))
+                else:
+                    st.success(
+                        f"已新增文档：{document['title']}，切分片段数：{document['chunk_count']}"
+                    )
         elif document_title.strip() == "" or document_content.strip() == "":
             st.warning("文档标题和正文不能为空。")
         else:
-            with st.spinner("正在新增文档、切分 chunks 并生成 embeddings..."):
-                document, error_message = save_document_with_content(
-                    title=document_title.strip(),
-                    file_type=document_file_type,
-                    content=document_content.strip(),
-            )
+            if document_storage_backend == "PostgreSQL / pgvector（本地实验）":
+                with st.spinner(
+                    "正在写入 PostgreSQL、切分 chunks 并生成 pgvector embeddings..."
+                ):
+                    document, error_message = save_postgresql_document_with_content(
+                        title=document_title.strip(),
+                        file_type=document_file_type,
+                        content=document_content.strip(),
+                    )
+            else:
+                with st.spinner("正在新增文档、切分 chunks 并生成 embeddings..."):
+                    document, error_message = save_document_with_content(
+                        title=document_title.strip(),
+                        file_type=document_file_type,
+                        content=document_content.strip(),
+                    )
 
             if error_message is not None:
                 st.error(format_document_error_message(error_message))
