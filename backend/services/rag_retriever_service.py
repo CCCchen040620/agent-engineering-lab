@@ -7,6 +7,7 @@ from backend.config import (
 from backend.services.postgresql_rag_retriever import (
     retrieve_postgresql_snippets,
 )
+from backend.services.rag_backend_service import normalize_rag_retriever_backend
 from backend.services.sqlite_llm_qa_service import search_sqlite_snippets
 
 
@@ -19,6 +20,8 @@ def retrieve_rag_snippets(
     mode: str = "precomputed_embedding",
     min_score: float = DEFAULT_MIN_SCORE,
 ) -> list[dict]:
+    backend = normalize_rag_retriever_backend(backend)
+
     if backend == "sqlite":
         keyword, snippets = search_sqlite_snippets(
             question=question,
