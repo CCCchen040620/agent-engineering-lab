@@ -1,6 +1,6 @@
 import psycopg
 
-from backend.config import DATABASE_PATH, DATABASE_URL
+from backend.config import DATABASE_URL, SQLITE_ADMIN_DATABASE_PATH
 from backend.services.database_url_service import is_postgresql_database
 from backend.services.postgresql_document_repository import (
     list_all_chunks_from_postgresql,
@@ -107,7 +107,7 @@ def main():
         print("当前 DATABASE_URL:", DATABASE_URL)
         return
 
-    sqlite_connection = create_sqlite_connection(DATABASE_PATH)
+    sqlite_connection = create_sqlite_connection(SQLITE_ADMIN_DATABASE_PATH)
     create_documents_table(sqlite_connection)
     create_chunks_table(sqlite_connection)
 
