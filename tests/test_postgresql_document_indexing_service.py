@@ -90,3 +90,46 @@ def test_create_postgresql_document_with_chunks_and_embeddings(monkeypatch):
     assert result["embeddings"][0]["chunk_id"] == 1
     assert result["embeddings"][0]["embedding"] == [1.0, 0.0, 0.0]
     assert result["embeddings"][0]["model"] == "fake-model"
+
+
+def test_create_postgresql_document_returns_none_when_content_has_no_chunks(
+    monkeypatch,
+):
+    connection = object()
+    insert_called = False
+
+    def fake_insert_document(
+        connection,
+        title,
+        file_type,
+        chunk_count,
+        is_indexed,
+    ):
+        nonlocal insert_called
+        insert_called = True
+
+        return {
+            "id": 1,
+            "title": title,
+            "file_type": file_type,
+            "chunk_count": chunk_count,
+            "is_indexed": is_indexed,
+        }
+
+    monkeypatch.setattr(
+        "backend.services.postgresql_document_indexing_service."
+        "insert_document_to_postgresql",
+        fake_insert_document,
+    )
+
+    result = create_postgresql_document_with_chunks_and_embeddings(
+        connection,
+        title="空文档",
+        file_type="md",
+        content="   \n   ",
+        embedder=lambda text: [1.0],
+        embedding_model="fake-model",
+    )
+
+    assert result is None
+    assert insert_called is False
