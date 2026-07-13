@@ -9,6 +9,7 @@ from backend.services.postgresql_natural_language_search_service import (
 from backend.config import DATABASE_URL
 from backend.services.database_url_service import is_postgresql_database
 from backend.services.postgresql_document_repository import (
+    summarize_document_sources_from_postgresql,
     summarize_documents_by_source_from_postgresql,
     delete_documents_by_source_from_postgresql,
     list_chunks_by_document_from_postgresql,
@@ -62,6 +63,23 @@ def list_postgresql_documents(
         documents = list_documents_from_postgresql(connection, source=source)
 
     return documents
+
+
+@router.get("/documents/source-summary")
+def summarize_postgresql_document_sources(
+    database_url: str = Depends(get_postgresql_database_url),
+):
+    if not is_postgresql_database(database_url):
+        raise HTTPException(
+            status_code=400,
+            detail="DATABASE_URL must be a PostgreSQL URL.",
+        )
+
+    with psycopg.connect(database_url) as connection:
+        initialize_postgresql_knowledge_schema(connection)
+        summaries = summarize_document_sources_from_postgresql(connection)
+
+    return summaries
 
 
 @router.get("/documents/evaluation/cleanup-preview")

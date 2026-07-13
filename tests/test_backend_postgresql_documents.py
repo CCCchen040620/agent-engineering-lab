@@ -139,6 +139,91 @@ def test_list_postgresql_documents_endpoint_filters_by_source(monkeypatch):
     assert data[0]["title"] == "Evaluation Doc"
 
 
+def test_summarize_postgresql_document_sources_endpoint(monkeypatch):
+    captured = {}
+
+    def fake_connect(database_url: str):
+        captured["database_url"] = database_url
+        return FakeConnection()
+
+    def fake_initialize_schema(connection):
+        captured["schema_initialized"] = True
+
+    def fake_summarize_sources(connection):
+        captured["summary_loaded"] = True
+
+        return [
+            {
+                "source": "evaluation",
+                "document_count": 0,
+            },
+            {
+                "source": "migration",
+                "document_count": 8,
+            },
+            {
+                "source": "production",
+                "document_count": 5,
+            },
+        ]
+
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.psycopg.connect",
+        fake_connect,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.initialize_postgresql_knowledge_schema",
+        fake_initialize_schema,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.summarize_document_sources_from_postgresql",
+        fake_summarize_sources,
+    )
+
+    app.dependency_overrides[get_postgresql_database_url] = lambda: (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+
+    response = client.get("/api/v1/postgresql/documents/source-summary")
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert captured["database_url"] == (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+    assert captured["schema_initialized"] is True
+    assert captured["summary_loaded"] is True
+    assert data == [
+        {
+            "source": "evaluation",
+            "document_count": 0,
+        },
+        {
+            "source": "migration",
+            "document_count": 8,
+        },
+        {
+            "source": "production",
+            "document_count": 5,
+        },
+    ]
+
+
+def test_summarize_postgresql_document_sources_rejects_sqlite_url():
+    app.dependency_overrides[get_postgresql_database_url] = lambda: "sqlite:///data/app.db"
+
+    response = client.get("/api/v1/postgresql/documents/source-summary")
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 400
+    assert "PostgreSQL URL" in response.json()["detail"]
+
+
 def test_list_postgresql_documents_rejects_sqlite_url():
     app.dependency_overrides[get_postgresql_database_url] = lambda: "sqlite:///data/app.db"
 
