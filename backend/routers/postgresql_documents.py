@@ -1,5 +1,5 @@
 import psycopg
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from backend.services.postgresql_vector_search_repository import (
     search_chunks_by_vector_from_postgresql,
 )
@@ -46,6 +46,7 @@ def get_postgresql_database_url() -> str:
 
 @router.get("/documents", response_model=list[PostgreSQLDocument])
 def list_postgresql_documents(
+    source: str | None = Query(default=None),
     database_url: str = Depends(get_postgresql_database_url),
 ):
     if not is_postgresql_database(database_url):
@@ -56,7 +57,7 @@ def list_postgresql_documents(
 
     with psycopg.connect(database_url) as connection:
         initialize_postgresql_knowledge_schema(connection)
-        documents = list_documents_from_postgresql(connection)
+        documents = list_documents_from_postgresql(connection, source=source)
 
     return documents
 

@@ -87,6 +87,24 @@ def test_list_documents_from_postgresql():
     )
 
 
+def test_list_documents_from_postgresql_filters_by_source():
+    connection = FakeConnection()
+    connection.cursor_instance.rows = [
+        (1, "Evaluation Doc", "md", 2, True, "evaluation"),
+    ]
+
+    documents = list_documents_from_postgresql(
+        connection,
+        source="evaluation",
+    )
+
+    assert len(documents) == 1
+    assert documents[0]["title"] == "Evaluation Doc"
+    assert documents[0]["source"] == "evaluation"
+    assert connection.cursor_instance.params == ("evaluation",)
+    assert "WHERE source = %s" in connection.cursor_instance.sql
+
+
 def test_insert_document_to_postgresql():
     connection = FakeConnection()
     connection.cursor_instance.row = (1, "员工手册", "md", 12, True)

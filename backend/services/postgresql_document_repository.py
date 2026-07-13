@@ -18,15 +18,29 @@ def row_to_chunk(row) -> dict:
     }
 
 
-def list_documents_from_postgresql(connection) -> list[dict]:
+def list_documents_from_postgresql(
+    connection,
+    source: str | None = None,
+) -> list[dict]:
     with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT id, title, file_type, chunk_count, is_indexed, source
-            FROM documents
-            ORDER BY id
-            """
-        )
+        if source is None:
+            cursor.execute(
+                """
+                SELECT id, title, file_type, chunk_count, is_indexed, source
+                FROM documents
+                ORDER BY id
+                """
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT id, title, file_type, chunk_count, is_indexed, source
+                FROM documents
+                WHERE source = %s
+                ORDER BY id
+                """,
+                (source,),
+            )
 
         rows = cursor.fetchall()
 
