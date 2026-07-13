@@ -15,9 +15,13 @@ from backend.services.postgresql_document_repository import (
 from backend.services.postgresql_schema_service import (
     initialize_postgresql_knowledge_schema,
 )
+from backend.services.postgresql_document_indexing_service import (
+    create_postgresql_document_with_chunks_and_embeddings,
+)
 from week05.models import (
     Chunk,
     Document,
+    DocumentCreateWithContentRequest,
     QuestionSearchRequest,
     QuestionSearchResponse,
     VectorSearchRequest,
@@ -70,6 +74,33 @@ def list_postgresql_document_chunks(
     return chunks
 
 
+@router.post(
+    "/documents/with-content",
+    response_model=Document,
+    status_code=201,
+)
+def create_postgresql_document_with_content(
+    request: DocumentCreateWithContentRequest,
+    database_url: str = Depends(get_postgresql_database_url),
+):
+    if not is_postgresql_database(database_url):
+        raise HTTPException(
+            status_code=400,
+            detail="DATABASE_URL must be a PostgreSQL URL.",
+        )
+
+    with psycopg.connect(database_url) as connection:
+        initialize_postgresql_knowledge_schema(connection)
+        result = create_postgresql_document_with_chunks_and_embeddings(
+            connection,
+            title=request.title,
+            file_type=request.file_type,
+            content=request.content,
+        )
+
+    return result["document"]
+
+    
 @router.post("/search/vector", response_model=list[VectorSearchResult])
 def search_postgresql_chunks_by_vector(
     request: VectorSearchRequest,

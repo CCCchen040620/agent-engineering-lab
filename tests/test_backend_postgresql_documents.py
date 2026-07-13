@@ -323,3 +323,113 @@ def test_search_postgresql_chunks_by_question_rejects_sqlite_url():
 
     assert response.status_code == 400
     assert "PostgreSQL URL" in response.json()["detail"]
+
+
+def test_create_postgresql_document_with_content_endpoint(monkeypatch):
+    captured = {}
+
+    def fake_connect(database_url: str):
+        captured["database_url"] = database_url
+        return FakeConnection()
+
+    def fake_initialize_schema(connection):
+        captured["schema_initialized"] = True
+
+    def fake_create_document(
+        connection,
+        title: str,
+        file_type: str,
+        content: str,
+    ):
+        captured["title"] = title
+        captured["file_type"] = file_type
+        captured["content"] = content
+
+        return {
+            "document": {
+                "id": 1,
+                "title": title,
+                "file_type": file_type,
+                "chunk_count": 2,
+                "is_indexed": True,
+            },
+            "chunks": [
+                {
+                    "id": 1,
+                    "document_id": 1,
+                    "text": "员工每周可以申请一天远程办公。",
+                    "chunk_index": 0,
+                },
+                {
+                    "id": 2,
+                    "document_id": 1,
+                    "text": "远程办公需要提前提交申请。",
+                    "chunk_index": 1,
+                },
+            ],
+            "embeddings": [
+                {
+                    "id": 1,
+                    "chunk_id": 1,
+                    "embedding": [1.0, 0.0, 0.0],
+                    "model": "fake-model",
+                },
+                {
+                    "id": 2,
+                    "chunk_id": 2,
+                    "embedding": [0.0, 1.0, 0.0],
+                    "model": "fake-model",
+                },
+            ],
+        }
+
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.psycopg.connect",
+        fake_connect,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.initialize_postgresql_knowledge_schema",
+        fake_initialize_schema,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents."
+        "create_postgresql_document_with_chunks_and_embeddings",
+        fake_create_document,
+    )
+
+    app.dependency_overrides[get_postgresql_database_url] = lambda: (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+
+    response = client.post(
+        "/api/v1/postgresql/documents/with-content",
+        json={
+            "title": "远程办公制度",
+            "file_type": "md",
+            "content": "员工每周可以申请一天远程办公。远程办公需要提前提交申请。",
+        },
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 201
+
+    data = response.json()
+
+    assert captured["database_url"] == (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+    assert captured["schema_initialized"] is True
+    assert captured["title"] == "远程办公制度"
+    assert captured["file_type"] == "md"
+    assert captured["content"] == (
+        "员工每周可以申请一天远程办公。远程办公需要提前提交申请。"
+    )
+
+    assert data == {
+        "id": 1,
+        "title": "远程办公制度",
+        "file_type": "md",
+        "chunk_count": 2,
+        "is_indexed": True,
+    }
