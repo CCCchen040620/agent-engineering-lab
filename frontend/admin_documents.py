@@ -48,6 +48,7 @@ def backend_supports(
 def load_documents_for_backend(
     backend: str,
     info: dict | None,
+    source: str | None = None,
 ) -> tuple[list[dict], str | None]:
     if not backend_supports(info, backend, "document_listing"):
         return [], "当前后端暂不支持文档列表。"
@@ -55,6 +56,7 @@ def load_documents_for_backend(
     documents, error_message = list_documents_api(
         base_url=BACKEND_API_BASE_URL,
         backend=backend,
+        source=source,
     )
 
     if error_message is not None:
@@ -148,10 +150,6 @@ def render_document_overview(info: dict | None) -> None:
         backend="sqlite",
         info=info,
     )
-    postgresql_documents, postgresql_error = load_documents_for_backend(
-        backend="postgresql",
-        info=info,
-    )
 
     sqlite_column, postgresql_column = st.columns(2)
 
@@ -164,8 +162,31 @@ def render_document_overview(info: dict | None) -> None:
 
     with postgresql_column:
         render_postgresql_document_source_summary()
+
+        source_filter_label = st.selectbox(
+            "PostgreSQL 来源筛选",
+            options=[
+                "全部",
+                "production",
+                "migration",
+                "evaluation",
+            ],
+            key="postgresql_document_source_filter",
+        )
+
+        source_filter = None
+
+        if source_filter_label != "全部":
+            source_filter = source_filter_label
+
+        postgresql_documents, postgresql_error = load_documents_for_backend(
+            backend="postgresql",
+            info=info,
+            source=source_filter,
+        )
+
         render_backend_documents(
-            title="PostgreSQL 文档列表",
+            title=f"PostgreSQL 文档列表（{source_filter_label}）",
             documents=postgresql_documents,
             error_message=postgresql_error,
         )

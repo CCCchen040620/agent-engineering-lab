@@ -62,13 +62,20 @@ def get_document_api_prefix(backend: str) -> str:
 def list_documents_api(
     base_url: str,
     backend: str = "sqlite",
+    source: str | None = None,
 ) -> tuple[list[dict] | None, str | None]:
     """List documents from the selected backend."""
+    endpoint = base_url + get_document_api_prefix(backend) + "/documents"
+    params = {}
+
+    if backend.strip().lower() == "postgresql" and source not in (None, ""):
+        params["source"] = source
+
     try:
-        response = requests.get(
-            base_url + get_document_api_prefix(backend) + "/documents",
-            timeout=30,
-        )
+        if params == {}:
+            response = requests.get(endpoint, timeout=30)
+        else:
+            response = requests.get(endpoint, params=params, timeout=30)
     except requests.RequestException:
         return None, "后端服务暂时不可用，请确认 FastAPI 已启动。"
 

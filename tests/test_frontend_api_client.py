@@ -271,6 +271,45 @@ def test_list_documents_api_can_use_postgresql_endpoint(monkeypatch):
     )
 
 
+def test_list_documents_api_can_filter_postgresql_documents_by_source(monkeypatch):
+    captured = {}
+
+    def fake_get(url, params, timeout):
+        captured["url"] = url
+        captured["params"] = params
+        captured["timeout"] = timeout
+
+        return FakeResponse(
+            200,
+            [
+                {
+                    "id": 1,
+                    "title": "PostgreSQL migration document",
+                    "file_type": "md",
+                    "chunk_count": 2,
+                    "is_indexed": True,
+                    "source": "migration",
+                }
+            ],
+        )
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    data, error_message = list_documents_api(
+        "http://127.0.0.1:8000",
+        backend="postgresql",
+        source="migration",
+    )
+
+    assert error_message is None
+    assert data[0]["source"] == "migration"
+    assert captured["url"] == (
+        "http://127.0.0.1:8000/api/v1/postgresql/documents"
+    )
+    assert captured["params"] == {"source": "migration"}
+    assert captured["timeout"] == 30
+
+
 def test_list_document_chunks_api_uses_selected_backend(monkeypatch):
     captured = {}
 
