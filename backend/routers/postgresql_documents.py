@@ -65,8 +65,15 @@ def list_postgresql_documents(
 
 @router.delete("/documents/evaluation")
 def delete_postgresql_evaluation_documents(
+    confirm: bool = Query(default=False),
     database_url: str = Depends(get_postgresql_database_url),
 ):
+    if not confirm:
+        raise HTTPException(
+            status_code=400,
+            detail="Deleting evaluation documents requires confirm=true.",
+        )
+
     if not is_postgresql_database(database_url):
         raise HTTPException(
             status_code=400,
@@ -85,7 +92,7 @@ def delete_postgresql_evaluation_documents(
         "deleted_count": deleted_count,
     }
 
-    
+
 @router.get("/documents/{document_id}/chunks", response_model=list[Chunk])
 def list_postgresql_document_chunks(
     document_id: int,

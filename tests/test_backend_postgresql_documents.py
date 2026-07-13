@@ -841,7 +841,7 @@ def test_delete_postgresql_evaluation_documents_endpoint(monkeypatch):
         "postgresql://agent_user:agent_password@localhost:5432/agent_db"
     )
 
-    response = client.delete("/api/v1/postgresql/documents/evaluation")
+    response = client.delete("/api/v1/postgresql/documents/evaluation?confirm=true")
 
     clear_dependency_overrides()
 
@@ -851,3 +851,16 @@ def test_delete_postgresql_evaluation_documents_endpoint(monkeypatch):
         "message": "评测文档已清理。",
         "deleted_count": 2,
     }
+
+
+def test_delete_postgresql_evaluation_documents_requires_confirm(monkeypatch):
+    app.dependency_overrides[get_postgresql_database_url] = lambda: (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+
+    response = client.delete("/api/v1/postgresql/documents/evaluation")
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 400
+    assert "confirm=true" in response.json()["detail"]
