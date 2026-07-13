@@ -6,8 +6,11 @@ from frontend.api_client import (
     chat_with_langgraph_agent_api,
     create_document_with_content_api,
     create_postgresql_document_with_content_api,
+    find_rag_backend_capabilities,
     get_error_detail,
+    get_info_api,
     get_system_status_api,
+    rag_backend_supports_feature,
     submit_feedback_api,
     upload_text_document_api,
     parse_sse_event_line,
@@ -111,6 +114,92 @@ def test_get_system_status_api_gets_status(monkeypatch):
 
     assert captured["url"] == "http://127.0.0.1:8000/api/v1/system/status"
     assert captured["timeout"] == 30
+
+
+def test_get_info_api_gets_backend_capabilities(monkeypatch):
+    captured = {}
+
+    def fake_get(url, timeout):
+        captured["url"] = url
+        captured["timeout"] = timeout
+
+        return FakeResponse(
+            200,
+            {
+                "name": "Enterprise Knowledge Base Agent",
+                "rag_backends": [
+                    {
+                        "backend": "sqlite",
+                        "supported_features": ["conversation_chat"],
+                    }
+                ],
+            },
+        )
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    data, error_message = get_info_api("http://127.0.0.1:8000")
+
+    assert error_message is None
+    assert data["rag_backends"][0]["backend"] == "sqlite"
+    assert captured["url"] == "http://127.0.0.1:8000/api/v1/info"
+    assert captured["timeout"] == 30
+
+
+def test_get_info_api_handles_network_failure(monkeypatch):
+    def fake_get(url, timeout):
+        raise requests.RequestException
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    data, error_message = get_info_api("http://127.0.0.1:8000")
+
+    assert data is None
+    assert error_message == "后端服务暂时不可用，请确认 FastAPI 已启动。"
+
+
+def test_find_rag_backend_capabilities():
+    info = {
+        "rag_backends": [
+            {
+                "backend": "sqlite",
+                "supported_features": ["conversation_chat"],
+            },
+            {
+                "backend": "postgresql",
+                "supported_features": ["langgraph_agent_chat"],
+            },
+        ]
+    }
+
+    capabilities = find_rag_backend_capabilities(info, " PostgreSQL ")
+
+    assert capabilities == {
+        "backend": "postgresql",
+        "supported_features": ["langgraph_agent_chat"],
+    }
+
+
+def test_rag_backend_supports_feature():
+    info = {
+        "rag_backends": [
+            {
+                "backend": "sqlite",
+                "supported_features": ["conversation_chat"],
+            },
+            {
+                "backend": "postgresql",
+                "supported_features": ["langgraph_agent_chat"],
+            },
+        ]
+    }
+
+    assert rag_backend_supports_feature(info, "sqlite", "conversation_chat") is True
+    assert rag_backend_supports_feature(info, "postgresql", "conversation_chat") is False
+
+
+def test_rag_backend_supports_feature_falls_back_to_true_without_capabilities():
+    assert rag_backend_supports_feature(None, "postgresql", "conversation_chat") is True
 
 
 def test_get_system_status_api_handles_network_failure(monkeypatch):

@@ -5,6 +5,51 @@ import json
 import requests
 
 
+def get_info_api(base_url: str) -> tuple[dict | None, str | None]:
+    """Get backend feature and capability information."""
+    try:
+        response = requests.get(
+            base_url + "/api/v1/info",
+            timeout=30,
+        )
+    except requests.RequestException:
+        return None, "后端服务暂时不可用，请确认 FastAPI 已启动。"
+
+    if response.status_code == 200:
+        return response.json(), None
+
+    return None, get_error_detail(response)
+
+
+def find_rag_backend_capabilities(
+    info: dict | None,
+    backend: str,
+) -> dict | None:
+    if info is None:
+        return None
+
+    normalized_backend = backend.strip().lower()
+
+    for capabilities in info.get("rag_backends", []):
+        if capabilities.get("backend") == normalized_backend:
+            return capabilities
+
+    return None
+
+
+def rag_backend_supports_feature(
+    info: dict | None,
+    backend: str,
+    feature: str,
+) -> bool:
+    capabilities = find_rag_backend_capabilities(info, backend)
+
+    if capabilities is None:
+        return True
+
+    return feature in capabilities.get("supported_features", [])
+
+
 def get_system_status_api(base_url: str) -> tuple[dict | None, str | None]:
     """Get backend, database, Ollama, and model status."""
     try:

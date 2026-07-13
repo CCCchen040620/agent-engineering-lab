@@ -13,6 +13,8 @@ RAG_BACKEND_CAPABILITIES = {
             "document_indexing",
             "chunk_listing",
             "rag_retrieval",
+            "llm_chat",
+            "simple_agent_chat",
             "langgraph_agent_chat",
             "conversation_chat",
             "streaming_chat",
