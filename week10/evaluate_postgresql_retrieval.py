@@ -18,11 +18,14 @@ DEFAULT_QUESTIONS = [
     },
 ]
 
+DEFAULT_MIN_SCORES = [0.0, 0.6, 0.8]
+
 
 def evaluate_postgresql_retrieval(
     connection,
     questions: list[dict],
     top_k: int = 2,
+    min_score: float = 0.0,
 ) -> dict:
     items = []
     passed_count = 0
@@ -35,6 +38,7 @@ def evaluate_postgresql_retrieval(
             connection,
             question=question,
             top_k=top_k,
+            min_score=min_score,
         )
 
         results = search_result["results"]
@@ -74,8 +78,34 @@ def evaluate_postgresql_retrieval(
         "total": total,
         "passed": passed_count,
         "hit_rate": hit_rate,
+        "top_k": top_k,
+        "min_score": min_score,
         "items": items,
     }
+
+
+def evaluate_postgresql_retrieval_for_min_scores(
+    connection,
+    questions: list[dict],
+    top_k: int = 2,
+    min_scores: list[float] | None = None,
+) -> list[dict]:
+    if min_scores is None:
+        min_scores = DEFAULT_MIN_SCORES
+
+    results = []
+
+    for min_score in min_scores:
+        result = evaluate_postgresql_retrieval(
+            connection,
+            questions=questions,
+            top_k=top_k,
+            min_score=min_score,
+        )
+
+        results.append(result)
+
+    return results
 
 
 def main():
@@ -85,23 +115,28 @@ def main():
         return
 
     with psycopg.connect(DATABASE_URL) as connection:
-        result = evaluate_postgresql_retrieval(
+        results = evaluate_postgresql_retrieval_for_min_scores(
             connection,
             questions=DEFAULT_QUESTIONS,
             top_k=2,
         )
 
     print("PostgreSQL 检索评测完成。")
-    print("问题数量：", result["total"])
-    print("通过数量：", result["passed"])
-    print("命中率：", result["hit_rate"])
 
-    for item in result["items"]:
+    for result in results:
         print("-" * 50)
-        print("问题：", item["question"])
-        print("期望片段：", item["expected_text"])
-        print("Top1 片段：", item["top_result_text"])
-        print("是否通过：", item["passed"])
+        print("top_k：", result["top_k"])
+        print("min_score：", result["min_score"])
+        print("问题数量：", result["total"])
+        print("通过数量：", result["passed"])
+        print("命中率：", result["hit_rate"])
+
+        for item in result["items"]:
+            print("-" * 50)
+            print("问题：", item["question"])
+            print("期望片段：", item["expected_text"])
+            print("Top1 片段：", item["top_result_text"])
+            print("是否通过：", item["passed"])
 
 
 if __name__ == "__main__":
