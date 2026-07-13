@@ -1285,6 +1285,7 @@ Remove-Item Env:DATABASE_URL
 3. 回填 PostgreSQL chunk embeddings。
 4. 运行 PostgreSQL 检索评测。
 5. 运行 PostgreSQL LangGraph Agent 业务验收。
+6. 写入一份端到端验收文档，并验证 Agent 能引用这份新文档回答。
 
 如果当前 PowerShell 窗口没有设置 `DATABASE_URL`，脚本会默认使用：
 

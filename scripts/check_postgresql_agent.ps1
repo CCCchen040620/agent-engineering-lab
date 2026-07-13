@@ -33,30 +33,34 @@ Write-Host "Checking PostgreSQL LangGraph Agent flow..."
 Write-Host "DATABASE_URL: $DatabaseUrl"
 Write-Host "This check assumes Ollama is running and the required models are available."
 
-Invoke-PostgresqlAgentStep "Step 1/5: Checking PostgreSQL Docker service..." {
+Invoke-PostgresqlAgentStep "Step 1/6: Checking PostgreSQL Docker service..." {
     & "$PSScriptRoot\check_postgres.ps1"
 }
 
-Invoke-PostgresqlAgentStep "Step 2/5: Initializing PostgreSQL schema..." {
+Invoke-PostgresqlAgentStep "Step 2/6: Initializing PostgreSQL schema..." {
     python -m week10.init_postgresql_schema
 }
 
 if ($SkipEmbeddingBackfill) {
     Write-Host ""
-    Write-Host "Step 3/5: Skipping PostgreSQL chunk embedding backfill."
+    Write-Host "Step 3/6: Skipping PostgreSQL chunk embedding backfill."
 }
 else {
-    Invoke-PostgresqlAgentStep "Step 3/5: Backfilling PostgreSQL chunk embeddings..." {
+    Invoke-PostgresqlAgentStep "Step 3/6: Backfilling PostgreSQL chunk embeddings..." {
         python -m week10.backfill_postgresql_chunk_embeddings
     }
 }
 
-Invoke-PostgresqlAgentStep "Step 4/5: Evaluating PostgreSQL retrieval..." {
+Invoke-PostgresqlAgentStep "Step 4/6: Evaluating PostgreSQL retrieval..." {
     python -m week10.evaluate_postgresql_retrieval
 }
 
-Invoke-PostgresqlAgentStep "Step 5/5: Evaluating PostgreSQL LangGraph Agent flow..." {
+Invoke-PostgresqlAgentStep "Step 5/6: Evaluating PostgreSQL LangGraph Agent flow..." {
     python -m week10.evaluate_postgresql_agent
+}
+
+Invoke-PostgresqlAgentStep "Step 6/6: Evaluating PostgreSQL Agent end-to-end indexing flow..." {
+    python -m week10.evaluate_postgresql_agent_end_to_end
 }
 
 Write-Host ""
