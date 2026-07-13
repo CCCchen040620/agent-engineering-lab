@@ -12,6 +12,7 @@ def test_required_project_scripts_exist():
         "scripts/start_backend.ps1",
         "scripts/start_frontend.ps1",
         "scripts/check_postgres.ps1",
+        "scripts/check_postgresql_agent.ps1",
     ]
 
     for script_path in required_scripts:
@@ -122,6 +123,19 @@ def test_postgres_check_validates_postgres_service_health():
     assert "State.Health.Status" in script
     assert "docker compose up postgres" in script
     assert "PostgreSQL check completed successfully." in script
+
+
+def test_postgresql_agent_check_runs_required_steps():
+    script = Path("scripts/check_postgresql_agent.ps1").read_text(encoding="utf-8")
+
+    assert "check_postgres.ps1" in script
+    assert "week10.init_postgresql_schema" in script
+    assert "week10.backfill_postgresql_chunk_embeddings" in script
+    assert "week10.evaluate_postgresql_retrieval" in script
+    assert "week10.evaluate_postgresql_agent" in script
+    assert "DATABASE_URL" in script
+    assert "SkipEmbeddingBackfill" in script
+    assert "PostgreSQL Agent check completed successfully." in script
 
 
 def test_pyproject_declares_postgresql_driver_dependency():

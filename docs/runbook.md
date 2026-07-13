@@ -1270,6 +1270,36 @@ python -c "from backend.services.system_status_service import check_postgresql_s
 Remove-Item Env:DATABASE_URL
 ```
 
+## 一键验收 PostgreSQL LangGraph Agent
+
+当 PostgreSQL/pgvector、Ollama embedding、LangGraph Agent 都有改动时，可以运行专项验收脚本：
+
+```powershell
+.\scripts\check_postgresql_agent.ps1
+```
+
+该脚本会依次执行：
+
+1. 检查 Docker Compose 中的 PostgreSQL 服务是否运行并健康。
+2. 初始化 PostgreSQL 知识库表结构。
+3. 回填 PostgreSQL chunk embeddings。
+4. 运行 PostgreSQL 检索评测。
+5. 运行 PostgreSQL LangGraph Agent 业务验收。
+
+如果当前 PowerShell 窗口没有设置 `DATABASE_URL`，脚本会默认使用：
+
+```text
+postgresql://agent_user:agent_password@localhost:5432/agent_db
+```
+
+如果只是想跳过 embedding 回填，可以运行：
+
+```powershell
+.\scripts\check_postgresql_agent.ps1 -SkipEmbeddingBackfill
+```
+
+注意：这个脚本是 PostgreSQL Agent 专项验收，不会替代普通的 `pytest` 或 `.\scripts\check_project.ps1`。
+
 当前项目仍然默认使用 SQLite。PostgreSQL/pgvector 目前是工程化准备能力，后续才会逐步迁移业务表和向量检索。
 
 ## 初始化 PostgreSQL 知识库表结构
