@@ -38,6 +38,8 @@ def test_initialize_postgresql_knowledge_schema_creates_core_tables():
 
     assert "CREATE EXTENSION IF NOT EXISTS vector" in sql_text
     assert "CREATE TABLE IF NOT EXISTS documents" in sql_text
+    assert "source TEXT NOT NULL DEFAULT 'production'" in sql_text
+    assert "ADD COLUMN IF NOT EXISTS source" in sql_text
     assert "CREATE TABLE IF NOT EXISTS chunks" in sql_text
     assert "CREATE TABLE IF NOT EXISTS chunk_embeddings" in sql_text
     assert "vector(1024)" in sql_text
@@ -46,6 +48,7 @@ def test_initialize_postgresql_knowledge_schema_creates_core_tables():
     assert result == {
         "vector_extension_ready": True,
         "documents_table_ready": True,
+        "documents_source_column_ready": True,
         "chunks_table_ready": True,
         "chunk_embeddings_table_ready": True,
     }

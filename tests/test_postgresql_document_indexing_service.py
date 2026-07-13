@@ -18,6 +18,7 @@ def test_create_postgresql_document_with_chunks_and_embeddings(monkeypatch):
         file_type,
         chunk_count,
         is_indexed,
+        source,
     ):
         return {
             "id": 1,
@@ -25,6 +26,7 @@ def test_create_postgresql_document_with_chunks_and_embeddings(monkeypatch):
             "file_type": file_type,
             "chunk_count": chunk_count,
             "is_indexed": is_indexed,
+            "source": source,
         }
 
     def fake_insert_chunk(connection, document_id, text, chunk_index):
@@ -85,11 +87,13 @@ def test_create_postgresql_document_with_chunks_and_embeddings(monkeypatch):
         content="员工每天需要完成 8 小时工作。新员工需要完成安全培训。",
         embedder=fake_embedder,
         embedding_model="fake-model",
+        source="evaluation",
     )
 
     assert result["document"]["title"] == "PostgreSQL 入库测试文档"
     assert result["document"]["chunk_count"] == 2
     assert result["document"]["is_indexed"] is True
+    assert result["document"]["source"] == "evaluation"
 
     assert len(result["chunks"]) == 2
     assert result["chunks"][0]["text"] == "员工每天需要完成 8 小时工作。"
@@ -115,6 +119,7 @@ def test_create_postgresql_document_returns_none_when_content_has_no_chunks(
         file_type,
         chunk_count,
         is_indexed,
+        source,
     ):
         nonlocal insert_called
         insert_called = True
@@ -125,6 +130,7 @@ def test_create_postgresql_document_returns_none_when_content_has_no_chunks(
             "file_type": file_type,
             "chunk_count": chunk_count,
             "is_indexed": is_indexed,
+            "source": source,
         }
 
     monkeypatch.setattr(
@@ -160,6 +166,7 @@ def test_create_postgresql_document_raises_error_when_embedding_fails(
         file_type,
         chunk_count,
         is_indexed,
+        source,
     ):
         nonlocal insert_document_called
         insert_document_called = True
@@ -170,6 +177,7 @@ def test_create_postgresql_document_raises_error_when_embedding_fails(
             "file_type": file_type,
             "chunk_count": chunk_count,
             "is_indexed": is_indexed,
+            "source": source,
         }
 
     def fake_insert_chunk(connection, document_id, text, chunk_index):
@@ -266,6 +274,7 @@ def test_create_postgresql_document_returns_none_when_title_exists(
         file_type,
         chunk_count,
         is_indexed,
+        source,
     ):
         nonlocal insert_document_called
         insert_document_called = True
@@ -276,6 +285,7 @@ def test_create_postgresql_document_returns_none_when_title_exists(
             "file_type": file_type,
             "chunk_count": chunk_count,
             "is_indexed": is_indexed,
+            "source": source,
         }
 
     def fake_insert_chunk(connection, document_id, text, chunk_index):

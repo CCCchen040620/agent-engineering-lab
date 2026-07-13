@@ -46,6 +46,7 @@ def create_postgresql_document_with_chunks_and_embeddings(
     content: str,
     embedder: Callable[[str], list[float]] | None = None,
     embedding_model: str = EMBEDDING_MODEL,
+    source: str = "production",
 ) -> dict | None:
     if embedder is None:
         embedder = embed_with_ollama
@@ -66,6 +67,7 @@ def create_postgresql_document_with_chunks_and_embeddings(
         file_type=file_type,
         chunk_count=len(chunks),
         is_indexed=True,
+        source=source,
     )
 
     inserted_chunks = []

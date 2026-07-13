@@ -28,6 +28,7 @@ def ensure_end_to_end_document(
     content: str = END_TO_END_DOCUMENT_CONTENT,
     embedder=embed_with_ollama,
     embedding_model: str = EMBEDDING_MODEL,
+    source: str = "evaluation",
 ) -> dict:
     existing_document = find_document_by_title_from_postgresql(connection, title)
 
@@ -44,6 +45,7 @@ def ensure_end_to_end_document(
         content=content,
         embedder=embedder,
         embedding_model=embedding_model,
+        source=source,
     )
 
     if created is None:
@@ -121,12 +123,14 @@ def evaluate_postgresql_agent_end_to_end(
     timeout_seconds: float = 30,
     embedder=embed_with_ollama,
     generator=generate_with_ollama,
+    source: str = "evaluation",
 ) -> dict:
     document_result = ensure_end_to_end_document(
         connection,
         title=title,
         content=content,
         embedder=embedder,
+        source=source,
     )
 
     if document_result["document"] is None:
@@ -186,6 +190,7 @@ def main():
     print("是否通过：", result["passed"])
     print("是否新建文档：", result["document_created"])
     print("文档标题：", result["document"]["title"] if result["document"] else "")
+    print("文档来源：", result["document"].get("source", "") if result["document"] else "")
     print("问题：", result["question"])
     print("检索后端：", result["retriever_backend"])
     print("检索模式：", result["mode"])

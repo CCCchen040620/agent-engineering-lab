@@ -28,6 +28,10 @@ class Document(BaseModel):
     is_indexed: bool
 
 
+class PostgreSQLDocument(Document):
+    source: str = Field(default="production", min_length=1)
+
+
 class DocumentCreateRequest(BaseModel):
     title: str = Field(min_length=1)
     file_type: str = Field(min_length=1)

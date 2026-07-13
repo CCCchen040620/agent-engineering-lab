@@ -29,6 +29,7 @@ from week05.models import (
     Chunk,
     Document,
     DocumentCreateWithContentRequest,
+    PostgreSQLDocument,
     QuestionSearchRequest,
     QuestionSearchResponse,
     VectorSearchRequest,
@@ -43,7 +44,7 @@ def get_postgresql_database_url() -> str:
     return DATABASE_URL
 
 
-@router.get("/documents", response_model=list[Document])
+@router.get("/documents", response_model=list[PostgreSQLDocument])
 def list_postgresql_documents(
     database_url: str = Depends(get_postgresql_database_url),
 ):
@@ -125,7 +126,7 @@ def backfill_postgresql_embeddings(
 
 @router.post(
     "/documents/with-content",
-    response_model=Document,
+    response_model=PostgreSQLDocument,
     status_code=201,
 )
 def create_postgresql_document_with_content(

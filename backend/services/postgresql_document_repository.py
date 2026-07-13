@@ -5,6 +5,7 @@ def row_to_document(row) -> dict:
         "file_type": row[2],
         "chunk_count": row[3],
         "is_indexed": bool(row[4]),
+        "source": row[5] if len(row) > 5 else "production",
     }
 
 
@@ -21,7 +22,7 @@ def list_documents_from_postgresql(connection) -> list[dict]:
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT id, title, file_type, chunk_count, is_indexed
+            SELECT id, title, file_type, chunk_count, is_indexed, source
             FROM documents
             ORDER BY id
             """
@@ -44,7 +45,7 @@ def find_document_by_title_from_postgresql(
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT id, title, file_type, chunk_count, is_indexed
+            SELECT id, title, file_type, chunk_count, is_indexed, source
             FROM documents
             WHERE title = %s
             """,
@@ -65,15 +66,16 @@ def insert_document_to_postgresql(
     file_type: str,
     chunk_count: int,
     is_indexed: bool,
+    source: str = "production",
 ) -> dict:
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            INSERT INTO documents (title, file_type, chunk_count, is_indexed)
-            VALUES (%s, %s, %s, %s)
-            RETURNING id, title, file_type, chunk_count, is_indexed
+            INSERT INTO documents (title, file_type, chunk_count, is_indexed, source)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id, title, file_type, chunk_count, is_indexed, source
             """,
-            (title, file_type, chunk_count, is_indexed),
+            (title, file_type, chunk_count, is_indexed, source),
         )
 
         row = cursor.fetchone()

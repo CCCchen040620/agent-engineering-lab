@@ -64,11 +64,13 @@ def test_ensure_end_to_end_document_creates_missing_document(monkeypatch):
         content,
         embedder,
         embedding_model,
+        source,
     ):
         captured["title"] = title
         captured["file_type"] = file_type
         captured["content"] = content
         captured["embedding_model"] = embedding_model
+        captured["source"] = source
 
         return {
             "document": {
@@ -77,6 +79,7 @@ def test_ensure_end_to_end_document_creates_missing_document(monkeypatch):
                 "file_type": file_type,
                 "chunk_count": 2,
                 "is_indexed": True,
+                "source": source,
             },
             "chunks": [],
             "embeddings": [],
@@ -102,11 +105,13 @@ def test_ensure_end_to_end_document_creates_missing_document(monkeypatch):
     assert result["created"] is True
     assert result["document"]["title"] == END_TO_END_DOCUMENT_TITLE
     assert result["document"]["is_indexed"] is True
+    assert result["document"]["source"] == "evaluation"
     assert captured == {
         "title": END_TO_END_DOCUMENT_TITLE,
         "file_type": "md",
         "content": END_TO_END_DOCUMENT_CONTENT,
         "embedding_model": "fake-model",
+        "source": "evaluation",
     }
 
 
@@ -255,6 +260,7 @@ def test_evaluate_postgresql_agent_end_to_end(monkeypatch):
         title,
         content,
         embedder,
+        source,
     ):
         return {
             "created": True,

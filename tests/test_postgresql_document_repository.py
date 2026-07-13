@@ -55,7 +55,16 @@ def test_row_to_document():
         "file_type": "md",
         "chunk_count": 12,
         "is_indexed": True,
+        "source": "production",
     }
+
+
+def test_row_to_document_defaults_source_for_legacy_rows():
+    row = (1, "鍛樺伐鎵嬪唽", "md", 12, True)
+
+    document = row_to_document(row)
+
+    assert document["source"] == "production"
 
 
 def test_list_documents_from_postgresql():
@@ -69,8 +78,10 @@ def test_list_documents_from_postgresql():
 
     assert len(documents) == 2
     assert documents[0]["title"] == "员工手册"
+    assert documents[0]["source"] == "production"
     assert documents[1]["is_indexed"] is False
-    assert "SELECT id, title, file_type, chunk_count, is_indexed" in (
+    assert documents[1]["source"] == "production"
+    assert "SELECT id, title, file_type, chunk_count, is_indexed, source" in (
         connection.cursor_instance.sql
     )
 
@@ -78,6 +89,8 @@ def test_list_documents_from_postgresql():
 def test_insert_document_to_postgresql():
     connection = FakeConnection()
     connection.cursor_instance.row = (1, "员工手册", "md", 12, True)
+
+    connection.cursor_instance.row = (*connection.cursor_instance.row, "production")
 
     document = insert_document_to_postgresql(
         connection,
@@ -94,9 +107,10 @@ def test_insert_document_to_postgresql():
         "md",
         12,
         True,
+        "production",
     )
     assert "INSERT INTO documents" in connection.cursor_instance.sql
-    assert "RETURNING id, title, file_type, chunk_count, is_indexed" in (
+    assert "RETURNING id, title, file_type, chunk_count, is_indexed, source" in (
         connection.cursor_instance.sql
     )
     assert connection.committed is True
@@ -172,6 +186,8 @@ def test_find_document_by_title_from_postgresql():
     connection = FakeConnection()
     connection.cursor_instance.row = (1, "员工手册", "md", 12, True)
 
+    connection.cursor_instance.row = (*connection.cursor_instance.row, "production")
+
     document = find_document_by_title_from_postgresql(
         connection,
         title="员工手册",
@@ -183,6 +199,7 @@ def test_find_document_by_title_from_postgresql():
         "file_type": "md",
         "chunk_count": 12,
         "is_indexed": True,
+        "source": "production",
     }
     assert connection.cursor_instance.params == ("员工手册",)
     assert "FROM documents" in connection.cursor_instance.sql

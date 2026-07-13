@@ -39,6 +39,7 @@ def test_list_postgresql_documents_endpoint(monkeypatch):
                 "file_type": "md",
                 "chunk_count": 1,
                 "is_indexed": True,
+                "source": "production",
             }
         ]
 
@@ -72,6 +73,7 @@ def test_list_postgresql_documents_endpoint(monkeypatch):
     )
     assert captured["schema_initialized"] is True
     assert len(data) == 1
+    assert data[0]["source"] == "production"
     assert data[0]["title"] == "PostgreSQL 测试文档"
 
 
@@ -543,6 +545,7 @@ def test_create_postgresql_document_with_content_endpoint(monkeypatch):
                 "file_type": file_type,
                 "chunk_count": 2,
                 "is_indexed": True,
+                "source": "production",
             },
             "chunks": [
                 {
@@ -623,6 +626,7 @@ def test_create_postgresql_document_with_content_endpoint(monkeypatch):
         "file_type": "md",
         "chunk_count": 2,
         "is_indexed": True,
+        "source": "production",
     }
 
 

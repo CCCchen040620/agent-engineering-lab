@@ -14,8 +14,16 @@ def initialize_postgresql_knowledge_schema(connection) -> dict:
                 file_type TEXT NOT NULL,
                 chunk_count INTEGER NOT NULL,
                 is_indexed BOOLEAN NOT NULL DEFAULT FALSE,
+                source TEXT NOT NULL DEFAULT 'production',
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
+            """
+        )
+
+        cursor.execute(
+            """
+            ALTER TABLE documents
+            ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'production'
             """
         )
 
@@ -48,6 +56,7 @@ def initialize_postgresql_knowledge_schema(connection) -> dict:
     return {
         "vector_extension_ready": True,
         "documents_table_ready": True,
+        "documents_source_column_ready": True,
         "chunks_table_ready": True,
         "chunk_embeddings_table_ready": True,
     }
