@@ -189,3 +189,6 @@ python -m streamlit run frontend/admin_documents.py
 - 判断文档是否完成 `precomputed_embedding` 检索准备
 - 一键补齐缺失的 chunk embeddings
 - 补索引会调用 Ollama `bge-m3`，可能需要等待一段时间
+- PostgreSQL 区域会显示文档来源分布，用于快速查看 `production`、`migration`、`evaluation` 各有多少文档
+- PostgreSQL 文档列表支持按来源筛选：`全部`、`production`、`migration`、`evaluation`
+- `production` 表示普通业务数据，`migration` 表示从 SQLite 迁移来的数据，`evaluation` 表示评测/验收数据
