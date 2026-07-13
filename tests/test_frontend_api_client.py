@@ -10,6 +10,8 @@ from frontend.api_client import (
     get_error_detail,
     get_info_api,
     get_system_status_api,
+    list_document_chunks_api,
+    list_documents_api,
     rag_backend_supports_feature,
     submit_feedback_api,
     upload_text_document_api,
@@ -200,6 +202,117 @@ def test_rag_backend_supports_feature():
 
 def test_rag_backend_supports_feature_falls_back_to_true_without_capabilities():
     assert rag_backend_supports_feature(None, "postgresql", "conversation_chat") is True
+
+
+def test_list_documents_api_uses_sqlite_endpoint_by_default(monkeypatch):
+    captured = {}
+
+    def fake_get(url, timeout):
+        captured["url"] = url
+        captured["timeout"] = timeout
+
+        return FakeResponse(
+            200,
+            [
+                {
+                    "id": 1,
+                    "title": "员工手册",
+                    "file_type": "md",
+                    "chunk_count": 3,
+                    "is_indexed": True,
+                }
+            ],
+        )
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    data, error_message = list_documents_api("http://127.0.0.1:8000")
+
+    assert error_message is None
+    assert data[0]["title"] == "员工手册"
+    assert captured["url"] == "http://127.0.0.1:8000/api/v1/db/documents"
+    assert captured["timeout"] == 30
+
+
+def test_list_documents_api_can_use_postgresql_endpoint(monkeypatch):
+    captured = {}
+
+    def fake_get(url, timeout):
+        captured["url"] = url
+        captured["timeout"] = timeout
+
+        return FakeResponse(
+            200,
+            [
+                {
+                    "id": 1,
+                    "title": "PostgreSQL 文档",
+                    "file_type": "md",
+                    "chunk_count": 2,
+                    "is_indexed": True,
+                }
+            ],
+        )
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    data, error_message = list_documents_api(
+        "http://127.0.0.1:8000",
+        backend="postgresql",
+    )
+
+    assert error_message is None
+    assert data[0]["title"] == "PostgreSQL 文档"
+    assert captured["url"] == (
+        "http://127.0.0.1:8000/api/v1/postgresql/documents"
+    )
+
+
+def test_list_document_chunks_api_uses_selected_backend(monkeypatch):
+    captured = {}
+
+    def fake_get(url, timeout):
+        captured["url"] = url
+
+        return FakeResponse(
+            200,
+            [
+                {
+                    "id": 1,
+                    "document_id": 2,
+                    "text": "员工每天需要完成 8 小时工作。",
+                }
+            ],
+        )
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    data, error_message = list_document_chunks_api(
+        "http://127.0.0.1:8000",
+        document_id=2,
+        backend="postgresql",
+    )
+
+    assert error_message is None
+    assert data[0]["document_id"] == 2
+    assert captured["url"] == (
+        "http://127.0.0.1:8000/api/v1/postgresql/documents/2/chunks"
+    )
+
+
+def test_list_documents_api_returns_backend_error(monkeypatch):
+    def fake_get(url, timeout):
+        return FakeResponse(400, {"detail": "DATABASE_URL must be a PostgreSQL URL."})
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    data, error_message = list_documents_api(
+        "http://127.0.0.1:8000",
+        backend="postgresql",
+    )
+
+    assert data is None
+    assert error_message == "DATABASE_URL must be a PostgreSQL URL."
 
 
 def test_get_system_status_api_handles_network_failure(monkeypatch):

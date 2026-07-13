@@ -50,6 +50,56 @@ def rag_backend_supports_feature(
     return feature in capabilities.get("supported_features", [])
 
 
+def get_document_api_prefix(backend: str) -> str:
+    normalized_backend = backend.strip().lower()
+
+    if normalized_backend == "postgresql":
+        return "/api/v1/postgresql"
+
+    return "/api/v1/db"
+
+
+def list_documents_api(
+    base_url: str,
+    backend: str = "sqlite",
+) -> tuple[list[dict] | None, str | None]:
+    """List documents from the selected backend."""
+    try:
+        response = requests.get(
+            base_url + get_document_api_prefix(backend) + "/documents",
+            timeout=30,
+        )
+    except requests.RequestException:
+        return None, "后端服务暂时不可用，请确认 FastAPI 已启动。"
+
+    if response.status_code == 200:
+        return response.json(), None
+
+    return None, get_error_detail(response)
+
+
+def list_document_chunks_api(
+    base_url: str,
+    document_id: int,
+    backend: str = "sqlite",
+) -> tuple[list[dict] | None, str | None]:
+    """List document chunks from the selected backend."""
+    try:
+        response = requests.get(
+            base_url
+            + get_document_api_prefix(backend)
+            + f"/documents/{document_id}/chunks",
+            timeout=30,
+        )
+    except requests.RequestException:
+        return None, "后端服务暂时不可用，请确认 FastAPI 已启动。"
+
+    if response.status_code == 200:
+        return response.json(), None
+
+    return None, get_error_detail(response)
+
+
 def get_system_status_api(base_url: str) -> tuple[dict | None, str | None]:
     """Get backend, database, Ollama, and model status."""
     try:
