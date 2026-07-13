@@ -6,6 +6,7 @@ from week10.evaluate_postgresql_agent_end_to_end import (
     ensure_end_to_end_document,
     evaluate_end_to_end_agent_result,
     evaluate_postgresql_agent_end_to_end,
+    top_citation_matches_expected_document,
 )
 
 
@@ -125,6 +126,49 @@ def test_cites_expected_document():
     assert cites_expected_document(citations, "不存在的文档") is False
 
 
+def test_top_citation_matches_expected_document():
+    citations = [
+        {
+            "title": END_TO_END_DOCUMENT_TITLE,
+            "path": "postgresql://chunk/2",
+        },
+        {
+            "title": "其他文档",
+            "path": "postgresql://chunk/1",
+        },
+    ]
+
+    assert (
+        top_citation_matches_expected_document(
+            citations,
+            END_TO_END_DOCUMENT_TITLE,
+        )
+        is True
+    )
+    assert top_citation_matches_expected_document([], END_TO_END_DOCUMENT_TITLE) is False
+
+
+def test_top_citation_does_not_match_when_expected_document_is_second():
+    citations = [
+        {
+            "title": "其他文档",
+            "path": "postgresql://chunk/1",
+        },
+        {
+            "title": END_TO_END_DOCUMENT_TITLE,
+            "path": "postgresql://chunk/2",
+        },
+    ]
+
+    assert (
+        top_citation_matches_expected_document(
+            citations,
+            END_TO_END_DOCUMENT_TITLE,
+        )
+        is False
+    )
+
+
 def test_evaluate_end_to_end_agent_result_passes_when_expected_document_is_cited():
     result = {
         "answer": "员工参加外部培训需要提前提交申请。",
@@ -146,7 +190,37 @@ def test_evaluate_end_to_end_agent_result_passes_when_expected_document_is_cited
 
     assert evaluation["passed"] is True
     assert evaluation["cited_expected_document"] is True
+    assert evaluation["top_citation_matched"] is True
     assert evaluation["citation_count"] == 1
+
+
+def test_evaluate_end_to_end_agent_result_fails_when_expected_document_is_not_top1():
+    result = {
+        "answer": "员工参加外部培训需要提前提交申请。",
+        "has_valid_context": True,
+        "is_fallback": False,
+        "citations": [
+            {
+                "title": "其他文档",
+                "text": "员工参加外部培训需要提前提交申请。",
+                "path": "postgresql://chunk/9",
+            },
+            {
+                "title": END_TO_END_DOCUMENT_TITLE,
+                "text": "员工参加外部培训需要提前提交申请。",
+                "path": "postgresql://chunk/10",
+            },
+        ],
+    }
+
+    evaluation = evaluate_end_to_end_agent_result(
+        result,
+        expected_title=END_TO_END_DOCUMENT_TITLE,
+    )
+
+    assert evaluation["passed"] is False
+    assert evaluation["cited_expected_document"] is True
+    assert evaluation["top_citation_matched"] is False
 
 
 def test_evaluate_end_to_end_agent_result_fails_when_wrong_document_is_cited():
@@ -231,6 +305,7 @@ def test_evaluate_postgresql_agent_end_to_end(monkeypatch):
     assert result["question"] == END_TO_END_QUESTION
     assert result["retriever_backend"] == "postgresql"
     assert result["cited_expected_document"] is True
+    assert result["top_citation_matched"] is True
 
     assert captured_call["question"] == END_TO_END_QUESTION
     assert captured_call["top_k"] == 3

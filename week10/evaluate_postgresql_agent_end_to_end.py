@@ -66,6 +66,21 @@ def cites_expected_document(citations: list[dict], expected_title: str) -> bool:
     return False
 
 
+def top_citation_matches_expected_document(
+    citations: list[dict],
+    expected_title: str,
+) -> bool:
+    if citations == []:
+        return False
+
+    top_citation = citations[0]
+
+    return (
+        top_citation.get("title") == expected_title
+        and is_postgresql_citation(top_citation)
+    )
+
+
 def evaluate_end_to_end_agent_result(
     result: dict,
     expected_title: str,
@@ -73,10 +88,14 @@ def evaluate_end_to_end_agent_result(
     citations = result.get("citations", [])
     has_valid_context = result.get("has_valid_context") is True
     cited_expected_document = cites_expected_document(citations, expected_title)
+    top_citation_matched = top_citation_matches_expected_document(
+        citations,
+        expected_title,
+    )
     passed = (
         has_valid_context
         and result.get("is_fallback") is False
-        and cited_expected_document
+        and top_citation_matched
     )
 
     return {
@@ -86,6 +105,7 @@ def evaluate_end_to_end_agent_result(
         "is_fallback": result.get("is_fallback", False),
         "citation_count": len(citations),
         "cited_expected_document": cited_expected_document,
+        "top_citation_matched": top_citation_matched,
         "citations": citations,
     }
 
@@ -120,6 +140,7 @@ def evaluate_postgresql_agent_end_to_end(
             "is_fallback": False,
             "citation_count": 0,
             "cited_expected_document": False,
+            "top_citation_matched": False,
             "citations": [],
         }
 
@@ -173,6 +194,7 @@ def main():
     print("has_valid_context：", result["has_valid_context"])
     print("是否兜底回答：", result["is_fallback"])
     print("是否引用验收文档：", result["cited_expected_document"])
+    print("Top1 是否引用验收文档：", result["top_citation_matched"])
     print("引用数量：", result["citation_count"])
     print("回答：", result["answer"])
 
