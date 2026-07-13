@@ -7,7 +7,9 @@ from backend.services.postgresql_document_repository import (
     row_to_chunk,
     row_to_document,
     update_document_source_by_title_from_postgresql,
+    delete_documents_by_source_from_postgresql,
 )
+
 
 class FakeCursor:
     def __init__(self):
@@ -285,3 +287,22 @@ def test_find_document_by_title_from_postgresql_returns_none_when_not_found():
 
     assert document is None
     assert connection.cursor_instance.params == ("不存在的文档",)
+
+
+def test_delete_documents_by_source_from_postgresql():
+    connection = FakeConnection()
+    connection.cursor_instance.rows = [
+        (1,),
+        (2,),
+    ]
+
+    deleted_count = delete_documents_by_source_from_postgresql(
+        connection,
+        source="evaluation",
+    )
+
+    assert deleted_count == 2
+    assert connection.cursor_instance.params == ("evaluation",)
+    assert "DELETE FROM documents" in connection.cursor_instance.sql
+    assert "WHERE source = %s" in connection.cursor_instance.sql
+    assert connection.committed is True

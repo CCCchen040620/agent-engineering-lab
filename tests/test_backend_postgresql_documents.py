@@ -808,3 +808,46 @@ def test_create_postgresql_document_with_content_returns_503_when_embedding_fail
 
     assert response.status_code == 503
     assert "PostgreSQL 文档索引失败" in response.json()["detail"]
+
+
+def test_delete_postgresql_evaluation_documents_endpoint(monkeypatch):
+    captured = {}
+
+    def fake_connect(database_url: str):
+        captured["database_url"] = database_url
+        return FakeConnection()
+
+    def fake_initialize_schema(connection):
+        captured["schema_initialized"] = True
+
+    def fake_delete_documents(connection, source: str):
+        captured["source"] = source
+        return 2
+
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.psycopg.connect",
+        fake_connect,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.initialize_postgresql_knowledge_schema",
+        fake_initialize_schema,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.delete_documents_by_source_from_postgresql",
+        fake_delete_documents,
+    )
+
+    app.dependency_overrides[get_postgresql_database_url] = lambda: (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+
+    response = client.delete("/api/v1/postgresql/documents/evaluation")
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 200
+    assert captured["source"] == "evaluation"
+    assert response.json() == {
+        "message": "评测文档已清理。",
+        "deleted_count": 2,
+    }

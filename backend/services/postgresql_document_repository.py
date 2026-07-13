@@ -191,3 +191,24 @@ def list_all_chunks_from_postgresql(connection) -> list[dict]:
         chunks.append(row_to_chunk(row))
 
     return chunks
+
+
+def delete_documents_by_source_from_postgresql(
+    connection,
+    source: str,
+) -> int:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            DELETE FROM documents
+            WHERE source = %s
+            RETURNING id
+            """,
+            (source,),
+        )
+
+        rows = cursor.fetchall()
+
+    connection.commit()
+
+    return len(rows)
