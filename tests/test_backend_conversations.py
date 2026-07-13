@@ -8,10 +8,17 @@ from backend.routers.db_documents import get_database_path
 client = TestClient(app)
 
 
-def test_conversation_endpoint_uses_config_database_path(tmp_path, monkeypatch):
+def test_conversation_endpoint_uses_sqlite_admin_database_path(
+    tmp_path,
+    monkeypatch,
+):
     app.dependency_overrides.clear()
     database_path = tmp_path / "configured.db"
-    monkeypatch.setattr(db_documents, "DATABASE_PATH", str(database_path))
+    monkeypatch.setattr(
+        db_documents,
+        "SQLITE_ADMIN_DATABASE_PATH",
+        str(database_path),
+    )
 
     response = client.post(
         "/api/v1/conversations",

@@ -36,6 +36,10 @@ if is_sqlite_database(DATABASE_URL):
     DATABASE_PATH = get_sqlite_path_from_database_url(DATABASE_URL)
 else:
     DATABASE_PATH = ""
+SQLITE_ADMIN_DATABASE_PATH = os.getenv(
+    "SQLITE_ADMIN_DATABASE_PATH",
+    "data/app.db",
+)
 LLM_MODEL = os.getenv("LLM_MODEL", "qwen3.6:latest")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "bge-m3:latest")
 

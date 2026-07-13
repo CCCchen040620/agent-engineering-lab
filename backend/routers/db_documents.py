@@ -1,6 +1,10 @@
 """SQLite-backed API routes for document management and RAG chat."""
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
-from backend.config import DATABASE_PATH, DEFAULT_MIN_SCORE, DEFAULT_TOP_K
+from backend.config import (
+    DEFAULT_MIN_SCORE,
+    DEFAULT_TOP_K,
+    SQLITE_ADMIN_DATABASE_PATH,
+)
 from backend.services.document_indexing_service import (
     DocumentIndexingError,
     create_document_with_chunks_and_embeddings,
@@ -39,7 +43,7 @@ router = APIRouter(prefix="/api/v1/db")
 
 
 def get_database_path() -> str:
-    return DATABASE_PATH
+    return SQLITE_ADMIN_DATABASE_PATH
 
 
 @router.get("/documents", response_model=list[Document])

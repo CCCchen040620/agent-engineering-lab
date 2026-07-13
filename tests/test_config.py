@@ -17,6 +17,7 @@ from backend.config import (
     RATE_LIMIT_WINDOW_SECONDS,
     SLOW_REQUEST_THRESHOLD_MS,
     RAG_RETRIEVER_BACKEND,
+    SQLITE_ADMIN_DATABASE_PATH,
 )
 
 
@@ -35,6 +36,7 @@ def test_default_config_values():
     assert SLOW_REQUEST_THRESHOLD_MS == 1000.0
     assert DATABASE_URL == "sqlite:///data/app.db"
     assert DATABASE_PATH == "data/app.db"
+    assert SQLITE_ADMIN_DATABASE_PATH == "data/app.db"
     assert RAG_RETRIEVER_BACKEND == "sqlite"
 
 
@@ -52,6 +54,7 @@ def test_config_can_read_environment_variables(monkeypatch):
     monkeypatch.setenv("RATE_LIMIT_MAX_REQUESTS", "10")
     monkeypatch.setenv("SLOW_REQUEST_THRESHOLD_MS", "500")
     monkeypatch.setenv("DATABASE_URL", "sqlite:///test.db")
+    monkeypatch.setenv("SQLITE_ADMIN_DATABASE_PATH", "data/admin-test.db")
     monkeypatch.setenv("RAG_RETRIEVER_BACKEND", "postgresql")
 
     reloaded_config = importlib.reload(config)
@@ -70,6 +73,7 @@ def test_config_can_read_environment_variables(monkeypatch):
     assert reloaded_config.SLOW_REQUEST_THRESHOLD_MS == 500.0
     assert reloaded_config.DATABASE_URL == "sqlite:///test.db"
     assert reloaded_config.DATABASE_PATH == "test.db"
+    assert reloaded_config.SQLITE_ADMIN_DATABASE_PATH == "data/admin-test.db"
     assert reloaded_config.RAG_RETRIEVER_BACKEND == "postgresql"
 
     monkeypatch.delenv("OLLAMA_BASE_URL")
@@ -85,6 +89,7 @@ def test_config_can_read_environment_variables(monkeypatch):
     monkeypatch.delenv("RATE_LIMIT_MAX_REQUESTS")
     monkeypatch.delenv("SLOW_REQUEST_THRESHOLD_MS")
     monkeypatch.delenv("DATABASE_URL")
+    monkeypatch.delenv("SQLITE_ADMIN_DATABASE_PATH")
     monkeypatch.delenv("RAG_RETRIEVER_BACKEND")
 
     importlib.reload(config)
@@ -169,10 +174,11 @@ def test_config_can_read_dotenv_file(tmp_path, monkeypatch):
 
 
 def test_default_database_url():
-    from backend.config import DATABASE_PATH, DATABASE_URL
+    from backend.config import DATABASE_PATH, DATABASE_URL, SQLITE_ADMIN_DATABASE_PATH
 
     assert DATABASE_URL == "sqlite:///data/app.db"
     assert DATABASE_PATH == "data/app.db"
+    assert SQLITE_ADMIN_DATABASE_PATH == "data/app.db"
 
 
 def test_config_can_read_postgresql_database_url(monkeypatch):
@@ -187,6 +193,7 @@ def test_config_can_read_postgresql_database_url(monkeypatch):
         "postgresql://agent_user:agent_password@localhost:5432/agent_db"
     )
     assert reloaded_config.DATABASE_PATH == ""
+    assert reloaded_config.SQLITE_ADMIN_DATABASE_PATH == "data/app.db"
 
     monkeypatch.delenv("DATABASE_URL", raising=False)
     importlib.reload(config)
