@@ -18,6 +18,11 @@ DEFAULT_QUESTIONS = [
     },
 ]
 
+DEFAULT_UNKNOWN_QUESTIONS = [
+    "公司有没有股票期权？",
+    "公司食堂几点开门？",
+]
+
 DEFAULT_MIN_SCORES = [0.0, 0.6, 0.8]
 
 
@@ -108,6 +113,61 @@ def evaluate_postgresql_retrieval_for_min_scores(
     return results
 
 
+def evaluate_postgresql_unknown_questions(
+    connection,
+    questions: list[str],
+    top_k: int = 2,
+    min_score: float = 0.8,
+) -> dict:
+    items = []
+    passed_count = 0
+
+    for question in questions:
+        search_result = search_postgresql_chunks_by_question(
+            connection,
+            question=question,
+            top_k=top_k,
+            min_score=min_score,
+        )
+
+        results = search_result["results"]
+
+        top_result_text = ""
+
+        if len(results) > 0:
+            top_result_text = results[0]["text"]
+
+        passed = len(results) == 0
+
+        if passed:
+            passed_count = passed_count + 1
+
+        items.append(
+            {
+                "question": question,
+                "passed": passed,
+                "result_count": len(results),
+                "top_result_text": top_result_text,
+            }
+        )
+
+    total = len(questions)
+
+    refusal_rate = 0.0
+
+    if total > 0:
+        refusal_rate = passed_count / total
+
+    return {
+        "total": total,
+        "passed": passed_count,
+        "refusal_rate": refusal_rate,
+        "top_k": top_k,
+        "min_score": min_score,
+        "items": items,
+    }
+
+
 def main():
     if not is_postgresql_database(DATABASE_URL):
         print("DATABASE_URL 不是 PostgreSQL 地址，已停止。")
@@ -119,6 +179,12 @@ def main():
             connection,
             questions=DEFAULT_QUESTIONS,
             top_k=2,
+        )
+        unknown_result = evaluate_postgresql_unknown_questions(
+            connection,
+            questions=DEFAULT_UNKNOWN_QUESTIONS,
+            top_k=2,
+            min_score=0.8,
         )
 
     print("PostgreSQL 检索评测完成。")
@@ -137,6 +203,21 @@ def main():
             print("期望片段：", item["expected_text"])
             print("Top1 片段：", item["top_result_text"])
             print("是否通过：", item["passed"])
+
+    print("=" * 50)
+    print("PostgreSQL 无答案问题评测完成。")
+    print("top_k：", unknown_result["top_k"])
+    print("min_score：", unknown_result["min_score"])
+    print("无答案问题数量：", unknown_result["total"])
+    print("正确无召回数量：", unknown_result["passed"])
+    print("无召回率：", unknown_result["refusal_rate"])
+
+    for item in unknown_result["items"]:
+        print("-" * 50)
+        print("问题：", item["question"])
+        print("返回结果数量：", item["result_count"])
+        print("Top1 片段：", item["top_result_text"])
+        print("是否通过：", item["passed"])
 
 
 if __name__ == "__main__":
