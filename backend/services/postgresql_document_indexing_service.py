@@ -4,6 +4,7 @@ from backend.config import EMBEDDING_MODEL
 from backend.services.document_indexing_service import split_text_into_chunks
 from backend.services.ollama_embedding_service import embed_with_ollama
 from backend.services.postgresql_document_repository import (
+    find_document_by_title_from_postgresql,
     insert_chunk_to_postgresql,
     insert_document_to_postgresql,
 )
@@ -52,6 +53,9 @@ def create_postgresql_document_with_chunks_and_embeddings(
     chunks = split_text_into_chunks(content)
 
     if chunks == []:
+        return None
+
+    if find_document_by_title_from_postgresql(connection, title) is not None:
         return None
 
     embeddings = create_embeddings_for_chunks(chunks, embedder)
