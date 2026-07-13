@@ -1503,3 +1503,80 @@ POST /api/v1/langgraph-agent/chat?retriever_backend=postgresql&top_k=2&mode=prec
 - 对于 PostgreSQL / pgvector 检索，`validate_context_node` 不只依赖关键词包含判断；当检索片段相似度分数足够高时，也可以判定为有效上下文。
 - 当前只有无会话版本 `POST /api/v1/langgraph-agent/chat` 支持 `retriever_backend=postgresql`。
 - `POST /api/v1/langgraph-agent/chat/stream` 和 `POST /api/v1/langgraph-agent/conversations/{conversation_id}/chat` 目前仍保护性禁用 PostgreSQL retriever，后续再逐步接入。
+
+## PostgreSQL evaluation 数据管理接口
+
+PostgreSQL 文档表支持用 `source` 区分正式数据和评测数据：
+
+```text
+production  正式/默认数据
+evaluation  评测验收数据
+```
+
+### GET /api/v1/postgresql/documents?source=evaluation
+
+按来源过滤 PostgreSQL 文档列表。
+
+示例：
+
+```text
+GET /api/v1/postgresql/documents?source=evaluation
+GET /api/v1/postgresql/documents?source=production
+```
+
+说明：
+
+- 不传 `source` 时返回全部 PostgreSQL 文档。
+- 传 `source=evaluation` 时只返回评测文档。
+- 传 `source=production` 时只返回正式/默认文档。
+
+### GET /api/v1/postgresql/documents/evaluation/cleanup-preview
+
+预览清理 `evaluation` 数据会影响多少内容。
+
+返回示例：
+
+```json
+{
+  "source": "evaluation",
+  "document_count": 1,
+  "chunk_count": 2,
+  "embedding_count": 2,
+  "documents": [
+    {
+      "id": 6,
+      "title": "PostgreSQL Agent 端到端验收文档"
+    }
+  ]
+}
+```
+
+说明：
+
+- 该接口只读，不会删除数据。
+- 适合在执行清理前确认影响范围。
+
+### DELETE /api/v1/postgresql/documents/evaluation?confirm=true
+
+清理 `source=evaluation` 的 PostgreSQL 评测文档。
+
+示例：
+
+```text
+DELETE /api/v1/postgresql/documents/evaluation?confirm=true
+```
+
+返回示例：
+
+```json
+{
+  "message": "评测文档已清理。",
+  "deleted_count": 1
+}
+```
+
+说明：
+
+- 必须显式传入 `confirm=true`，否则返回 `400`。
+- 该接口只清理 `source=evaluation` 的文档。
+- `source=production` 的正式文档不会被清理。

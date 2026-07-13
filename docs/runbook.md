@@ -1972,3 +1972,77 @@ postgresql://chunk/2
 ```powershell
 Remove-Item Env:DATABASE_URL
 ```
+
+## 清理 PostgreSQL evaluation 评测数据
+
+PostgreSQL 文档支持用 `source` 区分数据来源：
+
+```text
+production  正式/默认数据
+evaluation  评测验收数据
+```
+
+评测脚本可能会写入 `source=evaluation` 的文档。清理前建议先预览影响范围。
+
+### 1. 启动 PostgreSQL 并设置数据库地址
+
+```powershell
+docker compose up -d postgres
+$env:DATABASE_URL="postgresql://agent_user:agent_password@localhost:5432/agent_db"
+```
+
+### 2. 先运行清理预览脚本
+
+```powershell
+.\.venv\Scripts\python.exe -m week10.preview_postgresql_evaluation_cleanup
+```
+
+该脚本只会输出会影响的文档数、chunks 数和 embeddings 数，不会删除数据。
+
+### 3. 也可以通过 API 预览
+
+用 PostgreSQL `DATABASE_URL` 启动后端：
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn backend.main:app --reload --port 8001
+```
+
+然后访问：
+
+```text
+GET /api/v1/postgresql/documents/evaluation/cleanup-preview
+```
+
+### 4. 确认后再执行清理
+
+```text
+DELETE /api/v1/postgresql/documents/evaluation?confirm=true
+```
+
+注意：
+
+- 不带 `confirm=true` 会返回 `400`，不会执行删除。
+- 该接口只清理 `source=evaluation` 的文档。
+- `source=production` 的正式文档不会被删除。
+
+### 5. 清理后验证
+
+查看 evaluation 文档：
+
+```text
+GET /api/v1/postgresql/documents?source=evaluation
+```
+
+预期返回空列表：
+
+```json
+[]
+```
+
+再查看 production 文档：
+
+```text
+GET /api/v1/postgresql/documents?source=production
+```
+
+如果还能看到正式文档，说明清理没有影响 production 数据。
