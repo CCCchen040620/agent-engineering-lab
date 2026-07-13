@@ -1,5 +1,9 @@
 from fastapi import APIRouter
 
+from backend.services.rag_backend_capability_service import (
+    list_rag_backend_capabilities,
+)
+
 
 router = APIRouter(prefix="/api/v1")
 
@@ -42,5 +46,7 @@ def get_info():
             "system_status_diagnostics",
             "postgresql_status_diagnostics",
             "basic_in_memory_rate_limiting",
+            "rag_backend_capability_matrix",
         ],
+        "rag_backends": list_rag_backend_capabilities(),
     }
