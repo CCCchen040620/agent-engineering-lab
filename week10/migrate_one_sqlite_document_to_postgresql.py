@@ -24,6 +24,7 @@ from backend.services.sqlite_document_repository import (
     create_documents_table,
     find_document_from_db_by_title,
     list_chunks_by_document_id,
+    list_documents_from_db,
 )
 from week10.seed_sqlite_migration_sample import SQLITE_MIGRATION_SAMPLE_TITLE
 
@@ -31,6 +32,9 @@ from week10.seed_sqlite_migration_sample import SQLITE_MIGRATION_SAMPLE_TITLE
 class RealSqliteMigrationRepository:
     def __init__(self, connection):
         self.connection = connection
+
+    def list_documents(self):
+        return list_documents_from_db(self.connection)
 
     def find_document_by_title(self, title: str):
         return find_document_from_db_by_title(self.connection, title)
