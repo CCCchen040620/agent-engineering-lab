@@ -226,6 +226,114 @@ def test_list_postgresql_embedding_status_rejects_sqlite_url():
     assert "PostgreSQL URL" in response.json()["detail"]
 
 
+def test_backfill_postgresql_embeddings_endpoint(monkeypatch):
+    captured = {}
+
+    def fake_connect(database_url: str):
+        captured["database_url"] = database_url
+        return FakeConnection()
+
+    def fake_initialize_schema(connection):
+        captured["schema_initialized"] = True
+
+    def fake_backfill_embeddings(connection):
+        captured["backfilled"] = True
+
+        return {
+            "total_chunks": 3,
+            "updated": 1,
+            "skipped": 2,
+            "model": "bge-m3:latest",
+        }
+
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.psycopg.connect",
+        fake_connect,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.initialize_postgresql_knowledge_schema",
+        fake_initialize_schema,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents."
+        "backfill_missing_postgresql_chunk_embeddings",
+        fake_backfill_embeddings,
+    )
+
+    app.dependency_overrides[get_postgresql_database_url] = lambda: (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+
+    response = client.post("/api/v1/postgresql/embeddings/backfill")
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert captured["database_url"] == (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+    assert captured["schema_initialized"] is True
+    assert captured["backfilled"] is True
+    assert data == {
+        "total_chunks": 3,
+        "updated": 1,
+        "skipped": 2,
+        "model": "bge-m3:latest",
+    }
+
+
+def test_backfill_postgresql_embeddings_rejects_sqlite_url():
+    app.dependency_overrides[get_postgresql_database_url] = lambda: "sqlite:///data/app.db"
+
+    response = client.post("/api/v1/postgresql/embeddings/backfill")
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 400
+    assert "PostgreSQL URL" in response.json()["detail"]
+
+
+def test_backfill_postgresql_embeddings_returns_503_when_backfill_fails(
+    monkeypatch,
+):
+    def fake_connect(database_url: str):
+        return FakeConnection()
+
+    def fake_initialize_schema(connection):
+        pass
+
+    def fake_backfill_embeddings(connection):
+        raise RuntimeError("Ollama embedding failed")
+
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.psycopg.connect",
+        fake_connect,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.initialize_postgresql_knowledge_schema",
+        fake_initialize_schema,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents."
+        "backfill_missing_postgresql_chunk_embeddings",
+        fake_backfill_embeddings,
+    )
+
+    app.dependency_overrides[get_postgresql_database_url] = lambda: (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+
+    response = client.post("/api/v1/postgresql/embeddings/backfill")
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 503
+    assert "PostgreSQL embedding 回填失败" in response.json()["detail"]
+
+
 def test_search_postgresql_chunks_by_vector_endpoint(monkeypatch):
     captured = {}
 

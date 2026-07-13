@@ -15,6 +15,9 @@ from backend.services.postgresql_document_repository import (
 from backend.services.postgresql_embedding_repository import (
     summarize_document_embedding_status_from_postgresql,
 )
+from backend.services.postgresql_embedding_backfill_service import (
+    backfill_missing_postgresql_chunk_embeddings,
+)
 from backend.services.postgresql_schema_service import (
     initialize_postgresql_knowledge_schema,
 )
@@ -95,6 +98,29 @@ def list_postgresql_embedding_status(
         )
 
     return statuses
+
+
+@router.post("/embeddings/backfill")
+def backfill_postgresql_embeddings(
+    database_url: str = Depends(get_postgresql_database_url),
+):
+    if not is_postgresql_database(database_url):
+        raise HTTPException(
+            status_code=400,
+            detail="DATABASE_URL must be a PostgreSQL URL.",
+        )
+
+    with psycopg.connect(database_url) as connection:
+        initialize_postgresql_knowledge_schema(connection)
+        try:
+            result = backfill_missing_postgresql_chunk_embeddings(connection)
+        except Exception as error:
+            raise HTTPException(
+                status_code=503,
+                detail=f"PostgreSQL embedding 回填失败：{error}",
+            ) from error
+
+    return result
 
 
 @router.post(
