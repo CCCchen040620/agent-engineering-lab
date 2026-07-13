@@ -11,6 +11,8 @@ RAG_BACKEND_CAPABILITIES = {
         "supported_features": [
             "document_listing",
             "document_indexing",
+            "document_content_indexing",
+            "txt_file_upload",
             "chunk_listing",
             "rag_retrieval",
             "llm_chat",
@@ -34,6 +36,7 @@ RAG_BACKEND_CAPABILITIES = {
         "supported_features": [
             "document_listing",
             "document_indexing",
+            "document_content_indexing",
             "chunk_listing",
             "pgvector_retrieval",
             "langgraph_agent_chat",
@@ -43,6 +46,7 @@ RAG_BACKEND_CAPABILITIES = {
             "conversation_chat",
             "streaming_chat",
             "feedback_storage",
+            "txt_file_upload",
         ],
         "notes": [
             "PostgreSQL is currently used for pgvector retrieval experiments.",

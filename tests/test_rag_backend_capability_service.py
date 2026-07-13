@@ -11,6 +11,8 @@ def test_get_sqlite_backend_capabilities():
     assert capabilities["backend"] == "sqlite"
     assert capabilities["stage"] == "default"
     assert "conversation_chat" in capabilities["supported_features"]
+    assert "document_content_indexing" in capabilities["supported_features"]
+    assert "txt_file_upload" in capabilities["supported_features"]
     assert capabilities["unsupported_features"] == []
 
 
@@ -20,8 +22,10 @@ def test_get_postgresql_backend_capabilities():
     assert capabilities["backend"] == "postgresql"
     assert capabilities["stage"] == "experimental"
     assert "pgvector_retrieval" in capabilities["supported_features"]
+    assert "document_content_indexing" in capabilities["supported_features"]
     assert "conversation_chat" in capabilities["unsupported_features"]
     assert "streaming_chat" in capabilities["unsupported_features"]
+    assert "txt_file_upload" in capabilities["unsupported_features"]
 
 
 def test_get_backend_capabilities_normalizes_backend_name():
@@ -43,3 +47,5 @@ def test_list_rag_backend_capabilities_contains_sqlite_and_postgresql():
 def test_rag_backend_supports_feature():
     assert rag_backend_supports_feature("sqlite", "conversation_chat") is True
     assert rag_backend_supports_feature("postgresql", "conversation_chat") is False
+    assert rag_backend_supports_feature("sqlite", "txt_file_upload") is True
+    assert rag_backend_supports_feature("postgresql", "txt_file_upload") is False

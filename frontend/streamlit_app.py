@@ -33,6 +33,7 @@ if "chat_history" not in st.session_state:
 
 
 LANGGRAPH_AGENT_ENGINE = "LangGraph Agent 问答"
+SQLITE_BACKEND_LABEL = "SQLite（默认）"
 POSTGRESQL_BACKEND_LABEL = "PostgreSQL / pgvector（本地实验）"
 CHAT_ENGINE_FEATURES = {
     "普通 RAG 问答": "llm_chat",
@@ -90,6 +91,13 @@ def backend_supports(
         backend=backend,
         feature=feature,
     )
+
+
+def backend_label_to_backend(label: str) -> str:
+    if label == POSTGRESQL_BACKEND_LABEL:
+        return "postgresql"
+
+    return "sqlite"
 
 
 def format_agent_step(step_index: int, step: dict) -> str:
@@ -196,14 +204,11 @@ with st.sidebar:
 
     retriever_backend_label = st.radio(
     "检索后端",
-    ["SQLite（默认）", POSTGRESQL_BACKEND_LABEL],
+    [SQLITE_BACKEND_LABEL, POSTGRESQL_BACKEND_LABEL],
     index=0,
     )
 
-    if retriever_backend_label == POSTGRESQL_BACKEND_LABEL:
-        retriever_backend = "postgresql"
-    else:
-        retriever_backend = "sqlite"
+    retriever_backend = backend_label_to_backend(retriever_backend_label)
 
     if retriever_backend == "postgresql":
         st.info(
@@ -311,10 +316,11 @@ with st.sidebar:
 
     document_storage_backend = st.selectbox(
         "入库后端",
-        ["SQLite（默认）", "PostgreSQL / pgvector（本地实验）"],
+        [SQLITE_BACKEND_LABEL, POSTGRESQL_BACKEND_LABEL],
     )
+    document_storage_backend_name = backend_label_to_backend(document_storage_backend)
 
-    if document_storage_backend == "PostgreSQL / pgvector（本地实验）":
+    if document_storage_backend_name == "postgresql":
         st.info(
             "PostgreSQL / pgvector 入库需要后端使用 PostgreSQL DATABASE_URL 启动，"
             "并确保 Ollama 和 bge-m3 可用。"
@@ -339,9 +345,13 @@ with st.sidebar:
 
     if st.button("新增并索引"):
         if uploaded_file is not None:
-            if document_storage_backend == "PostgreSQL / pgvector（本地实验）":
+            if not backend_supports(
+                info,
+                document_storage_backend_name,
+                "txt_file_upload",
+            ):
                 st.warning(
-                    "PostgreSQL / pgvector 入库暂不支持 txt 文件上传，"
+                    f"{document_storage_backend} 当前不支持 txt 文件上传，"
                     "请把文本粘贴到“文档正文”后再新增。"
                 )
             else:
@@ -362,7 +372,15 @@ with st.sidebar:
         elif document_title.strip() == "" or document_content.strip() == "":
             st.warning("文档标题和正文不能为空。")
         else:
-            if document_storage_backend == "PostgreSQL / pgvector（本地实验）":
+            if not backend_supports(
+                info,
+                document_storage_backend_name,
+                "document_content_indexing",
+            ):
+                st.warning(
+                    f"{document_storage_backend} 当前不支持粘贴正文入库。"
+                )
+            elif document_storage_backend_name == "postgresql":
                 with st.spinner(
                     "正在写入 PostgreSQL、切分 chunks 并生成 pgvector embeddings..."
                 ):
