@@ -9,7 +9,21 @@ def migrate_sqlite_documents_to_postgresql(
     embedder,
     embedding_model: str,
     source: str = "migration",
+    confirm: bool = False,
 ) -> dict:
+    if confirm is False:
+        return {
+            "confirmed": False,
+            "blocked": True,
+            "reason": "confirm_required",
+            "total_sqlite_documents": 0,
+            "created_document_count": 0,
+            "skipped_document_count": 0,
+            "migrated_chunk_count": 0,
+            "embedding_count": 0,
+            "source": source,
+            "items": [],
+        }
     sqlite_documents = sqlite_repository.list_documents()
     items = []
 
@@ -40,6 +54,9 @@ def migrate_sqlite_documents_to_postgresql(
         embedding_count = embedding_count + item["embedding_count"]
 
     return {
+        "confirmed": True,
+        "blocked": False,
+        "reason": "",
         "total_sqlite_documents": len(sqlite_documents),
         "created_document_count": created_document_count,
         "skipped_document_count": skipped_document_count,

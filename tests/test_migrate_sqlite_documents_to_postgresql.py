@@ -100,6 +100,7 @@ def test_migrate_sqlite_documents_to_postgresql_skips_existing_documents():
         postgresql_repository=postgresql_repository,
         embedder=lambda text, model: [0.1, 0.2],
         embedding_model="fake-model",
+        confirm=True,
     )
 
     assert result["total_sqlite_documents"] == 2
@@ -108,6 +109,8 @@ def test_migrate_sqlite_documents_to_postgresql_skips_existing_documents():
     assert result["migrated_chunk_count"] == 1
     assert result["embedding_count"] == 1
     assert result["source"] == "migration"
+    assert result["confirmed"] is True
+    assert result["blocked"] is False
 
     assert result["items"][0]["title"] == "员工手册"
     assert result["items"][0]["skipped"] is True
@@ -130,6 +133,7 @@ def test_migrate_sqlite_documents_to_postgresql_handles_empty_sqlite():
         postgresql_repository=FakePostgresqlRepository(),
         embedder=lambda text, model: [0.1, 0.2],
         embedding_model="fake-model",
+        confirm=True,
     )
 
     assert result["total_sqlite_documents"] == 0
@@ -138,3 +142,34 @@ def test_migrate_sqlite_documents_to_postgresql_handles_empty_sqlite():
     assert result["migrated_chunk_count"] == 0
     assert result["embedding_count"] == 0
     assert result["items"] == []
+    assert result["confirmed"] is True
+    assert result["blocked"] is False
+
+
+def test_migrate_sqlite_documents_to_postgresql_requires_confirm():
+    sqlite_repository = FakeSqliteRepository()
+    postgresql_repository = FakePostgresqlRepository()
+
+    result = migrate_sqlite_documents_to_postgresql(
+        sqlite_repository=sqlite_repository,
+        postgresql_repository=postgresql_repository,
+        embedder=lambda text, model: [0.1, 0.2],
+        embedding_model="fake-model",
+    )
+
+    assert result == {
+        "confirmed": False,
+        "blocked": True,
+        "reason": "confirm_required",
+        "total_sqlite_documents": 0,
+        "created_document_count": 0,
+        "skipped_document_count": 0,
+        "migrated_chunk_count": 0,
+        "embedding_count": 0,
+        "source": "migration",
+        "items": [],
+    }
+
+    assert postgresql_repository.inserted_documents == []
+    assert postgresql_repository.inserted_chunks == []
+    assert postgresql_repository.inserted_embeddings == []
