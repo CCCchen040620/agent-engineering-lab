@@ -86,6 +86,7 @@ class VectorSearchResult(BaseModel):
 class QuestionSearchRequest(BaseModel):
     question: str = Field(min_length=1)
     top_k: int = 3
+    min_score: float = 0.0
 
 
 class QuestionSearchResponse(BaseModel):

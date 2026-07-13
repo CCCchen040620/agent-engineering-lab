@@ -201,6 +201,7 @@ def search_postgresql_chunks_by_natural_language_question(
             connection,
             question=request.question,
             top_k=request.top_k,
+            min_score=request.min_score,
         )
 
     return result

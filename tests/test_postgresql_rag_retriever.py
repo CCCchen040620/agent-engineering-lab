@@ -14,10 +14,12 @@ def test_retrieve_postgresql_snippets(monkeypatch):
         connection,
         question: str,
         top_k: int,
+        min_score: float,
     ):
         captured["connection"] = connection
         captured["question"] = question
         captured["top_k"] = top_k
+        captured["min_score"] = min_score
 
         return {
             "question": question,
@@ -58,6 +60,7 @@ def test_retrieve_postgresql_snippets(monkeypatch):
     assert captured["connection"] == connection
     assert captured["question"] == "员工每天需要工作多久？"
     assert captured["top_k"] == 2
+    assert captured["min_score"] == 0.0
 
     assert snippets == [
         {
@@ -80,6 +83,7 @@ def test_retrieve_postgresql_snippets_returns_empty_list(monkeypatch):
         connection,
         question: str,
         top_k: int,
+        min_score: float,
     ):
         return {
             "question": question,
@@ -102,11 +106,16 @@ def test_retrieve_postgresql_snippets_returns_empty_list(monkeypatch):
 
 
 def test_retrieve_postgresql_snippets_filters_by_min_score(monkeypatch):
+    captured = {}
+
     def fake_search_postgresql_chunks_by_question(
         connection,
         question: str,
         top_k: int,
+        min_score: float,
     ):
+        captured["min_score"] = min_score
+
         return {
             "question": question,
             "embedding_size": 1024,
@@ -118,14 +127,6 @@ def test_retrieve_postgresql_snippets_filters_by_min_score(monkeypatch):
                     "text": "员工每天需要完成 8 小时工作。",
                     "distance": 0.1337,
                     "score": 0.8663,
-                },
-                {
-                    "chunk_id": 3,
-                    "document_id": 3,
-                    "document_title": "报销制度",
-                    "text": "差旅报销需要在出差结束后 7 天内提交。",
-                    "distance": 0.5,
-                    "score": 0.5,
                 },
             ],
         }
@@ -141,6 +142,8 @@ def test_retrieve_postgresql_snippets_filters_by_min_score(monkeypatch):
         top_k=2,
         min_score=0.6,
     )
+
+    assert captured["min_score"] == 0.6
 
     assert snippets == [
         {

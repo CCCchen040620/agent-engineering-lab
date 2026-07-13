@@ -22,13 +22,13 @@ def retrieve_postgresql_snippets(
         connection,
         question=question,
         top_k=top_k,
+        min_score=min_score,
     )
 
     snippets = []
 
     for result in search_result["results"]:
-        if result["score"] >= min_score:
-            snippets.append(result_to_snippet(result))
+        snippets.append(result_to_snippet(result))
 
     return snippets
 

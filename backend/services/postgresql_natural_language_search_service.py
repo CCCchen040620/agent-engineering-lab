@@ -8,6 +8,7 @@ def search_postgresql_chunks_by_question(
     connection,
     question: str,
     top_k: int = 3,
+    min_score: float = 0.0,
 ) -> dict:
     query_embedding = embed_with_ollama(question)
 
@@ -17,8 +18,14 @@ def search_postgresql_chunks_by_question(
         top_k=top_k,
     )
 
+    filtered_results = []
+
+    for result in results:
+        if result["score"] >= min_score:
+            filtered_results.append(result)
+
     return {
         "question": question,
         "embedding_size": len(query_embedding),
-        "results": results,
+        "results": filtered_results,
     }

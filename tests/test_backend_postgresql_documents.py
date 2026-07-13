@@ -428,9 +428,15 @@ def test_search_postgresql_chunks_by_question_endpoint(monkeypatch):
     def fake_initialize_schema(connection):
         captured["schema_initialized"] = True
 
-    def fake_search_by_question(connection, question: str, top_k: int):
+    def fake_search_by_question(
+        connection,
+        question: str,
+        top_k: int,
+        min_score: float,
+    ):
         captured["question"] = question
         captured["top_k"] = top_k
+        captured["min_score"] = min_score
 
         return {
             "question": question,
@@ -469,6 +475,7 @@ def test_search_postgresql_chunks_by_question_endpoint(monkeypatch):
         json={
             "question": "员工每天需要工作多久？",
             "top_k": 2,
+            "min_score": 0.6,
         },
     )
 
@@ -484,6 +491,7 @@ def test_search_postgresql_chunks_by_question_endpoint(monkeypatch):
     assert captured["schema_initialized"] is True
     assert captured["question"] == "员工每天需要工作多久？"
     assert captured["top_k"] == 2
+    assert captured["min_score"] == 0.6
 
     assert data["question"] == "员工每天需要工作多久？"
     assert data["embedding_size"] == 1024
