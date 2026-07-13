@@ -23,8 +23,14 @@ def fetch_ollama_model_names(base_url: str = OLLAMA_BASE_URL) -> list[str]:
     return model_names
 
 
-def check_database_status(database_url: str = DATABASE_URL) -> dict:
+def check_database_status(
+    database_url: str = DATABASE_URL,
+    postgresql_checker=check_postgresql_connection,
+) -> dict:
     try:
+        if is_postgresql_database(database_url):
+            return postgresql_checker(database_url)
+
         connection = create_database_connection(database_url)
         cursor = connection.cursor()
         cursor.execute("SELECT 1")

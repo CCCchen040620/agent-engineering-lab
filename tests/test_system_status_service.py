@@ -18,6 +18,24 @@ def test_check_database_status_returns_ok(tmp_path):
     assert result["database_url"] == database_url
 
 
+def test_check_database_status_uses_postgresql_checker_for_postgresql_url():
+    def fake_postgresql_checker(database_url: str):
+        return {
+            "status": "ok",
+            "database_url": database_url,
+        }
+
+    database_url = "postgresql://agent:secret@localhost:5432/agent_db"
+
+    result = check_database_status(
+        database_url,
+        postgresql_checker=fake_postgresql_checker,
+    )
+
+    assert result["status"] == "ok"
+    assert result["database_url"] == database_url
+
+
 def test_check_ollama_status_reports_available_models():
     def fake_model_fetcher(base_url):
         return ["qwen3.6:latest", "bge-m3:latest"]
