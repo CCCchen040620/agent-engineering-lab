@@ -16,6 +16,7 @@ from backend.services.postgresql_schema_service import (
     initialize_postgresql_knowledge_schema,
 )
 from backend.services.postgresql_document_indexing_service import (
+    PostgreSQLDocumentIndexingError,
     create_postgresql_document_with_chunks_and_embeddings,
 )
 from week05.models import (
@@ -91,12 +92,18 @@ def create_postgresql_document_with_content(
 
     with psycopg.connect(database_url) as connection:
         initialize_postgresql_knowledge_schema(connection)
-        result = create_postgresql_document_with_chunks_and_embeddings(
-            connection,
-            title=request.title,
-            file_type=request.file_type,
-            content=request.content,
-        )
+        try:
+            result = create_postgresql_document_with_chunks_and_embeddings(
+                connection,
+                title=request.title,
+                file_type=request.file_type,
+                content=request.content,
+            )
+        except PostgreSQLDocumentIndexingError as error:
+            raise HTTPException(
+                status_code=503,
+                detail=str(error),
+            ) from error
 
     if result is None:
         raise HTTPException(

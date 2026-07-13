@@ -1,7 +1,9 @@
 from fastapi.testclient import TestClient
-
 from backend.main import app
 from backend.routers.postgresql_documents import get_postgresql_database_url
+from backend.services.postgresql_document_indexing_service import (
+    PostgreSQLDocumentIndexingError,
+)
 
 
 client = TestClient(app)
@@ -501,3 +503,53 @@ def test_create_postgresql_document_with_content_returns_409_when_not_created(
 
     assert response.status_code == 409
     assert "文档创建失败" in response.json()["detail"]
+
+
+def test_create_postgresql_document_with_content_returns_503_when_embedding_fails(
+    monkeypatch,
+):
+    def fake_connect(database_url: str):
+        return FakeConnection()
+
+    def fake_initialize_schema(connection):
+        pass
+
+    def fake_create_document(
+        connection,
+        title: str,
+        file_type: str,
+        content: str,
+    ):
+        raise PostgreSQLDocumentIndexingError("PostgreSQL 文档索引失败")
+
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.psycopg.connect",
+        fake_connect,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.initialize_postgresql_knowledge_schema",
+        fake_initialize_schema,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents."
+        "create_postgresql_document_with_chunks_and_embeddings",
+        fake_create_document,
+    )
+
+    app.dependency_overrides[get_postgresql_database_url] = lambda: (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+
+    response = client.post(
+        "/api/v1/postgresql/documents/with-content",
+        json={
+            "title": "Embedding 失败文档",
+            "file_type": "md",
+            "content": "员工每天需要完成 8 小时工作。",
+        },
+    )
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 503
+    assert "PostgreSQL 文档索引失败" in response.json()["detail"]
