@@ -114,6 +114,7 @@ def test_config_can_read_dotenv_file(tmp_path, monkeypatch):
         encoding="utf-8",
     )
 
+    monkeypatch.delenv("PYTHON_DOTENV_DISABLED", raising=False)
     monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
     monkeypatch.delenv("BACKEND_API_BASE_URL", raising=False)
     monkeypatch.delenv("LLM_MODEL", raising=False)
