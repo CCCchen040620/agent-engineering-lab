@@ -192,3 +192,5 @@ python -m streamlit run frontend/admin_documents.py
 - PostgreSQL 区域会显示文档来源分布，用于快速查看 `production`、`migration`、`evaluation` 各有多少文档
 - PostgreSQL 文档列表支持按来源筛选：`全部`、`production`、`migration`、`evaluation`
 - `production` 表示普通业务数据，`migration` 表示从 SQLite 迁移来的数据，`evaluation` 表示评测/验收数据
+- PostgreSQL 文档管理页支持手动输入文档 ID 删除单个文档，删除前需要勾选确认
+- 删除 PostgreSQL 文档会级联清理该文档对应的 chunks 和 embeddings，因此需要先确认文档 ID
