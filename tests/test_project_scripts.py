@@ -134,6 +134,8 @@ def test_postgresql_agent_check_runs_required_steps():
     assert "week10.evaluate_postgresql_retrieval" in script
     assert "week10.evaluate_postgresql_agent" in script
     assert "week10.evaluate_postgresql_agent_end_to_end" in script
+    assert "week10.evaluate_postgresql_conversation_chat" in script
+    assert "Step 7/7: Evaluating PostgreSQL conversation chat flow" in script
     assert "DATABASE_URL" in script
     assert "SkipEmbeddingBackfill" in script
     assert "PostgreSQL Agent check completed successfully." in script
