@@ -13,6 +13,7 @@ def test_required_project_scripts_exist():
         "scripts/start_frontend.ps1",
         "scripts/check_postgres.ps1",
         "scripts/check_postgresql_agent.ps1",
+        "scripts/check_rag_evaluation.ps1",
     ]
 
     for script_path in required_scripts:
@@ -142,6 +143,16 @@ def test_postgresql_agent_check_runs_required_steps():
     assert "DATABASE_URL" in script
     assert "SkipEmbeddingBackfill" in script
     assert "PostgreSQL Agent check completed successfully." in script
+
+
+def test_rag_evaluation_check_runs_unified_runner():
+    script = Path("scripts/check_rag_evaluation.ps1").read_text(encoding="utf-8")
+
+    assert "week11.run_rag_evaluation" in script
+    assert "PythonExecutable" in script
+    assert ".venv\\Scripts\\python.exe" in script
+    assert "DATABASE_URL" in script
+    assert "RAG evaluation completed successfully." in script
 
 
 def test_pyproject_declares_postgresql_driver_dependency():

@@ -38,6 +38,28 @@ pytest
 
 该脚本会先迁移 SQLite schema，再运行完整测试。
 
+## 运行统一 RAG 评测
+
+当你想检查 RAG / Agent 的回答质量时，可以单独运行统一评测脚本：
+
+```powershell
+.\scripts\check_rag_evaluation.ps1
+```
+
+该脚本会读取：
+
+```text
+docs/evaluations/rag-cases.json
+```
+
+并生成：
+
+```text
+docs/evaluations/rag-evaluation-run.md
+```
+
+注意：这个脚本是质量评测入口，不会替代普通测试。PostgreSQL 用例需要本机 PostgreSQL / pgvector 和 Ollama 环境可用；如果没有配置 PostgreSQL 连接，相关用例会被跳过。
+
 查看系统依赖状态：
 
 ```text
