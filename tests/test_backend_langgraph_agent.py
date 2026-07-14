@@ -278,6 +278,7 @@ def test_langgraph_agent_chat_endpoint_accepts_retriever_backend(monkeypatch):
             "mode": kwargs["mode"],
             "min_score": kwargs["min_score"],
             "retriever_backend": kwargs["retriever_backend"],
+            "retriever_backend_source": kwargs["retriever_backend_source"],
             "generator": {},
             "timeout_seconds": kwargs["timeout_seconds"],
             "is_timeout": False,
@@ -305,10 +306,64 @@ def test_langgraph_agent_chat_endpoint_accepts_retriever_backend(monkeypatch):
     data = response.json()
 
     assert captured["retriever_backend"] == "sqlite"
+    assert captured["retriever_backend_source"] == "override"
     assert captured["top_k"] == 2
     assert captured["mode"] == "precomputed_embedding"
     assert captured["min_score"] == 0.6
     assert data["retriever_backend"] == "sqlite"
+    assert data["retriever_backend_source"] == "override"
+
+
+def test_langgraph_agent_chat_endpoint_marks_default_retriever_backend(monkeypatch):
+    captured = {}
+
+    def fake_run_langgraph_agent(**kwargs):
+        captured.update(kwargs)
+
+        return {
+            "question": kwargs["question"],
+            "intent": "answer_question",
+            "keyword": "安全培训",
+            "contextual_question": kwargs["question"],
+            "context_document_title": "",
+            "snippets": [],
+            "has_valid_context": False,
+            "document_title": "",
+            "document": None,
+            "document_match_type": None,
+            "missing_field": "",
+            "answer": "知识库中没有找到相关资料，暂时无法回答。",
+            "citations": [],
+            "steps": [],
+            "database_path": kwargs["database_path"],
+            "top_k": kwargs["top_k"],
+            "mode": kwargs["mode"],
+            "min_score": kwargs["min_score"],
+            "retriever_backend": kwargs["retriever_backend"],
+            "retriever_backend_source": kwargs["retriever_backend_source"],
+            "timeout_seconds": kwargs["timeout_seconds"],
+            "is_timeout": False,
+            "is_fallback": False,
+        }
+
+    monkeypatch.setattr(
+        "backend.routers.langgraph_agent.run_langgraph_agent",
+        fake_run_langgraph_agent,
+    )
+
+    response = client.post(
+        "/api/v1/langgraph-agent/chat",
+        json={"question": "新员工什么时候完成安全培训？"},
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert captured["retriever_backend"] == "sqlite"
+    assert captured["retriever_backend_source"] == "default"
+    assert data["retriever_backend"] == "sqlite"
+    assert data["retriever_backend_source"] == "default"
 
 
 def test_langgraph_agent_conversation_chat_saves_messages(tmp_path):
@@ -353,6 +408,11 @@ def test_langgraph_agent_conversation_chat_saves_messages(tmp_path):
     assert messages[1]["content"] == data["answer"]
     assert messages[1]["metadata"]["intent"] == data["intent"]
     assert messages[1]["metadata"]["keyword"] == data["keyword"]
+    assert messages[1]["metadata"]["retriever_backend"] == data["retriever_backend"]
+    assert (
+        messages[1]["metadata"]["retriever_backend_source"]
+        == data["retriever_backend_source"]
+    )
     assert messages[1]["metadata"]["citations"] == data["citations"]
     assert messages[1]["metadata"]["steps"] == data["steps"]
 
@@ -932,6 +992,7 @@ def test_langgraph_agent_stream_endpoint_returns_sse(monkeypatch, tmp_path):
     assert 'data: {"type": "delta"' in text
     assert "这是流式回答" in text or "当前知识库文档" in text
     assert 'data: {"type": "metadata"' in text
+    assert '"retriever_backend_source": "default"' in text
     assert 'data: {"type": "done"}' in text
 
 
@@ -959,6 +1020,7 @@ def test_langgraph_agent_chat_endpoint_passes_postgresql_connection(
         captured["question"] = kwargs["question"]
         captured["database_path"] = kwargs["database_path"]
         captured["retriever_backend"] = kwargs["retriever_backend"]
+        captured["retriever_backend_source"] = kwargs["retriever_backend_source"]
         captured["postgresql_connection"] = kwargs["postgresql_connection"]
 
         return {
@@ -994,6 +1056,7 @@ def test_langgraph_agent_chat_endpoint_passes_postgresql_connection(
             "mode": kwargs["mode"],
             "min_score": kwargs["min_score"],
             "retriever_backend": kwargs["retriever_backend"],
+            "retriever_backend_source": kwargs["retriever_backend_source"],
             "timeout_seconds": kwargs["timeout_seconds"],
             "is_timeout": False,
             "is_fallback": False,
@@ -1031,10 +1094,12 @@ def test_langgraph_agent_chat_endpoint_passes_postgresql_connection(
     assert captured["question"] == "新员工什么时候完成安全培训？"
     assert captured["database_path"] == str(database_path)
     assert captured["retriever_backend"] == "postgresql"
+    assert captured["retriever_backend_source"] == "override"
     assert captured["postgresql_connection"] == fake_connection
     assert fake_connection.closed is True
 
     assert data["retriever_backend"] == "postgresql"
+    assert data["retriever_backend_source"] == "override"
     assert data["snippets"][0]["path"] == "postgresql://chunk/2"
 
 
@@ -1054,6 +1119,7 @@ def test_langgraph_agent_conversation_chat_accepts_postgresql_retriever(
         captured["question"] = kwargs["question"]
         captured["database_path"] = kwargs["database_path"]
         captured["retriever_backend"] = kwargs["retriever_backend"]
+        captured["retriever_backend_source"] = kwargs["retriever_backend_source"]
         captured["postgresql_connection"] = kwargs["postgresql_connection"]
         captured["messages"] = kwargs["messages"]
         captured["conversation_summary"] = kwargs["conversation_summary"]
@@ -1091,6 +1157,7 @@ def test_langgraph_agent_conversation_chat_accepts_postgresql_retriever(
             "mode": kwargs["mode"],
             "min_score": kwargs["min_score"],
             "retriever_backend": kwargs["retriever_backend"],
+            "retriever_backend_source": kwargs["retriever_backend_source"],
             "timeout_seconds": kwargs["timeout_seconds"],
             "is_timeout": False,
             "is_fallback": False,
@@ -1146,6 +1213,7 @@ def test_langgraph_agent_conversation_chat_accepts_postgresql_retriever(
     assert captured["question"] == "员工每天需要工作多久？"
     assert captured["database_path"] == str(database_path)
     assert captured["retriever_backend"] == "postgresql"
+    assert captured["retriever_backend_source"] == "override"
     assert captured["postgresql_connection"] == fake_connection
     assert captured["messages"] == []
     assert captured["conversation_summary"] == ""
@@ -1153,6 +1221,7 @@ def test_langgraph_agent_conversation_chat_accepts_postgresql_retriever(
 
     assert data["conversation_id"] == conversation_id
     assert data["retriever_backend"] == "postgresql"
+    assert data["retriever_backend_source"] == "override"
     assert data["snippets"][0]["path"] == "postgresql://chunk/2"
     assert len(data["saved_messages"]) == 2
 

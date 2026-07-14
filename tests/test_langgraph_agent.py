@@ -93,6 +93,7 @@ def test_run_langgraph_agent_lists_documents(tmp_path):
     assert "员工手册" in result["answer"]
     assert "请假制度" in result["answer"]
     assert result["citations"] == []
+    assert result["retriever_backend_source"] == "default"
 
     assert result["steps"][0]["tool"] == "load_conversation_summary"
     assert result["steps"][1]["tool"] == "decide_agent_intent"
@@ -132,6 +133,7 @@ def test_run_langgraph_agent_answers_with_context(tmp_path):
         question="新员工什么时候完成安全培训？",
         database_path=str(database_path),
         mode="keyword",
+        retriever_backend_source="override",
         generator=fake_generator,
     )
 
@@ -139,6 +141,7 @@ def test_run_langgraph_agent_answers_with_context(tmp_path):
     assert result["keyword"] == "安全培训"
     assert result["answer"] == "新员工需要在入职后 30 天内完成安全培训。"
     assert result["fallback_reason"] == ""
+    assert result["retriever_backend_source"] == "override"
     assert len(result["citations"]) == 1
 
     assert result["steps"][0]["tool"] == "load_conversation_summary"

@@ -58,6 +58,15 @@ def ensure_supported_retriever_backend(retriever_backend: str) -> str:
         )
 
 
+def resolve_retriever_backend(
+    retriever_backend: str | None,
+) -> tuple[str, str]:
+    if retriever_backend in (None, ""):
+        return ensure_supported_retriever_backend(RAG_RETRIEVER_BACKEND), "default"
+
+    return ensure_supported_retriever_backend(retriever_backend), "override"
+
+
 def create_postgresql_connection_for_retriever(
     retriever_backend: str,
     database_url: str,
@@ -106,6 +115,8 @@ def stream_langgraph_agent_result(result: dict):
             "citation_count": len(result["citations"]),
             "is_fallback": result.get("is_fallback", False),
             "is_timeout": result.get("is_timeout", False),
+            "retriever_backend": result.get("retriever_backend", ""),
+            "retriever_backend_source": result.get("retriever_backend_source", ""),
         }
     )
 
@@ -127,13 +138,15 @@ def langgraph_agent_chat(
         ge=1,
         le=120,
     ),
-    retriever_backend: str = Query(default=RAG_RETRIEVER_BACKEND),
+    retriever_backend: str | None = Query(default=None),
     database_path: str = Depends(get_database_path),
     postgresql_database_url: str = Depends(get_langgraph_postgresql_database_url),
     generator: Callable[[str], str] = Depends(get_langgraph_agent_generator),
     _rate_limit: None = Depends(enforce_heavy_request_rate_limit),
 ):
-    retriever_backend = ensure_supported_retriever_backend(retriever_backend)
+    retriever_backend, retriever_backend_source = resolve_retriever_backend(
+        retriever_backend
+    )
 
     postgresql_connection = create_postgresql_connection_for_retriever(
         retriever_backend=retriever_backend,
@@ -141,7 +154,7 @@ def langgraph_agent_chat(
     )
 
     try:
-        return run_langgraph_agent(
+        result = run_langgraph_agent(
             question=request.question,
             database_path=database_path,
             top_k=top_k,
@@ -149,12 +162,17 @@ def langgraph_agent_chat(
             min_score=min_score,
             timeout_seconds=timeout_seconds,
             retriever_backend=retriever_backend,
+            retriever_backend_source=retriever_backend_source,
             postgresql_connection=postgresql_connection,
             generator=generator,
         )
     finally:
         if postgresql_connection is not None:
             postgresql_connection.close()
+
+    result["retriever_backend_source"] = retriever_backend_source
+
+    return result
 
 
 @router.post("/chat/stream")
@@ -168,13 +186,15 @@ def langgraph_agent_chat_stream(
         ge=1,
         le=120,
     ),
-    retriever_backend: str = Query(default=RAG_RETRIEVER_BACKEND),
+    retriever_backend: str | None = Query(default=None),
     database_path: str = Depends(get_database_path),
     postgresql_database_url: str = Depends(get_langgraph_postgresql_database_url),
     generator: Callable[[str], str] = Depends(get_langgraph_agent_generator),
     _rate_limit: None = Depends(enforce_heavy_request_rate_limit),
 ):
-    retriever_backend = ensure_supported_retriever_backend(retriever_backend)
+    retriever_backend, retriever_backend_source = resolve_retriever_backend(
+        retriever_backend
+    )
 
     ensure_postgresql_retriever_not_enabled_for_endpoint(retriever_backend)
 
@@ -186,8 +206,11 @@ def langgraph_agent_chat_stream(
         min_score=min_score,
         timeout_seconds=timeout_seconds,
         retriever_backend=retriever_backend,
+        retriever_backend_source=retriever_backend_source,
         generator=generator,
     )
+
+    result["retriever_backend_source"] = retriever_backend_source
 
     return StreamingResponse(
         stream_langgraph_agent_result(result),
@@ -207,13 +230,15 @@ def langgraph_agent_conversation_chat(
         ge=1,
         le=120,
     ),
-    retriever_backend: str = Query(default=RAG_RETRIEVER_BACKEND),
+    retriever_backend: str | None = Query(default=None),
     database_path: str = Depends(get_database_path),
     postgresql_database_url: str = Depends(get_langgraph_postgresql_database_url),
     generator: Callable[[str], str] = Depends(get_langgraph_agent_generator),
     _rate_limit: None = Depends(enforce_heavy_request_rate_limit),
 ):
-    retriever_backend = ensure_supported_retriever_backend(retriever_backend)
+    retriever_backend, retriever_backend_source = resolve_retriever_backend(
+        retriever_backend
+    )
 
     connection = create_connection(database_path)
 
@@ -249,6 +274,7 @@ def langgraph_agent_conversation_chat(
             min_score=min_score,
             timeout_seconds=timeout_seconds,
             retriever_backend=retriever_backend,
+            retriever_backend_source=retriever_backend_source,
             postgresql_connection=postgresql_connection,
             generator=generator,
             messages=messages,
@@ -273,6 +299,8 @@ def langgraph_agent_conversation_chat(
     assistant_metadata = {
         "intent": result["intent"],
         "keyword": result["keyword"],
+        "retriever_backend": result["retriever_backend"],
+        "retriever_backend_source": result["retriever_backend_source"],
         "citations": result["citations"],
         "steps": result["steps"],
     }
@@ -302,6 +330,7 @@ def langgraph_agent_conversation_chat(
 
     result["conversation_id"] = conversation_id
     result["conversation_summary"] = updated_conversation["summary"]
+    result["retriever_backend_source"] = retriever_backend_source
     result["saved_messages"] = [
         user_message,
         assistant_message,

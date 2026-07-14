@@ -51,6 +51,7 @@ class LangGraphAgentState(TypedDict):
     mode: str
     min_score: float
     retriever_backend: str
+    retriever_backend_source: str
     postgresql_connection: object | None
     generator: Callable[[str], str]
     started_at: float
@@ -731,6 +732,7 @@ def run_langgraph_agent(
     conversation_summary: str = "",
     timeout_seconds: float = LANGGRAPH_AGENT_TIMEOUT_SECONDS,
     retriever_backend: str = "sqlite",
+    retriever_backend_source: str = "default",
     postgresql_connection=None,
 ) -> LangGraphAgentState:
     graph = build_langgraph_agent()
@@ -777,6 +779,7 @@ def run_langgraph_agent(
         "mode": mode,
         "min_score": min_score,
         "retriever_backend": retriever_backend,
+        "retriever_backend_source": retriever_backend_source,
         "postgresql_connection": postgresql_connection,
         "generator": generator,
         "started_at": time.perf_counter(),
