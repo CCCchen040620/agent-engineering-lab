@@ -1,3 +1,6 @@
+import time
+from threading import Event
+
 from fastapi.testclient import TestClient
 
 from backend.main import app
@@ -31,6 +34,25 @@ def isolate_postgresql_backfill_connection(monkeypatch, task_dispatcher_service)
 
 def setup_function():
     app.dependency_overrides.clear()
+
+
+def wait_for_task_status(
+    queue: InMemoryTaskQueue,
+    task_id: int,
+    expected_status: str,
+    timeout_seconds: float = 1.0,
+) -> dict:
+    deadline = time.monotonic() + timeout_seconds
+
+    while time.monotonic() < deadline:
+        task = queue.get_task(task_id)
+
+        if task is not None and task["status"] == expected_status:
+            return task
+
+        time.sleep(0.01)
+
+    raise AssertionError(f"Task {task_id} did not become {expected_status}.")
 
 
 def test_create_task_endpoint():
@@ -103,6 +125,68 @@ def test_run_task_endpoint_returns_404_when_task_not_found():
     app.dependency_overrides[get_task_queue] = lambda: test_queue
 
     response = client.post("/api/v1/tasks/999/run")
+
+    assert response.status_code == 404
+
+
+def test_run_task_async_endpoint_returns_running_then_succeeded(monkeypatch):
+    from backend.services import task_dispatcher_service
+
+    isolate_postgresql_backfill_connection(monkeypatch, task_dispatcher_service)
+    handler_started = Event()
+    release_handler = Event()
+
+    def fake_backfill_missing_postgresql_chunk_embeddings(connection):
+        handler_started.set()
+        assert release_handler.wait(timeout=1)
+
+        return {
+            "total_chunks": 3,
+            "updated_embeddings": 2,
+            "skipped_embeddings": 1,
+            "model": "fake-model",
+        }
+
+    monkeypatch.setattr(
+        task_dispatcher_service,
+        "backfill_missing_postgresql_chunk_embeddings",
+        fake_backfill_missing_postgresql_chunk_embeddings,
+    )
+
+    test_queue = InMemoryTaskQueue()
+    task = test_queue.create_task(
+        task_type="postgresql_embedding_backfill",
+        payload={},
+    )
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.post(f"/api/v1/tasks/{task['id']}/run-async")
+
+    assert response.status_code == 202
+
+    data = response.json()
+    assert data["id"] == task["id"]
+    assert data["status"] == "running"
+
+    assert handler_started.wait(timeout=1)
+    assert test_queue.get_task(task["id"])["status"] == "running"
+
+    release_handler.set()
+    completed_task = wait_for_task_status(test_queue, task["id"], "succeeded")
+
+    assert completed_task["result"] == {
+        "total_chunks": 3,
+        "updated_embeddings": 2,
+        "skipped_embeddings": 1,
+        "model": "fake-model",
+    }
+
+
+def test_run_task_async_endpoint_returns_404_when_task_not_found():
+    test_queue = InMemoryTaskQueue()
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.post("/api/v1/tasks/999/run-async")
 
     assert response.status_code == 404
 

@@ -1,3 +1,5 @@
+from threading import Thread
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from backend.services.task_queue_service import InMemoryTaskQueue, TaskRunner
@@ -18,19 +20,45 @@ def get_task_queue() -> InMemoryTaskQueue:
     return task_queue
 
 
-def run_task_by_id(task_id: int, queue: InMemoryTaskQueue) -> dict:
+def build_task_handler(task: dict):
+    dispatcher = build_default_task_dispatcher()
+
+    return lambda payload: dispatcher.dispatch(task["type"], payload)
+
+
+def get_task_or_404(task_id: int, queue: InMemoryTaskQueue) -> dict:
     task = queue.get_task(task_id)
 
     if task is None:
         raise HTTPException(status_code=404, detail="任务不存在。")
 
-    dispatcher = build_default_task_dispatcher()
+    return task
+
+
+def run_task_by_id(task_id: int, queue: InMemoryTaskQueue) -> dict:
+    task = get_task_or_404(task_id, queue)
     runner = TaskRunner(queue=queue)
 
-    return runner.run_task(
-        task_id,
-        lambda payload: dispatcher.dispatch(task["type"], payload),
+    return runner.run_task(task_id, build_task_handler(task))
+
+
+def finish_running_task_by_id(task_id: int, queue: InMemoryTaskQueue) -> dict:
+    task = queue.get_task(task_id)
+
+    if task is None:
+        return {}
+
+    runner = TaskRunner(queue=queue)
+    return runner.finish_running_task(task_id, build_task_handler(task))
+
+
+def start_task_thread(task_id: int, queue: InMemoryTaskQueue) -> None:
+    thread = Thread(
+        target=finish_running_task_by_id,
+        args=(task_id, queue),
+        daemon=True,
     )
+    thread.start()
 
 
 @router.post("", status_code=201)
@@ -70,6 +98,18 @@ def run_task(
     queue: InMemoryTaskQueue = Depends(get_task_queue),
 ):
     return run_task_by_id(task_id, queue)
+
+
+@router.post("/{task_id}/run-async", status_code=202)
+def run_task_async(
+    task_id: int,
+    queue: InMemoryTaskQueue = Depends(get_task_queue),
+):
+    task = get_task_or_404(task_id, queue)
+    queue.mark_task_running(task_id)
+    start_task_thread(task_id, queue)
+
+    return task
 
 
 @router.post("/postgresql-embedding-backfill")

@@ -96,3 +96,12 @@ class TaskRunner:
             return self.queue.mark_task_succeeded(task_id, result)
         except Exception as error:
             return self.queue.mark_task_failed(task_id, str(error))
+
+    def finish_running_task(self, task_id: int, handler) -> dict:
+        task = self.queue.get_task_or_raise(task_id)
+
+        try:
+            result = handler(task["payload"])
+            return self.queue.mark_task_succeeded(task_id, result)
+        except Exception as error:
+            return self.queue.mark_task_failed(task_id, str(error))

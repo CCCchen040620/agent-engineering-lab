@@ -174,3 +174,35 @@ def test_task_runner_passes_payload_to_handler():
     runner.run_task(task["id"], handler)
 
     assert captured["payload"] == {"scope": "lightweight"}
+
+
+def test_task_runner_finishes_running_task_when_handler_returns_result():
+    queue = InMemoryTaskQueue()
+    task = queue.create_task("embedding_backfill", {"source": "postgresql"})
+    queue.mark_task_running(task["id"])
+    runner = TaskRunner(queue)
+
+    def handler(payload):
+        return {"updated": 10, "source": payload["source"]}
+
+    result = runner.finish_running_task(task["id"], handler)
+
+    assert result["status"] == "succeeded"
+    assert result["result"] == {"updated": 10, "source": "postgresql"}
+    assert result["error"] == ""
+
+
+def test_task_runner_marks_running_task_failed_when_handler_raises_error():
+    queue = InMemoryTaskQueue()
+    task = queue.create_task("embedding_backfill", {})
+    queue.mark_task_running(task["id"])
+    runner = TaskRunner(queue)
+
+    def handler(payload):
+        raise RuntimeError("Ollama unavailable")
+
+    result = runner.finish_running_task(task["id"], handler)
+
+    assert result["status"] == "failed"
+    assert result["result"] == {}
+    assert result["error"] == "Ollama unavailable"
