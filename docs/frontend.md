@@ -15,10 +15,13 @@ python -m streamlit run frontend/admin_tasks.py
 - 查看任务列表
 - 查看任务状态：`pending`、`running`、`succeeded`、`failed`
 - 一键运行 PostgreSQL embedding 回填
+- 支持两种运行方式：
+  - `同步运行（等待完成）`：点击后等待任务执行完成，再展示最终状态和结果。
+  - `异步运行（立即返回）`：点击后立即创建并启动任务，页面先显示 `running`，后续刷新任务列表查看最终结果。
 - 查看任务结果摘要，例如 `total_chunks`、`updated_embeddings`、`skipped_embeddings` 和 `model`
 - 查看失败任务的错误信息
 
-说明：当前任务中心仍是学习版同步执行，不是真正的后台异步 worker。它的价值是先把“任务创建、执行、状态查询、结果展示”这条链路打通。
+说明：当前任务中心仍是学习版实现，异步运行使用的是后端进程内的轻量后台线程，不是生产级独立 worker。它的价值是先把“任务创建、执行、状态查询、结果展示”这条链路打通。
 
 本项目提供了一个基于 Streamlit 的网页界面，用于演示企业知识库 Agent 的 RAG 问答能力。
 

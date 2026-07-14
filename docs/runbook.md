@@ -22,16 +22,23 @@ python -m streamlit run frontend/admin_tasks.py
 - 查看任务列表
 - 查看任务状态和错误信息
 - 一键触发 PostgreSQL embedding 回填
+- 选择同步或异步运行方式
 - 查看任务结果摘要：`total_chunks`、`updated_embeddings`、`skipped_embeddings`、`model`
+
+运行方式说明：
+
+- `同步运行（等待完成）`：页面会等待任务执行结束，适合本地小规模验收。
+- `异步运行（立即返回）`：页面会先创建任务，再调用异步运行接口，任务进入 `running` 后立即返回；后续刷新任务列表查看是否变成 `succeeded` 或 `failed`。
 
 验收重点：
 
 - 点击“运行 PostgreSQL embedding 回填”后，页面不应崩溃
-- 成功时任务状态为 `succeeded`
+- 同步运行成功时，页面会直接显示 `succeeded`
+- 异步运行成功启动时，页面会先显示任务已开始；刷新任务列表后应能看到最终状态
 - 如果 PostgreSQL、Ollama 或 embedding 模型不可用，任务状态应为 `failed`，并在 `error` 中记录原因
 - 如果所有 chunks 已经有 embedding，结果中 `updated_embeddings` 可以为 `0`，`skipped_embeddings` 等于已有 embedding 的 chunks 数量
 
-说明：当前任务中心是学习版同步执行流程，不是真正的后台异步 worker。后续如果要接近生产形态，可以再引入独立 worker、持久化任务表、任务进度和重试机制。
+说明：当前任务中心是学习版任务流程，异步运行使用后端进程内的轻量后台线程。后续如果要接近生产形态，可以再引入独立 worker、持久化任务表、任务进度和重试机制。
 
 本手册用于记录企业知识库 Agent 项目的常用启动和维护命令。
 
