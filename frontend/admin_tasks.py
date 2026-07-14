@@ -4,6 +4,10 @@ from frontend.api_client import (
     list_tasks_api,
     run_postgresql_embedding_backfill_task_api,
 )
+from frontend.task_result_summary import (
+    build_task_result_summary,
+    summarize_task_result_as_text,
+)
 from backend.config import BACKEND_API_BASE_URL
 
 
@@ -23,6 +27,15 @@ if st.button("运行 PostgreSQL embedding 回填"):
         else:
             st.info(f"任务状态：{task['status']}")
 
+        summary_items = build_task_result_summary(task)
+
+        if summary_items:
+            st.subheader("任务结果摘要")
+            columns = st.columns(len(summary_items))
+
+            for column, item in zip(columns, summary_items):
+                column.metric(item["label"], item["value"])
+
         st.json(task)
     except Exception as error:
         st.error(f"任务请求失败：{error}")
@@ -38,6 +51,13 @@ try:
     if not tasks:
         st.info("暂无任务。")
     else:
-        st.dataframe(tasks, use_container_width=True)
+        display_tasks = []
+
+        for task in tasks:
+            display_task = dict(task)
+            display_task["result_summary"] = summarize_task_result_as_text(task)
+            display_tasks.append(display_task)
+
+        st.dataframe(display_tasks, use_container_width=True)
 except Exception as error:
     st.error(f"无法读取任务列表：{error}")
