@@ -60,6 +60,22 @@ docs/evaluations/rag-evaluation-run.md
 
 注意：这个脚本是质量评测入口，不会替代普通测试。PostgreSQL 用例需要本机 PostgreSQL / pgvector 和 Ollama 环境可用；如果没有配置 PostgreSQL 连接，相关用例会被跳过。
 
+如果只想运行一部分评测用例，可以直接使用 Python CLI 的通用筛选参数：
+
+```powershell
+.\.venv\Scripts\python.exe -m week11.run_rag_evaluation --scenario unknown_answer
+```
+
+```powershell
+.\.venv\Scripts\python.exe -m week11.run_rag_evaluation --tag policy
+```
+
+```powershell
+.\.venv\Scripts\python.exe -m week11.run_rag_evaluation --retriever-backend postgresql --tag unknown
+```
+
+这些参数只是按 `rag-cases.json` 里的通用字段筛选，不绑定具体业务含义。后续如果项目转成合同、客服或销售知识库，可以继续复用同一套 CLI。
+
 查看系统依赖状态：
 
 ```text

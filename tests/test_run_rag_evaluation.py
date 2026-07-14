@@ -2,6 +2,8 @@ from week11.evaluation_cases import load_evaluation_cases
 from week11.run_rag_evaluation import (
     build_rag_evaluation_report,
     evaluate_rag_result,
+    main,
+    parse_rag_evaluation_args,
     run_langgraph_evaluation_case,
     run_rag_evaluation,
     write_rag_evaluation_report,
@@ -181,6 +183,114 @@ def test_run_rag_evaluation_can_select_cases_before_running():
     assert evaluation["total"] == 1
     assert evaluation["passed"] == 1
     assert captured_cases[0]["id"] == "pg_stock_options_refusal"
+
+
+def test_parse_rag_evaluation_args_accepts_generic_filters():
+    args = parse_rag_evaluation_args(
+        [
+            "--case-file",
+            "custom-cases.json",
+            "--report-path",
+            "custom-report.md",
+            "--retriever-backend",
+            "postgresql",
+            "--expected-answer-type",
+            "refusal",
+            "--scenario",
+            "unknown_answer",
+            "--tag",
+            "unknown",
+            "--tag",
+            "postgresql",
+            "--tag-match",
+            "any",
+            "--mode",
+            "precomputed_embedding",
+        ]
+    )
+
+    assert args.case_file == "custom-cases.json"
+    assert args.report_path == "custom-report.md"
+    assert args.retriever_backend == "postgresql"
+    assert args.expected_answer_type == "refusal"
+    assert args.scenario == "unknown_answer"
+    assert args.tags == ["unknown", "postgresql"]
+    assert args.tag_match == "any"
+    assert args.mode == "precomputed_embedding"
+
+
+def test_main_passes_cli_filters_to_evaluation_runner(monkeypatch, tmp_path):
+    captured = {}
+    report_path = tmp_path / "report.md"
+
+    def fake_load_evaluation_cases(file_path):
+        captured["case_file"] = file_path
+        return []
+
+    def fake_run_rag_evaluation(**kwargs):
+        captured["run_kwargs"] = kwargs
+        return {
+            "total": 0,
+            "evaluated": 0,
+            "passed": 0,
+            "failed": 0,
+            "skipped": 0,
+            "pass_rate": 0,
+            "by_backend": {},
+            "by_answer_type": {},
+            "by_scenario": {},
+            "by_tag": {},
+            "items": [],
+        }
+
+    def fake_write_rag_evaluation_report(evaluation, path):
+        captured["report_path"] = path
+        return path
+
+    monkeypatch.setattr(
+        "week11.run_rag_evaluation.load_evaluation_cases",
+        fake_load_evaluation_cases,
+    )
+    monkeypatch.setattr(
+        "week11.run_rag_evaluation.run_rag_evaluation",
+        fake_run_rag_evaluation,
+    )
+    monkeypatch.setattr(
+        "week11.run_rag_evaluation.write_rag_evaluation_report",
+        fake_write_rag_evaluation_report,
+    )
+
+    main(
+        [
+            "--case-file",
+            "custom-cases.json",
+            "--report-path",
+            str(report_path),
+            "--retriever-backend",
+            "postgresql",
+            "--expected-answer-type",
+            "refusal",
+            "--scenario",
+            "unknown_answer",
+            "--tag",
+            "unknown",
+            "--tag-match",
+            "all",
+            "--mode",
+            "precomputed_embedding",
+        ]
+    )
+
+    run_kwargs = captured["run_kwargs"]
+
+    assert captured["case_file"] == "custom-cases.json"
+    assert captured["report_path"] == str(report_path)
+    assert run_kwargs["retriever_backend"] == "postgresql"
+    assert run_kwargs["expected_answer_type"] == "refusal"
+    assert run_kwargs["scenario"] == "unknown_answer"
+    assert run_kwargs["tags"] == ["unknown"]
+    assert run_kwargs["tag_match"] == "all"
+    assert run_kwargs["mode"] == "precomputed_embedding"
 
 
 def test_run_rag_evaluation_skips_postgresql_without_connection_for_real_runner():

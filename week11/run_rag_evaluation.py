@@ -1,3 +1,5 @@
+import argparse
+
 from pathlib import Path
 from typing import Callable
 
@@ -7,7 +9,11 @@ from backend.config import DATABASE_URL, SQLITE_ADMIN_DATABASE_PATH
 from backend.services.database_url_service import is_postgresql_database
 from backend.services.langgraph_agent import run_langgraph_agent
 from backend.services.ollama_service import generate_with_ollama
-from week11.evaluation_cases import load_evaluation_cases, select_evaluation_cases
+from week11.evaluation_cases import (
+    DEFAULT_EVALUATION_CASES_PATH,
+    load_evaluation_cases,
+    select_evaluation_cases,
+)
 
 
 DEFAULT_EVALUATION_REPORT_PATH = Path("docs/evaluations/rag-evaluation-run.md")
@@ -434,8 +440,54 @@ def write_rag_evaluation_report(
     return path
 
 
-def main():
-    cases = load_evaluation_cases()
+def parse_rag_evaluation_args(argv: list[str] | None = None):
+    parser = argparse.ArgumentParser(
+        description="Run shared RAG evaluation cases and write a Markdown report."
+    )
+    parser.add_argument(
+        "--case-file",
+        default=str(DEFAULT_EVALUATION_CASES_PATH),
+        help="Path to the evaluation cases JSON file.",
+    )
+    parser.add_argument(
+        "--report-path",
+        default=str(DEFAULT_EVALUATION_REPORT_PATH),
+        help="Path to the generated Markdown report.",
+    )
+    parser.add_argument(
+        "--retriever-backend",
+        help="Only run cases for this retriever backend.",
+    )
+    parser.add_argument(
+        "--expected-answer-type",
+        help="Only run cases with this expected answer type.",
+    )
+    parser.add_argument(
+        "--scenario",
+        help="Only run cases for this scenario.",
+    )
+    parser.add_argument(
+        "--tag",
+        action="append",
+        dest="tags",
+        help="Only run cases with this tag. Can be provided multiple times.",
+    )
+    parser.add_argument(
+        "--tag-match",
+        choices=["all", "any"],
+        default="all",
+        help="When multiple tags are provided, require all tags or any tag.",
+    )
+    parser.add_argument(
+        "--mode",
+        help="Only run cases for this retrieval mode.",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None):
+    args = parse_rag_evaluation_args(argv)
+    cases = load_evaluation_cases(args.case_file)
     postgresql_connection = None
 
     try:
@@ -445,8 +497,14 @@ def main():
         evaluation = run_rag_evaluation(
             cases=cases,
             postgresql_connection=postgresql_connection,
+            retriever_backend=args.retriever_backend,
+            expected_answer_type=args.expected_answer_type,
+            scenario=args.scenario,
+            tags=args.tags,
+            mode=args.mode,
+            tag_match=args.tag_match,
         )
-        report_path = write_rag_evaluation_report(evaluation)
+        report_path = write_rag_evaluation_report(evaluation, args.report_path)
 
         print("RAG 统一评测完成。")
         print("总用例数：", evaluation["total"])
