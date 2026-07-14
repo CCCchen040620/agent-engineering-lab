@@ -58,6 +58,36 @@ docs/evaluations/rag-cases.json
 docs/evaluations/rag-evaluation-run.md
 ```
 
+报告中的核心指标分为四层：
+
+```text
+业务通过率：问题类型、拒答、引用和期望文档是否符合业务预期
+检索通过率：检索阶段是否找到了正确上下文，或无答案问题是否正确无召回
+生成通过率：本地 LLM 是否成功生成回答，没有触发 fallback 或 timeout
+端到端通过率：检索、生成、引用和最终回答整体是否严格通过
+```
+
+如果看到类似结果：
+
+```text
+业务通过率：1.0
+检索通过率：1.0
+生成通过率：0.8
+端到端通过率：0.8
+```
+
+通常表示知识库检索链路是好的，问题主要出在本地模型生成稳定性上。
+
+报告明细中还会显示：
+
+```text
+失败原因：fallback_answer
+失败阶段：generation
+兜底原因：HTTP Error 500: Internal Server Error
+```
+
+这类结果说明已经检索到相关资料，但 Ollama / LLM 生成回答时失败。当前项目会对 Ollama 生成调用自动重试一次；如果重试后仍失败，才会进入 fallback，并在报告里记录兜底原因。
+
 注意：这个脚本是质量评测入口，不会替代普通测试。PostgreSQL 用例需要本机 PostgreSQL / pgvector 和 Ollama 环境可用；如果没有配置 PostgreSQL 连接，相关用例会被跳过。
 
 如果只想运行一部分评测用例，可以直接使用 Python CLI 的通用筛选参数：
