@@ -1495,6 +1495,93 @@ def test_list_tasks_api_can_filter_and_sort(monkeypatch):
     assert tasks[0]["id"] == 3
 
 
+def test_list_tasks_api_can_limit_results(monkeypatch):
+    from frontend import api_client
+
+    captured = {}
+
+    class FakeResponse:
+        status_code = 200
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return [
+                {
+                    "id": 1,
+                    "type": "postgresql_embedding_backfill",
+                    "status": "pending",
+                    "payload": {},
+                    "result": {},
+                    "error": "",
+                }
+            ]
+
+    def fake_get(url, params=None, timeout=10):
+        captured["url"] = url
+        captured["params"] = params
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr(api_client.requests, "get", fake_get)
+
+    tasks = api_client.list_tasks_api("http://testserver", limit=1)
+
+    assert captured["url"] == "http://testserver/api/v1/tasks"
+    assert captured["params"] == {"limit": 1}
+    assert captured["timeout"] == 10
+    assert len(tasks) == 1
+
+
+def test_list_tasks_api_can_filter_sort_and_limit(monkeypatch):
+    from frontend import api_client
+
+    captured = {}
+
+    class FakeResponse:
+        status_code = 200
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return [
+                {
+                    "id": 3,
+                    "type": "postgresql_embedding_backfill",
+                    "status": "failed",
+                    "payload": {},
+                    "result": {},
+                    "error": "Ollama unavailable",
+                }
+            ]
+
+    def fake_get(url, params=None, timeout=10):
+        captured["url"] = url
+        captured["params"] = params
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr(api_client.requests, "get", fake_get)
+
+    tasks = api_client.list_tasks_api(
+        "http://testserver",
+        status="failed",
+        order="desc",
+        limit=1,
+    )
+
+    assert captured["url"] == "http://testserver/api/v1/tasks"
+    assert captured["params"] == {
+        "status": "failed",
+        "order": "desc",
+        "limit": 1,
+    }
+    assert captured["timeout"] == 10
+    assert tasks[0]["id"] == 3
+
+
 def test_get_task_api(monkeypatch):
     from frontend import api_client
 

@@ -38,6 +38,7 @@ class InMemoryTaskQueue:
         self,
         status: str | None = None,
         order: str = "asc",
+        limit: int | None = None,
     ) -> list[dict]:
         if status in (None, ""):
             tasks = list(self.tasks)
@@ -48,11 +49,16 @@ class InMemoryTaskQueue:
                 if task["status"] == status
             ]
 
-        return sorted(
+        sorted_tasks = sorted(
             tasks,
             key=lambda task: task["id"],
             reverse=order == "desc",
         )
+
+        if limit is None:
+            return sorted_tasks
+
+        return sorted_tasks[:limit]
 
     def get_task(self, task_id: int) -> dict | None:
         for task in self.tasks:

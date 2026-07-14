@@ -93,6 +93,35 @@ def test_list_tasks_can_filter_and_sort():
     assert second not in tasks
 
 
+def test_list_tasks_can_limit_results():
+    queue = InMemoryTaskQueue()
+
+    first = queue.create_task("embedding_backfill", {})
+    second = queue.create_task("rag_evaluation", {})
+    queue.create_task("postgresql_embedding_backfill", {})
+
+    tasks = queue.list_tasks(limit=2)
+
+    assert tasks == [first, second]
+
+
+def test_list_tasks_can_filter_sort_and_limit():
+    queue = InMemoryTaskQueue()
+
+    first = queue.create_task("embedding_backfill", {})
+    second = queue.create_task("rag_evaluation", {})
+    third = queue.create_task("postgresql_embedding_backfill", {})
+
+    queue.mark_task_failed(first["id"], "Ollama unavailable")
+    queue.mark_task_failed(second["id"], "PostgreSQL unavailable")
+    queue.mark_task_failed(third["id"], "Unknown error")
+
+    tasks = queue.list_tasks(status="failed", order="desc", limit=2)
+
+    assert tasks == [third, second]
+    assert first not in tasks
+
+
 def test_get_task_by_id():
     queue = InMemoryTaskQueue()
 

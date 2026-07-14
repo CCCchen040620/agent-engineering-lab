@@ -99,7 +99,7 @@ st.divider()
 
 st.subheader("任务列表")
 
-filter_column, sort_column, refresh_column = st.columns([2, 2, 1])
+filter_column, sort_column, limit_column, refresh_column = st.columns([2, 2, 2, 1])
 
 with filter_column:
     status_filter = st.selectbox(
@@ -113,6 +113,12 @@ with sort_column:
         value=True,
     )
 
+with limit_column:
+    limit_option = st.selectbox(
+        "最多显示任务数",
+        ["20", "50", "100", "全部"],
+    )
+
 with refresh_column:
     st.write("")
     st.write("")
@@ -120,11 +126,14 @@ with refresh_column:
     if st.button("刷新列表"):
         st.rerun()
 
+task_limit = None if limit_option == "全部" else int(limit_option)
+
 try:
     tasks = list_tasks_api(
         BACKEND_API_BASE_URL,
         status=status_filter,
         order="desc" if newest_first else "asc",
+        limit=task_limit,
     )
 
     if not tasks:
@@ -136,7 +145,7 @@ try:
             newest_first=newest_first,
         )
 
-        st.caption(f"当前显示 {len(display_tasks)} / {len(tasks)} 个任务。")
+        st.caption(f"当前显示 {len(display_tasks)} 个任务。")
 
         if not display_tasks:
             st.info("当前筛选条件下没有任务。")

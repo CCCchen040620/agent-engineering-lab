@@ -547,6 +547,7 @@ def list_tasks_api(
     base_url: str,
     status: str | None = None,
     order: str | None = None,
+    limit: int | None = None,
 ) -> list[dict]:
     params = {}
 
@@ -555,6 +556,9 @@ def list_tasks_api(
 
     if order in ("asc", "desc"):
         params["order"] = order
+
+    if limit is not None:
+        params["limit"] = limit
 
     response = requests.get(
         base_url + "/api/v1/tasks",
