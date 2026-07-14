@@ -21,6 +21,18 @@ def get_retriever_backend_radio_index(info: dict | None) -> int:
     return 0
 
 
+def get_retriever_backend_override(
+    info: dict | None,
+    selected_backend: str,
+) -> str | None:
+    default_backend = get_default_retriever_backend_from_info(info)
+
+    if selected_backend == default_backend:
+        return None
+
+    return selected_backend
+
+
 def build_retriever_backend_caption(
     info: dict | None,
     selected_backend: str,

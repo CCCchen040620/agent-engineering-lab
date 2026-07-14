@@ -1,6 +1,7 @@
 from frontend.retriever_backend_view import (
     build_retriever_backend_caption,
     get_default_retriever_backend_from_info,
+    get_retriever_backend_override,
     get_retriever_backend_radio_index,
 )
 
@@ -30,3 +31,21 @@ def test_build_retriever_backend_caption():
     )
 
     assert caption == "主数据库：postgresql | 默认检索后端：postgresql | 当前选择：sqlite"
+
+
+def test_get_retriever_backend_override_returns_none_for_default_backend():
+    info = {
+        "database_backend": "postgresql",
+        "default_rag_retriever_backend": "postgresql",
+    }
+
+    assert get_retriever_backend_override(info, "postgresql") is None
+
+
+def test_get_retriever_backend_override_returns_selected_backend_when_overridden():
+    info = {
+        "database_backend": "postgresql",
+        "default_rag_retriever_backend": "postgresql",
+    }
+
+    assert get_retriever_backend_override(info, "sqlite") == "sqlite"

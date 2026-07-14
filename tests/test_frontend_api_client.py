@@ -778,6 +778,47 @@ def test_chat_with_langgraph_agent_api_sends_timeout_and_retriever_backend(monke
     assert captured["params"]["retriever_backend"] == "postgresql"
 
 
+def test_chat_with_langgraph_agent_api_omits_retriever_backend_when_not_overridden(
+    monkeypatch,
+):
+    captured = {}
+
+    def fake_post(url, params, json, timeout):
+        captured["params"] = params
+
+        return FakeResponse(
+            200,
+            {
+                "question": "新员工什么时候完成安全培训？",
+                "keyword": "安全培训",
+                "answer": "30 天内完成安全培训。",
+                "citations": [],
+                "steps": [],
+            },
+        )
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    data, error_message = chat_with_langgraph_agent_api(
+        base_url="http://127.0.0.1:8000",
+        question="新员工什么时候完成安全培训？",
+        top_k=3,
+        mode="precomputed_embedding",
+        min_score=0.8,
+        timeout_seconds=30,
+        retriever_backend=None,
+    )
+
+    assert error_message is None
+    assert data["answer"] == "30 天内完成安全培训。"
+    assert captured["params"] == {
+        "top_k": 3,
+        "mode": "precomputed_embedding",
+        "min_score": 0.8,
+        "timeout_seconds": 30,
+    }
+
+
 def test_chat_with_langgraph_agent_conversation_api_sends_retriever_backend(
     monkeypatch,
 ):
@@ -837,6 +878,49 @@ def test_chat_with_langgraph_agent_conversation_api_sends_retriever_backend(
         "retriever_backend": "postgresql",
     }
     assert captured["timeout"] == 300
+
+
+def test_chat_with_langgraph_agent_conversation_api_omits_retriever_backend_when_not_overridden(
+    monkeypatch,
+):
+    captured = {}
+
+    def fake_post(url, params, json, timeout):
+        captured["params"] = params
+
+        return FakeResponse(
+            200,
+            {
+                "conversation_id": 7,
+                "question": "How long does an employee work every day?",
+                "keyword": "work hours",
+                "answer": "8 hours.",
+                "citations": [],
+                "saved_messages": [],
+            },
+        )
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    data, error_message = chat_with_langgraph_agent_conversation_api(
+        base_url="http://127.0.0.1:8000",
+        conversation_id=7,
+        question="How long does an employee work every day?",
+        top_k=2,
+        mode="precomputed_embedding",
+        min_score=0.6,
+        timeout_seconds=30,
+        retriever_backend=None,
+    )
+
+    assert error_message is None
+    assert data["answer"] == "8 hours."
+    assert captured["params"] == {
+        "top_k": 2,
+        "mode": "precomputed_embedding",
+        "min_score": 0.6,
+        "timeout_seconds": 30,
+    }
 
 
 def test_submit_feedback_api_posts_feedback(monkeypatch):

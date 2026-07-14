@@ -240,19 +240,23 @@ def chat_with_langgraph_agent_api(
     mode: str,
     min_score: float,
     timeout_seconds: int,
-    retriever_backend: str = "sqlite",
+    retriever_backend: str | None = None,
 ) -> tuple[dict | None, str | None]:
     """Ask the FastAPI LangGraph Agent endpoint and return data or an error."""
+    params = {
+        "top_k": top_k,
+        "mode": mode,
+        "min_score": min_score,
+        "timeout_seconds": timeout_seconds,
+    }
+
+    if retriever_backend not in (None, ""):
+        params["retriever_backend"] = retriever_backend
+
     try:
         response = requests.post(
             base_url + "/api/v1/langgraph-agent/chat",
-            params={
-                "top_k": top_k,
-                "mode": mode,
-                "min_score": min_score,
-                "timeout_seconds": timeout_seconds,
-                "retriever_backend": retriever_backend,
-            },
+            params=params,
             json={"question": question},
             timeout=300,
         )
@@ -319,20 +323,24 @@ def chat_with_langgraph_agent_conversation_api(
     mode: str,
     min_score: float,
     timeout_seconds: int,
-    retriever_backend: str = "sqlite",
+    retriever_backend: str | None = None,
 ) -> tuple[dict | None, str | None]:
     """Ask the LangGraph Agent endpoint and save messages to a conversation."""
+    params = {
+        "top_k": top_k,
+        "mode": mode,
+        "min_score": min_score,
+        "timeout_seconds": timeout_seconds,
+    }
+
+    if retriever_backend not in (None, ""):
+        params["retriever_backend"] = retriever_backend
+
     try:
         response = requests.post(
             base_url
             + f"/api/v1/langgraph-agent/conversations/{conversation_id}/chat",
-            params={
-                "top_k": top_k,
-                "mode": mode,
-                "min_score": min_score,
-                "timeout_seconds": timeout_seconds,
-                "retriever_backend": retriever_backend,
-            },
+            params=params,
             json={"question": question},
             timeout=300,
         )

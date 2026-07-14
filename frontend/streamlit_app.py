@@ -19,6 +19,7 @@ from frontend.api_client import (
 )
 from frontend.retriever_backend_view import (
     build_retriever_backend_caption,
+    get_retriever_backend_override,
     get_retriever_backend_radio_index,
 )
 
@@ -213,6 +214,10 @@ with st.sidebar:
     )
 
     retriever_backend = backend_label_to_backend(retriever_backend_label)
+    retriever_backend_override = get_retriever_backend_override(
+        info,
+        retriever_backend,
+    )
     st.caption(build_retriever_backend_caption(info, retriever_backend))
 
     if retriever_backend == "postgresql":
@@ -501,7 +506,7 @@ if st.button("提问"):
                             mode=mode,
                             min_score=min_score,
                             timeout_seconds=timeout_seconds,
-                            retriever_backend=retriever_backend,
+                            retriever_backend=retriever_backend_override,
                         )
                     else:
                         response, error_message = chat_with_langgraph_agent_api(
@@ -511,7 +516,7 @@ if st.button("提问"):
                             mode=mode,
                             min_score=min_score,
                             timeout_seconds=timeout_seconds,
-                            retriever_backend=retriever_backend,
+                            retriever_backend=retriever_backend_override,
                         )
             else:
                 response, error_message = chat_with_llm_api(
