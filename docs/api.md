@@ -1480,7 +1480,7 @@ python -m week10.backfill_postgresql_chunk_embeddings
 - 当前接口仍然是 PostgreSQL 调试接口，还没有替代 SQLite/LangGraph Agent 主业务链路。
 ## PostgreSQL Retriever 接入 LangGraph Agent
 
-`POST /api/v1/langgraph-agent/chat` 现在支持通过查询参数切换检索后端：
+`POST /api/v1/langgraph-agent/chat` 和 `POST /api/v1/langgraph-agent/conversations/{conversation_id}/chat` 现在支持通过查询参数切换检索后端：
 
 ```text
 retriever_backend=postgresql
@@ -1504,6 +1504,12 @@ retriever_backend=postgresql
 
 ```text
 POST /api/v1/langgraph-agent/chat?retriever_backend=postgresql&top_k=2&mode=precomputed_embedding&min_score=0.6&timeout_seconds=30
+```
+
+带会话保存的请求示例：
+
+```text
+POST /api/v1/langgraph-agent/conversations/1/chat?retriever_backend=postgresql&top_k=2&mode=precomputed_embedding&min_score=0.6&timeout_seconds=30
 ```
 
 请求体：
@@ -1532,8 +1538,9 @@ POST /api/v1/langgraph-agent/chat?retriever_backend=postgresql&top_k=2&mode=prec
 
 - PostgreSQL retriever 返回的引用路径使用 `postgresql://chunk/{chunk_id}`。
 - 对于 PostgreSQL / pgvector 检索，`validate_context_node` 不只依赖关键词包含判断；当检索片段相似度分数足够高时，也可以判定为有效上下文。
-- 当前只有无会话版本 `POST /api/v1/langgraph-agent/chat` 支持 `retriever_backend=postgresql`。
-- `POST /api/v1/langgraph-agent/chat/stream` 和 `POST /api/v1/langgraph-agent/conversations/{conversation_id}/chat` 目前仍保护性禁用 PostgreSQL retriever，后续再逐步接入。
+- 无会话版本和带会话保存版本都支持 `retriever_backend=postgresql`。
+- 带会话保存版本会使用 PostgreSQL 做知识库检索，同时继续把 user/assistant 消息保存到 SQLite。
+- `POST /api/v1/langgraph-agent/chat/stream` 目前仍保护性禁用 PostgreSQL retriever，后续再逐步接入。
 
 ## PostgreSQL evaluation 数据管理接口
 

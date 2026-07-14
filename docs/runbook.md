@@ -905,6 +905,12 @@ id
 POST /api/v1/langgraph-agent/conversations/1/chat
 ```
 
+如果要使用 PostgreSQL / pgvector 作为检索后端，可以追加查询参数：
+
+```text
+POST /api/v1/langgraph-agent/conversations/1/chat?retriever_backend=postgresql&mode=precomputed_embedding&top_k=3&min_score=0.6
+```
+
 请求：
 
 ```json
@@ -922,6 +928,7 @@ POST /api/v1/langgraph-agent/conversations/1/chat
 - `saved_messages` 中应该有两条：
   - `role=user`
   - `role=assistant`
+- 如果使用 `retriever_backend=postgresql`，引用路径应类似 `postgresql://chunk/{chunk_id}`
 
 ### 18.3 查看消息是否入库
 
@@ -1286,6 +1293,7 @@ Remove-Item Env:DATABASE_URL
 4. 运行 PostgreSQL 检索评测。
 5. 运行 PostgreSQL LangGraph Agent 业务验收。
 6. 写入一份端到端验收文档，并验证 Agent 能引用这份新文档回答。
+7. 验证 `retriever_backend=postgresql` 可以和会话保存接口一起工作。
 
 如果当前 PowerShell 窗口没有设置 `DATABASE_URL`，脚本会默认使用：
 
@@ -1299,9 +1307,11 @@ postgresql://agent_user:agent_password@localhost:5432/agent_db
 .\scripts\check_postgresql_agent.ps1 -SkipEmbeddingBackfill
 ```
 
+该脚本会优先使用项目虚拟环境中的 `.venv\Scripts\python.exe`。如果本机系统 Python 没有安装 `psycopg`，也不会影响该脚本运行。
+
 注意：这个脚本是 PostgreSQL Agent 专项验收，不会替代普通的 `pytest` 或 `.\scripts\check_project.ps1`。
 
-当前项目仍然默认使用 SQLite。PostgreSQL/pgvector 目前是工程化准备能力，后续才会逐步迁移业务表和向量检索。
+当前项目仍然默认保留 SQLite 作为学习版和会话/反馈存储。PostgreSQL/pgvector 已经可以作为实验性知识库检索后端，用于文档、chunks、embeddings 和 LangGraph Agent 检索。
 
 ## 初始化 PostgreSQL 知识库表结构
 

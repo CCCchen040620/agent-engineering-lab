@@ -29,9 +29,9 @@ ollama list
   - `LangGraph Agent 问答`：默认调用 `POST /api/v1/langgraph-agent/chat`
 - 可切换检索后端：
   - `SQLite（默认）`：使用本地 SQLite 知识库，是当前默认模式
-  - `PostgreSQL / pgvector（本地实验）`：调用 LangGraph Agent 普通问答接口，并通过 `retriever_backend=postgresql` 使用 PostgreSQL/pgvector 检索
+  - `PostgreSQL / pgvector（本地实验）`：通过 `retriever_backend=postgresql` 使用 PostgreSQL/pgvector 检索
 - 当选择 `PostgreSQL / pgvector（本地实验）` 时，页面会提示需要先启动 postgres，并用 PostgreSQL `DATABASE_URL` 启动后端。
-- PostgreSQL / pgvector 模式当前只支持普通 LangGraph Agent 问答；页面会自动关闭学习版流式输出和会话保存，避免调用尚未支持 PostgreSQL retriever 的接口。
+- PostgreSQL / pgvector 模式当前支持普通 LangGraph Agent 问答和会话保存；页面仍会自动关闭学习版流式输出。
 - Simple Agent 会先判断用户意图，再选择工具：
   - 文档列表类问题会调用 `list_documents_tool`
   - 读取文档类问题会调用 `find_document_by_title_tool` 和 `read_document_chunks_tool`
@@ -52,6 +52,7 @@ ollama list
   - `answer_with_context_tool`
   - `refuse_answer_tool`
 - LangGraph Agent 模式如果开启会话保存，会调用 `POST /api/v1/langgraph-agent/conversations/{conversation_id}/chat`，把本轮 user/assistant 消息写入 SQLite。
+- 如果此时检索后端选择 PostgreSQL，页面会把 `retriever_backend=postgresql` 一起传给后端：知识库检索走 PostgreSQL/pgvector，会话消息仍写入 SQLite。
 - 会话保存需要先通过 Conversation API 创建会话，并在页面侧边栏填写对应的 `conversation_id`。
 - 保存成功后，页面会显示：
   - `已保存到会话：<conversation_id>`
@@ -160,7 +161,8 @@ min_score：0.6
 注意：
 
 - 该功能保存的是本轮 user/assistant 消息。
-- 当前还没有把历史消息重新传给 Agent 参与多轮推理。
+- 带会话保存的 LangGraph Agent 会读取同一 `conversation_id` 下的历史消息和 summary，用于有限的上下文补全。
+- 这不是完整长期记忆；它主要用于最近引用文档、上下文问题补全和减少无关引用。
 - 如果填写不存在的 `conversation_id`，后端会返回 `会话不存在。`
 
 ### 反馈管理页
