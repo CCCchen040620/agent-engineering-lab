@@ -56,3 +56,31 @@ def test_get_task_endpoint_returns_404_when_task_not_found():
     response = client.get("/api/v1/tasks/999")
 
     assert response.status_code == 404
+
+
+def test_run_task_endpoint_marks_task_succeeded():
+    test_queue = InMemoryTaskQueue()
+    task = test_queue.create_task(
+        task_type="echo",
+        payload={"message": "hello"},
+    )
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.post(f"/api/v1/tasks/{task['id']}/run")
+
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["id"] == task["id"]
+    assert data["status"] == "succeeded"
+    assert data["result"] == {"message": "hello"}
+    assert data["error"] == ""
+
+
+def test_run_task_endpoint_returns_404_when_task_not_found():
+    test_queue = InMemoryTaskQueue()
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.post("/api/v1/tasks/999/run")
+
+    assert response.status_code == 404
