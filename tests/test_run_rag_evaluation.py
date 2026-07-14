@@ -185,6 +185,45 @@ def test_run_rag_evaluation_can_select_cases_before_running():
     assert captured_cases[0]["id"] == "pg_stock_options_refusal"
 
 
+def test_run_rag_evaluation_can_select_multi_turn_cases():
+    cases = load_evaluation_cases()
+    captured_cases = []
+
+    def fake_runner(case, postgresql_connection, generator):
+        captured_cases.append(case)
+        return {
+            "answer": "员工每天需要完成 8 小时工作。",
+            "has_valid_context": True,
+            "citations": [
+                {
+                    "title": case["expected_document_title"],
+                    "text": "员工每天需要完成 8 小时工作。",
+                    "path": "sqlite://1",
+                }
+            ],
+            "snippets": [
+                {
+                    "title": case["expected_document_title"],
+                    "text": "员工每天需要完成 8 小时工作。",
+                    "score": 0.9,
+                }
+            ],
+        }
+
+    evaluation = run_rag_evaluation(
+        cases=cases,
+        runner=fake_runner,
+        scenario="conversation_context",
+        tags="multi_turn",
+    )
+
+    assert evaluation["total"] == 1
+    assert evaluation["passed"] == 1
+    assert captured_cases[0]["id"] == "sqlite_conversation_work_hours_answer"
+    assert len(captured_cases[0]["messages"]) == 2
+    assert evaluation["items"][0]["message_count"] == 2
+
+
 def test_parse_rag_evaluation_args_accepts_generic_filters():
     args = parse_rag_evaluation_args(
         [
@@ -348,6 +387,55 @@ def test_run_langgraph_evaluation_case_uses_sqlite_admin_database_path(monkeypat
     assert captured_kwargs["database_path"] == "data/app.db"
 
 
+def test_run_langgraph_evaluation_case_passes_messages_to_agent(monkeypatch):
+    captured_kwargs = {}
+
+    def fake_run_langgraph_agent(**kwargs):
+        captured_kwargs.update(kwargs)
+        return {
+            "answer": "模型回答",
+            "has_valid_context": True,
+            "citations": [],
+            "snippets": [],
+        }
+
+    monkeypatch.setattr(
+        "week11.run_rag_evaluation.run_langgraph_agent",
+        fake_run_langgraph_agent,
+    )
+
+    messages = [
+        {
+            "role": "assistant",
+            "content": "员工手册 的片段如下：",
+            "metadata": {
+                "citations": [
+                    {
+                        "title": "员工手册",
+                        "text": "员工每天需要完成 8 小时工作。",
+                        "path": "sqlite://1",
+                    }
+                ]
+            },
+        }
+    ]
+    case = {
+        "id": "conversation_case",
+        "question": "每天需要工作多久？",
+        "expected_answer_type": "answer",
+        "expected_document_title": "员工手册",
+        "retriever_backend": "sqlite",
+        "mode": "precomputed_embedding",
+        "top_k": 3,
+        "min_score": 0.6,
+        "messages": messages,
+    }
+
+    run_langgraph_evaluation_case(case)
+
+    assert captured_kwargs["messages"] == messages
+
+
 def test_build_rag_evaluation_report_contains_summary():
     evaluation = {
         "total": 1,
@@ -396,6 +484,7 @@ def test_build_rag_evaluation_report_contains_summary():
                 "expected_document_title": "员工手册",
                 "scenario": "known_answer",
                 "tags": ["sqlite", "answer", "policy"],
+                "message_count": 0,
                 "retriever_backend": "sqlite",
                 "mode": "precomputed_embedding",
                 "top_k": 3,

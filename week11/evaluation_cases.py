@@ -23,6 +23,7 @@ SUPPORTED_MODES = {"keyword", "vector", "embedding", "precomputed_embedding"}
 
 
 def validate_evaluation_case(case: dict) -> dict:
+    case = {**case}
     missing_fields = REQUIRED_FIELDS - set(case)
 
     if missing_fields:
@@ -49,6 +50,28 @@ def validate_evaluation_case(case: dict) -> dict:
     for tag in case["tags"]:
         if not isinstance(tag, str) or tag.strip() == "":
             raise ValueError("Evaluation case tags must contain non-empty strings.")
+
+    if "messages" not in case:
+        case["messages"] = []
+
+    if not isinstance(case["messages"], list):
+        raise ValueError("Evaluation case messages must be a list.")
+
+    for message in case["messages"]:
+        if not isinstance(message, dict):
+            raise ValueError("Evaluation case messages must contain dictionaries.")
+
+        for field in ["role", "content"]:
+            if field not in message:
+                raise ValueError(f"Evaluation case message is missing field: {field}")
+
+            if not isinstance(message[field], str) or message[field].strip() == "":
+                raise ValueError(
+                    f"Evaluation case message field must be a non-empty string: {field}"
+                )
+
+        if "metadata" in message and not isinstance(message["metadata"], dict):
+            raise ValueError("Evaluation case message metadata must be a dictionary.")
 
     if case["expected_answer_type"] not in SUPPORTED_ANSWER_TYPES:
         raise ValueError(
@@ -191,6 +214,7 @@ def to_agent_case(case: dict) -> dict:
         "expected_document_title": case["expected_document_title"],
         "scenario": case["scenario"],
         "tags": case["tags"],
+        "messages": case["messages"],
     }
 
 

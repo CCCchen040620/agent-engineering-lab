@@ -46,5 +46,36 @@
     "mode": "precomputed_embedding",
     "top_k": 2,
     "min_score": 0.8
+  },
+  {
+    "id": "sqlite_conversation_work_hours_answer",
+    "question": "每天需要工作多久？",
+    "expected_answer_type": "answer",
+    "expected_document_title": "员工手册",
+    "scenario": "conversation_context",
+    "tags": ["sqlite", "answer", "policy", "conversation_context", "multi_turn"],
+    "retriever_backend": "sqlite",
+    "mode": "precomputed_embedding",
+    "top_k": 3,
+    "min_score": 0.6,
+    "messages": [
+      {
+        "role": "user",
+        "content": "查看员工手册的片段"
+      },
+      {
+        "role": "assistant",
+        "content": "员工手册 的片段如下：\n[1] 员工每天需要完成 8 小时工作。\n[2] 新员工入职后需要在 30 天内完成安全培训。",
+        "metadata": {
+          "citations": [
+            {
+              "title": "员工手册",
+              "text": "员工每天需要完成 8 小时工作。",
+              "path": "sqlite://1"
+            }
+          ]
+        }
+      }
+    ]
   }
 ]

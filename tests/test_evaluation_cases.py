@@ -14,11 +14,12 @@ def test_load_evaluation_cases_from_default_file():
     cases = load_evaluation_cases()
     case_ids = {case["id"] for case in cases}
 
-    assert len(cases) >= 4
+    assert len(cases) >= 5
     assert "pg_work_hours_answer" in case_ids
     assert "pg_stock_options_refusal" in case_ids
     assert "sqlite_safety_training_answer" in case_ids
     assert "pg_prompt_injection_stock_options_refusal" in case_ids
+    assert "sqlite_conversation_work_hours_answer" in case_ids
 
     for case in cases:
         assert case["question"] != ""
@@ -26,6 +27,7 @@ def test_load_evaluation_cases_from_default_file():
         assert case["retriever_backend"] in {"sqlite", "postgresql"}
         assert case["scenario"] != ""
         assert case["tags"] != []
+        assert isinstance(case["messages"], list)
         assert case["top_k"] >= 1
         assert 0 <= case["min_score"] <= 1
 
@@ -107,6 +109,21 @@ def test_select_evaluation_cases_can_select_prompt_injection_security_cases():
     assert selected_cases[0]["id"] == "pg_prompt_injection_stock_options_refusal"
 
 
+def test_select_evaluation_cases_can_select_conversation_context_cases():
+    cases = load_evaluation_cases()
+
+    selected_cases = select_evaluation_cases(
+        cases,
+        retriever_backend="sqlite",
+        scenario="conversation_context",
+        tags=["conversation_context", "multi_turn"],
+    )
+
+    assert len(selected_cases) == 1
+    assert selected_cases[0]["id"] == "sqlite_conversation_work_hours_answer"
+    assert len(selected_cases[0]["messages"]) == 2
+
+
 def test_select_evaluation_cases_rejects_invalid_tag_match():
     cases = load_evaluation_cases()
 
@@ -124,6 +141,7 @@ def test_load_agent_evaluation_cases_maps_expected_answer_type():
     assert all("expected_document_title" in case for case in cases)
     assert all("scenario" in case for case in cases)
     assert all("tags" in case for case in cases)
+    assert all("messages" in case for case in cases)
 
 
 def test_load_agent_evaluation_cases_can_use_generic_filters():
@@ -175,6 +193,48 @@ def test_validate_evaluation_case_requires_tags():
         validate_evaluation_case(case)
 
 
+def test_validate_evaluation_case_defaults_messages_to_empty_list():
+    case = {
+        "id": "case_without_messages",
+        "question": "员工每天需要工作多久？",
+        "expected_answer_type": "answer",
+        "expected_document_title": "员工手册",
+        "scenario": "known_answer",
+        "tags": ["sqlite", "answer"],
+        "retriever_backend": "sqlite",
+        "mode": "precomputed_embedding",
+        "top_k": 3,
+        "min_score": 0.6,
+    }
+
+    validated_case = validate_evaluation_case(case)
+
+    assert validated_case["messages"] == []
+
+
+def test_validate_evaluation_case_rejects_invalid_messages():
+    case = {
+        "id": "case_with_invalid_messages",
+        "question": "每天需要工作多久？",
+        "expected_answer_type": "answer",
+        "expected_document_title": "员工手册",
+        "scenario": "conversation_context",
+        "tags": ["sqlite", "answer", "conversation_context"],
+        "retriever_backend": "sqlite",
+        "mode": "precomputed_embedding",
+        "top_k": 3,
+        "min_score": 0.6,
+        "messages": [
+            {
+                "role": "user",
+            }
+        ],
+    }
+
+    with pytest.raises(ValueError, match="content"):
+        validate_evaluation_case(case)
+
+
 def test_validate_evaluation_case_allows_custom_scenario():
     case = {
         "id": "case_with_custom_scenario",
@@ -189,7 +249,11 @@ def test_validate_evaluation_case_allows_custom_scenario():
         "min_score": 0.8,
     }
 
-    assert validate_evaluation_case(case) == case
+    validated_case = validate_evaluation_case(case)
+
+    assert validated_case["scenario"] == "contract_review"
+    assert validated_case["tags"] == ["contract", "answer"]
+    assert validated_case["messages"] == []
 
 
 def test_summarize_evaluation_cases():
@@ -205,6 +269,8 @@ def test_summarize_evaluation_cases():
     assert summary["by_scenario"]["known_answer"] >= 2
     assert summary["by_scenario"]["unknown_answer"] >= 1
     assert summary["by_scenario"]["prompt_injection"] >= 1
+    assert summary["by_scenario"]["conversation_context"] >= 1
     assert summary["by_tag"]["policy"] >= 2
     assert summary["by_tag"]["security"] >= 1
     assert summary["by_tag"]["prompt_injection"] >= 1
+    assert summary["by_tag"]["multi_turn"] >= 1
