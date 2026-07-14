@@ -15,6 +15,8 @@ def test_info_endpoint():
 
     assert data["name"] == "Enterprise Knowledge Base Agent"
     assert data["version"] == "0.1.0"
+    assert data["database_backend"] == "sqlite"
+    assert data["default_rag_retriever_backend"] == "sqlite"
     assert "legacy_file_chat_with_citations" in data["features"]
     assert "legacy_file_refusal_for_unknown_questions" in data["features"]
     assert "legacy_json_list_documents" in data["features"]

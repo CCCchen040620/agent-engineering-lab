@@ -17,6 +17,10 @@ from frontend.api_client import (
     upload_text_document_api,
     stream_langgraph_agent_api,
 )
+from frontend.retriever_backend_view import (
+    build_retriever_backend_caption,
+    get_retriever_backend_radio_index,
+)
 
 
 st.set_page_config(
@@ -203,12 +207,13 @@ with st.sidebar:
     )
 
     retriever_backend_label = st.radio(
-    "检索后端",
-    [SQLITE_BACKEND_LABEL, POSTGRESQL_BACKEND_LABEL],
-    index=0,
+        "检索后端",
+        [SQLITE_BACKEND_LABEL, POSTGRESQL_BACKEND_LABEL],
+        index=get_retriever_backend_radio_index(info),
     )
 
     retriever_backend = backend_label_to_backend(retriever_backend_label)
+    st.caption(build_retriever_backend_caption(info, retriever_backend))
 
     if retriever_backend == "postgresql":
         st.info(

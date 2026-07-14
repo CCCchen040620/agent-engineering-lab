@@ -1,5 +1,7 @@
 from fastapi import APIRouter
 
+from backend.config import DATABASE_URL, RAG_RETRIEVER_BACKEND
+from backend.services.database_url_service import is_postgresql_database
 from backend.services.rag_backend_capability_service import (
     list_rag_backend_capabilities,
 )
@@ -10,9 +12,13 @@ router = APIRouter(prefix="/api/v1")
 
 @router.get("/info")
 def get_info():
+    database_backend = "postgresql" if is_postgresql_database(DATABASE_URL) else "sqlite"
+
     return {
         "name": "Enterprise Knowledge Base Agent",
         "version": "0.1.0",
+        "database_backend": database_backend,
+        "default_rag_retriever_backend": RAG_RETRIEVER_BACKEND,
         "features": [
             "health_check",
             "legacy_file_chat_with_citations",

@@ -1,0 +1,32 @@
+from frontend.retriever_backend_view import (
+    build_retriever_backend_caption,
+    get_default_retriever_backend_from_info,
+    get_retriever_backend_radio_index,
+)
+
+
+def test_get_default_retriever_backend_from_info_defaults_to_sqlite():
+    assert get_default_retriever_backend_from_info(None) == "sqlite"
+    assert get_retriever_backend_radio_index(None) == 0
+
+
+def test_get_default_retriever_backend_from_info_uses_postgresql():
+    info = {
+        "database_backend": "postgresql",
+        "default_rag_retriever_backend": "postgresql",
+    }
+
+    assert get_default_retriever_backend_from_info(info) == "postgresql"
+    assert get_retriever_backend_radio_index(info) == 1
+
+
+def test_build_retriever_backend_caption():
+    caption = build_retriever_backend_caption(
+        {
+            "database_backend": "postgresql",
+            "default_rag_retriever_backend": "postgresql",
+        },
+        selected_backend="sqlite",
+    )
+
+    assert caption == "主数据库：postgresql | 默认检索后端：postgresql | 当前选择：sqlite"
