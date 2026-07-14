@@ -20,13 +20,6 @@ REQUIRED_FIELDS = {
 SUPPORTED_ANSWER_TYPES = {"answer", "refusal"}
 SUPPORTED_RETRIEVER_BACKENDS = {"sqlite", "postgresql"}
 SUPPORTED_MODES = {"keyword", "vector", "embedding", "precomputed_embedding"}
-SUPPORTED_SCENARIOS = {
-    "known_answer",
-    "unknown_answer",
-    "prompt_injection",
-    "conversation_context",
-    "migration",
-}
 
 
 def validate_evaluation_case(case: dict) -> dict:
@@ -49,9 +42,6 @@ def validate_evaluation_case(case: dict) -> dict:
 
     if not isinstance(case["expected_document_title"], str):
         raise ValueError("Evaluation case field must be a string: expected_document_title")
-
-    if case["scenario"] not in SUPPORTED_SCENARIOS:
-        raise ValueError(f"Unsupported scenario: {case['scenario']}")
 
     if not isinstance(case["tags"], list) or case["tags"] == []:
         raise ValueError("Evaluation case tags must be a non-empty list.")
@@ -101,13 +91,39 @@ def load_evaluation_cases(
     return [validate_evaluation_case(case) for case in cases]
 
 
-def filter_evaluation_cases(
+def normalize_selection_values(value, field_name: str) -> list[str] | None:
+    if value is None:
+        return None
+
+    if isinstance(value, str):
+        values = [value]
+    else:
+        values = list(value)
+
+    if values == []:
+        raise ValueError(f"{field_name} must not be empty when provided.")
+
+    for item in values:
+        if not isinstance(item, str) or item.strip() == "":
+            raise ValueError(f"{field_name} must contain non-empty strings.")
+
+    return values
+
+
+def select_evaluation_cases(
     cases: list[dict],
     retriever_backend: str | None = None,
     expected_answer_type: str | None = None,
     scenario: str | None = None,
-    tag: str | None = None,
+    tags: str | list[str] | tuple[str, ...] | set[str] | None = None,
+    mode: str | None = None,
+    tag_match: str = "all",
 ) -> list[dict]:
+    selected_tags = normalize_selection_values(tags, "tags")
+
+    if tag_match not in ["all", "any"]:
+        raise ValueError("tag_match must be 'all' or 'any'.")
+
     filtered_cases = cases
 
     if retriever_backend is not None:
@@ -129,12 +145,42 @@ def filter_evaluation_cases(
             case for case in filtered_cases if case["scenario"] == scenario
         ]
 
-    if tag is not None:
+    if mode is not None:
         filtered_cases = [
-            case for case in filtered_cases if tag in case["tags"]
+            case for case in filtered_cases if case["mode"] == mode
+        ]
+
+    if selected_tags is not None and tag_match == "all":
+        filtered_cases = [
+            case
+            for case in filtered_cases
+            if all(tag in case["tags"] for tag in selected_tags)
+        ]
+
+    if selected_tags is not None and tag_match == "any":
+        filtered_cases = [
+            case
+            for case in filtered_cases
+            if any(tag in case["tags"] for tag in selected_tags)
         ]
 
     return filtered_cases
+
+
+def filter_evaluation_cases(
+    cases: list[dict],
+    retriever_backend: str | None = None,
+    expected_answer_type: str | None = None,
+    scenario: str | None = None,
+    tag: str | None = None,
+) -> list[dict]:
+    return select_evaluation_cases(
+        cases=cases,
+        retriever_backend=retriever_backend,
+        expected_answer_type=expected_answer_type,
+        scenario=scenario,
+        tags=tag,
+    )
 
 
 def to_agent_case(case: dict) -> dict:
@@ -151,9 +197,20 @@ def to_agent_case(case: dict) -> dict:
 def load_agent_evaluation_cases(
     file_path: str | Path = DEFAULT_EVALUATION_CASES_PATH,
     retriever_backend: str | None = None,
+    expected_answer_type: str | None = None,
+    scenario: str | None = None,
+    tags: str | list[str] | tuple[str, ...] | set[str] | None = None,
+    mode: str | None = None,
 ) -> list[dict]:
     cases = load_evaluation_cases(file_path)
-    cases = filter_evaluation_cases(cases, retriever_backend=retriever_backend)
+    cases = select_evaluation_cases(
+        cases=cases,
+        retriever_backend=retriever_backend,
+        expected_answer_type=expected_answer_type,
+        scenario=scenario,
+        tags=tags,
+        mode=mode,
+    )
     return [to_agent_case(case) for case in cases]
 
 

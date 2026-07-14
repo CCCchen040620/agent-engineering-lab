@@ -7,7 +7,7 @@ from backend.config import DATABASE_URL, SQLITE_ADMIN_DATABASE_PATH
 from backend.services.database_url_service import is_postgresql_database
 from backend.services.langgraph_agent import run_langgraph_agent
 from backend.services.ollama_service import generate_with_ollama
-from week11.evaluation_cases import load_evaluation_cases
+from week11.evaluation_cases import load_evaluation_cases, select_evaluation_cases
 
 
 DEFAULT_EVALUATION_REPORT_PATH = Path("docs/evaluations/rag-evaluation-run.md")
@@ -251,9 +251,25 @@ def run_rag_evaluation(
     runner: Callable[..., dict] | None = None,
     postgresql_connection=None,
     generator: Callable[[str], str] = generate_with_ollama,
+    retriever_backend: str | None = None,
+    expected_answer_type: str | None = None,
+    scenario: str | None = None,
+    tags: str | list[str] | tuple[str, ...] | set[str] | None = None,
+    mode: str | None = None,
+    tag_match: str = "all",
 ) -> dict:
     if cases is None:
         cases = load_evaluation_cases()
+
+    cases = select_evaluation_cases(
+        cases=cases,
+        retriever_backend=retriever_backend,
+        expected_answer_type=expected_answer_type,
+        scenario=scenario,
+        tags=tags,
+        mode=mode,
+        tag_match=tag_match,
+    )
 
     actual_runner = runner if runner is not None else run_langgraph_evaluation_case
     items = []

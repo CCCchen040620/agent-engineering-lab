@@ -157,6 +157,32 @@ def test_run_rag_evaluation_with_fake_runner():
     assert captured_cases == cases
 
 
+def test_run_rag_evaluation_can_select_cases_before_running():
+    cases = load_evaluation_cases()
+    captured_cases = []
+
+    def fake_runner(case, postgresql_connection, generator):
+        captured_cases.append(case)
+        return {
+            "answer": "知识库中没有找到相关资料，暂时无法回答。",
+            "has_valid_context": False,
+            "citations": [],
+            "snippets": [],
+        }
+
+    evaluation = run_rag_evaluation(
+        cases=cases,
+        runner=fake_runner,
+        retriever_backend="postgresql",
+        scenario="unknown_answer",
+        tags="unknown",
+    )
+
+    assert evaluation["total"] == 1
+    assert evaluation["passed"] == 1
+    assert captured_cases[0]["id"] == "pg_stock_options_refusal"
+
+
 def test_run_rag_evaluation_skips_postgresql_without_connection_for_real_runner():
     cases = [
         {

@@ -4,6 +4,7 @@ from week11.evaluation_cases import (
     filter_evaluation_cases,
     load_agent_evaluation_cases,
     load_evaluation_cases,
+    select_evaluation_cases,
     summarize_evaluation_cases,
     validate_evaluation_case,
 )
@@ -52,6 +53,51 @@ def test_filter_evaluation_cases_by_scenario_and_tag():
     assert all("policy" in case["tags"] for case in policy_cases)
 
 
+def test_select_evaluation_cases_combines_generic_filters():
+    cases = load_evaluation_cases()
+
+    selected_cases = select_evaluation_cases(
+        cases,
+        retriever_backend="postgresql",
+        expected_answer_type="answer",
+        scenario="known_answer",
+        tags=["postgresql", "policy"],
+        mode="precomputed_embedding",
+    )
+
+    assert len(selected_cases) >= 1
+
+    for case in selected_cases:
+        assert case["retriever_backend"] == "postgresql"
+        assert case["expected_answer_type"] == "answer"
+        assert case["scenario"] == "known_answer"
+        assert "postgresql" in case["tags"]
+        assert "policy" in case["tags"]
+        assert case["mode"] == "precomputed_embedding"
+
+
+def test_select_evaluation_cases_matches_any_tag_when_requested():
+    cases = load_evaluation_cases()
+
+    selected_cases = select_evaluation_cases(
+        cases,
+        tags=["sqlite", "unknown"],
+        tag_match="any",
+    )
+
+    assert len(selected_cases) >= 2
+
+    for case in selected_cases:
+        assert "sqlite" in case["tags"] or "unknown" in case["tags"]
+
+
+def test_select_evaluation_cases_rejects_invalid_tag_match():
+    cases = load_evaluation_cases()
+
+    with pytest.raises(ValueError, match="tag_match"):
+        select_evaluation_cases(cases, tags=["policy"], tag_match="unsupported")
+
+
 def test_load_agent_evaluation_cases_maps_expected_answer_type():
     cases = load_agent_evaluation_cases(retriever_backend="postgresql")
     case_types = {case["case_type"] for case in cases}
@@ -62,6 +108,19 @@ def test_load_agent_evaluation_cases_maps_expected_answer_type():
     assert all("expected_document_title" in case for case in cases)
     assert all("scenario" in case for case in cases)
     assert all("tags" in case for case in cases)
+
+
+def test_load_agent_evaluation_cases_can_use_generic_filters():
+    cases = load_agent_evaluation_cases(
+        retriever_backend="postgresql",
+        scenario="unknown_answer",
+        tags="unknown",
+    )
+
+    assert len(cases) == 1
+    assert cases[0]["case_type"] == "refusal"
+    assert cases[0]["scenario"] == "unknown_answer"
+    assert "unknown" in cases[0]["tags"]
 
 
 def test_validate_evaluation_case_requires_expected_document_for_answer():
@@ -100,22 +159,21 @@ def test_validate_evaluation_case_requires_tags():
         validate_evaluation_case(case)
 
 
-def test_validate_evaluation_case_rejects_unsupported_scenario():
+def test_validate_evaluation_case_allows_custom_scenario():
     case = {
-        "id": "case_with_bad_scenario",
+        "id": "case_with_custom_scenario",
         "question": "员工每天需要工作多久？",
         "expected_answer_type": "answer",
         "expected_document_title": "员工手册",
-        "scenario": "unsupported",
-        "tags": ["postgresql", "answer"],
+        "scenario": "contract_review",
+        "tags": ["contract", "answer"],
         "retriever_backend": "postgresql",
         "mode": "precomputed_embedding",
         "top_k": 2,
         "min_score": 0.8,
     }
 
-    with pytest.raises(ValueError, match="scenario"):
-        validate_evaluation_case(case)
+    assert validate_evaluation_case(case) == case
 
 
 def test_summarize_evaluation_cases():
