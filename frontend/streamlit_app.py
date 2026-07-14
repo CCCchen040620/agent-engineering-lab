@@ -19,6 +19,7 @@ from frontend.api_client import (
 )
 from frontend.retriever_backend_view import (
     build_retriever_backend_caption,
+    build_retriever_backend_result_caption,
     get_chat_engine_radio_index,
     get_retriever_backend_override,
     get_retriever_backend_radio_index,
@@ -533,7 +534,14 @@ if st.button("提问"):
         else:
             history_item = response.copy()
             history_item["engine"] = chat_engine
-            history_item["retriever_backend"] = retriever_backend
+            history_item["retriever_backend"] = response.get(
+                "retriever_backend",
+                retriever_backend,
+            )
+            history_item["retriever_backend_source"] = response.get(
+                "retriever_backend_source",
+                "",
+            )
             history_item["feedback"] = None
             history_item["feedback_id"] = None
             st.session_state["chat_history"].append(history_item)
@@ -557,7 +565,7 @@ if st.button("提问"):
 
             st.caption(f"检索关键词：{response['keyword']}")
             st.caption(f"问答引擎：{chat_engine}")
-            st.caption(f"检索后端：{retriever_backend}")
+            st.caption(build_retriever_backend_result_caption(response))
 
             if "conversation_id" in response:
                 st.caption(f"已保存到会话：{response['conversation_id']}")
@@ -591,7 +599,7 @@ if st.session_state["chat_history"] != []:
             st.write(item["answer"])
             caption_text = (
                 f"引擎：{item.get('engine', '普通 RAG 问答')} "
-                f"| 检索后端：{item.get('retriever_backend', 'sqlite')} "
+                f"| {build_retriever_backend_result_caption(item)} "
                 f"| 关键词：{item['keyword']} "
                 f"| 引用数量：{len(item['citations'])}"
             )

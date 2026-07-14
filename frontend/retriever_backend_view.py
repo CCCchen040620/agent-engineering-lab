@@ -40,6 +40,26 @@ def get_retriever_backend_override(
     return selected_backend
 
 
+def format_retriever_backend_source(source: str | None) -> str:
+    if source == "default":
+        return "根据配置自动选择"
+
+    if source == "override":
+        return "手动选择"
+
+    return "未知来源"
+
+
+def build_retriever_backend_result_caption(result: dict) -> str:
+    backend = result.get("retriever_backend", SQLITE_BACKEND)
+    source = result.get("retriever_backend_source", "")
+
+    if source == "":
+        return f"检索后端：{backend}"
+
+    return f"检索后端：{backend}（{format_retriever_backend_source(source)}）"
+
+
 def build_retriever_backend_caption(
     info: dict | None,
     selected_backend: str,

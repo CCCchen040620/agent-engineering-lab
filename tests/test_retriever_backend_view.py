@@ -1,5 +1,7 @@
 from frontend.retriever_backend_view import (
     build_retriever_backend_caption,
+    build_retriever_backend_result_caption,
+    format_retriever_backend_source,
     get_chat_engine_radio_index,
     get_default_retriever_backend_from_info,
     get_retriever_backend_override,
@@ -52,3 +54,33 @@ def test_get_retriever_backend_override_returns_selected_backend_when_overridden
     }
 
     assert get_retriever_backend_override(info, "sqlite") == "sqlite"
+
+
+def test_format_retriever_backend_source():
+    assert format_retriever_backend_source("default") == "根据配置自动选择"
+    assert format_retriever_backend_source("override") == "手动选择"
+    assert format_retriever_backend_source("") == "未知来源"
+
+
+def test_build_retriever_backend_result_caption():
+    assert (
+        build_retriever_backend_result_caption(
+            {
+                "retriever_backend": "postgresql",
+                "retriever_backend_source": "default",
+            }
+        )
+        == "检索后端：postgresql（根据配置自动选择）"
+    )
+
+    assert (
+        build_retriever_backend_result_caption(
+            {
+                "retriever_backend": "sqlite",
+                "retriever_backend_source": "override",
+            }
+        )
+        == "检索后端：sqlite（手动选择）"
+    )
+
+    assert build_retriever_backend_result_caption({}) == "检索后端：sqlite"
