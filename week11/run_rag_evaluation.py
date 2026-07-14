@@ -104,6 +104,7 @@ def evaluate_rag_result(case: dict, result: dict) -> dict:
     answer = result.get("answer", "")
     has_valid_context = result.get("has_valid_context") is True
     is_fallback = result.get("is_fallback") is True
+    fallback_reason = result.get("fallback_reason", "")
     is_timeout = result.get("is_timeout") is True
     expected_answer_type = case["expected_answer_type"]
     expected_document_in_citations = is_expected_document_in_citations(
@@ -144,6 +145,7 @@ def evaluate_rag_result(case: dict, result: dict) -> dict:
         "answer": answer,
         "has_valid_context": has_valid_context,
         "is_fallback": is_fallback,
+        "fallback_reason": fallback_reason,
         "is_timeout": is_timeout,
         "citation_count": len(citations),
         "citations": citations,
@@ -174,6 +176,7 @@ def build_skipped_evaluation_item(case: dict, reason: str) -> dict:
         "answer": "",
         "has_valid_context": False,
         "is_fallback": False,
+        "fallback_reason": "",
         "is_timeout": False,
         "citation_count": 0,
         "citations": [],
@@ -453,6 +456,7 @@ def build_rag_evaluation_report(evaluation: dict) -> str:
                 f"- 跳过原因：{item['skip_reason']}",
                 f"- has_valid_context：{format_bool(item['has_valid_context'])}",
                 f"- 是否兜底回答：{format_bool(item['is_fallback'])}",
+                f"- 兜底原因：{item['fallback_reason'] if item['fallback_reason'] else '无'}",
                 f"- 是否超时：{format_bool(item['is_timeout'])}",
                 f"- 引用数量：{item['citation_count']}",
                 f"- snippets 数量：{item['snippet_count']}",

@@ -137,11 +137,13 @@ def answer_with_context_tool(
         return refuse_answer_tool(question)
 
     prompt = build_rag_prompt(question, snippets)
+    generation_error = ""
 
     try:
         answer = generator(prompt).strip()
-    except Exception:
+    except Exception as error:
         answer = MODEL_UNAVAILABLE_ANSWER
+        generation_error = str(error)
 
     citations = []
 
@@ -157,6 +159,7 @@ def answer_with_context_tool(
     return {
         "question": question,
         "answer": answer,
+        "generation_error": generation_error,
         "citations": citations,
     }
 

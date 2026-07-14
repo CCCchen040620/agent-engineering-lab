@@ -57,6 +57,7 @@ class LangGraphAgentState(TypedDict):
     timeout_seconds: float
     is_timeout: bool
     is_fallback: bool
+    fallback_reason: str
 
 
 def decide_intent_node(state: LangGraphAgentState) -> dict:
@@ -521,6 +522,7 @@ def build_fallback_answer_result(
 
     return {
         "is_fallback": True,
+        "fallback_reason": error_message,
         "answer": build_fallback_answer(state["snippets"]),
         "citations": citations,
         "steps": state["steps"]
@@ -563,11 +565,12 @@ def answer_node(state: LangGraphAgentState) -> dict:
         if tool_result["answer"] in [MODEL_UNAVAILABLE_ANSWER, REFUSAL_ANSWER]:
             return build_fallback_answer_result(
                 state=state,
-                error_message=tool_result["answer"],
+                error_message=tool_result.get("generation_error") or tool_result["answer"],
             )
 
         return {
             "is_fallback": False,
+            "fallback_reason": "",
             "answer": tool_result["answer"],
             "citations": tool_result["citations"],
             "steps": state["steps"]
@@ -780,6 +783,7 @@ def run_langgraph_agent(
         "timeout_seconds": timeout_seconds,
         "is_timeout": False,
         "is_fallback": False,
+        "fallback_reason": "",
     }
 
     result = graph.invoke(initial_state)

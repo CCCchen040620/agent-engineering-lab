@@ -138,6 +138,7 @@ def test_run_langgraph_agent_answers_with_context(tmp_path):
     assert result["intent"] == "answer_question"
     assert result["keyword"] == "安全培训"
     assert result["answer"] == "新员工需要在入职后 30 天内完成安全培训。"
+    assert result["fallback_reason"] == ""
     assert len(result["citations"]) == 1
 
     assert result["steps"][0]["tool"] == "load_conversation_summary"
@@ -673,6 +674,7 @@ def test_run_langgraph_agent_falls_back_when_generator_fails(tmp_path):
     )
 
     assert result["is_fallback"] is True
+    assert result["fallback_reason"] == "模型生成失败"
     assert "已检索到相关资料，但模型生成回答失败" in result["answer"]
     assert "新员工入职后需要在 30 天内完成安全培训。" in result["answer"]
     assert len(result["citations"]) == 1
@@ -714,6 +716,7 @@ def test_run_langgraph_agent_falls_back_when_generator_returns_refusal(tmp_path)
     )
 
     assert result["is_fallback"] is True
+    assert result["fallback_reason"] == REFUSAL_ANSWER
     assert "已检索到相关资料，但模型生成回答失败" in result["answer"]
     assert "新员工入职后需要在 30 天内完成安全培训。" in result["answer"]
     assert len(result["citations"]) == 1

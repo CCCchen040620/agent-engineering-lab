@@ -47,6 +47,7 @@ def test_evaluate_rag_result_passes_answer_when_expected_document_is_cited():
 
     assert item["passed"] is True
     assert item["failure_reasons"] == []
+    assert item["fallback_reason"] == ""
     assert item["expected_document_in_citations"] is True
     assert item["expected_document_in_snippets"] is True
 
@@ -88,6 +89,46 @@ def test_evaluate_rag_result_fails_answer_when_expected_document_is_not_cited():
     assert item["passed"] is False
     assert item["failure_reasons"] == ["expected_document_not_cited"]
     assert item["expected_document_in_citations"] is False
+
+
+def test_evaluate_rag_result_keeps_fallback_reason():
+    case = {
+        "id": "fallback_case",
+        "question": "新员工什么时候完成安全培训？",
+        "expected_answer_type": "answer",
+        "expected_document_title": "员工手册",
+        "retriever_backend": "sqlite",
+        "mode": "precomputed_embedding",
+        "top_k": 3,
+        "min_score": 0.6,
+    }
+    result = {
+        "answer": "已检索到相关资料，但模型生成回答失败。",
+        "has_valid_context": True,
+        "is_fallback": True,
+        "fallback_reason": "模型生成失败",
+        "is_timeout": False,
+        "snippets": [
+            {
+                "title": "员工手册",
+                "text": "新员工入职后需要在 30 天内完成安全培训。",
+                "score": 0.9,
+            }
+        ],
+        "citations": [
+            {
+                "title": "员工手册",
+                "text": "新员工入职后需要在 30 天内完成安全培训。",
+                "path": "sqlite://1",
+            }
+        ],
+    }
+
+    item = evaluate_rag_result(case, result)
+
+    assert item["passed"] is False
+    assert item["failure_reasons"] == ["fallback_answer"]
+    assert item["fallback_reason"] == "模型生成失败"
 
 
 def test_build_failure_reasons_for_answer_collects_multiple_reasons():
@@ -556,6 +597,7 @@ def test_build_rag_evaluation_report_contains_summary():
                 "answer": "员工每天需要完成 8 小时工作。",
                 "has_valid_context": True,
                 "is_fallback": False,
+                "fallback_reason": "",
                 "is_timeout": False,
                 "citation_count": 1,
                 "citations": [
@@ -581,6 +623,7 @@ def test_build_rag_evaluation_report_contains_summary():
     assert "known_answer" in report
     assert "policy" in report
     assert "失败原因" in report
+    assert "兜底原因：无" in report
 
 
 def test_write_rag_evaluation_report(tmp_path):

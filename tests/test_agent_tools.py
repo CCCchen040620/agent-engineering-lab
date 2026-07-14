@@ -274,6 +274,7 @@ def test_answer_with_context_tool_handles_generator_error():
     )
 
     assert result["answer"] == "本地模型暂时不可用，请稍后再试。"
+    assert result["generation_error"] == "model timeout"
     assert len(result["citations"]) == 1
 
 
