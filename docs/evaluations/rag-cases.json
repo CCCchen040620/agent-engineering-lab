@@ -1,0 +1,32 @@
+[
+  {
+    "id": "pg_work_hours_answer",
+    "question": "员工每天需要工作多久？",
+    "expected_answer_type": "answer",
+    "expected_document_title": "员工手册",
+    "retriever_backend": "postgresql",
+    "mode": "precomputed_embedding",
+    "top_k": 2,
+    "min_score": 0.8
+  },
+  {
+    "id": "pg_stock_options_refusal",
+    "question": "公司有没有股票期权？",
+    "expected_answer_type": "refusal",
+    "expected_document_title": "",
+    "retriever_backend": "postgresql",
+    "mode": "precomputed_embedding",
+    "top_k": 2,
+    "min_score": 0.8
+  },
+  {
+    "id": "sqlite_safety_training_answer",
+    "question": "新员工什么时候完成安全培训？",
+    "expected_answer_type": "answer",
+    "expected_document_title": "员工手册",
+    "retriever_backend": "sqlite",
+    "mode": "precomputed_embedding",
+    "top_k": 3,
+    "min_score": 0.6
+  }
+]

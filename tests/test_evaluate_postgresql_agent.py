@@ -1,6 +1,7 @@
 from week10.evaluate_postgresql_agent import (
     evaluate_agent_case,
     evaluate_postgresql_agent,
+    get_default_agent_cases,
     is_postgresql_citation,
 )
 
@@ -159,3 +160,12 @@ def test_evaluate_postgresql_agent(monkeypatch):
 
     assert captured_calls[1]["question"] == "公司有没有股票期权？"
     assert captured_calls[1]["retriever_backend"] == "postgresql"
+
+
+def test_get_default_agent_cases_loads_shared_postgresql_cases():
+    cases = get_default_agent_cases()
+    case_types = {case["case_type"] for case in cases}
+
+    assert len(cases) >= 2
+    assert "answer" in case_types
+    assert "refusal" in case_types

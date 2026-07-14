@@ -4,18 +4,11 @@ from backend.config import DATABASE_URL
 from backend.services.database_url_service import is_postgresql_database
 from backend.services.langgraph_agent import run_langgraph_agent
 from backend.services.ollama_service import generate_with_ollama
+from week11.evaluation_cases import load_agent_evaluation_cases
 
 
-DEFAULT_AGENT_CASES = [
-    {
-        "question": "员工每天需要工作多久？",
-        "case_type": "answer",
-    },
-    {
-        "question": "公司有没有股票期权？",
-        "case_type": "refusal",
-    },
-]
+def get_default_agent_cases() -> list[dict]:
+    return load_agent_evaluation_cases(retriever_backend="postgresql")
 
 
 def is_postgresql_citation(citation: dict) -> bool:
@@ -67,7 +60,7 @@ def evaluate_postgresql_agent(
     generator=generate_with_ollama,
 ) -> dict:
     if cases is None:
-        cases = DEFAULT_AGENT_CASES
+        cases = get_default_agent_cases()
 
     items = []
 
