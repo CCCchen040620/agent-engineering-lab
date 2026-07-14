@@ -1,5 +1,6 @@
 from week11.evaluation_cases import load_evaluation_cases
 from week11.run_rag_evaluation import (
+    build_failure_reasons,
     build_rag_evaluation_report,
     evaluate_rag_result,
     main,
@@ -45,6 +46,7 @@ def test_evaluate_rag_result_passes_answer_when_expected_document_is_cited():
     item = evaluate_rag_result(case, result)
 
     assert item["passed"] is True
+    assert item["failure_reasons"] == []
     assert item["expected_document_in_citations"] is True
     assert item["expected_document_in_snippets"] is True
 
@@ -84,7 +86,29 @@ def test_evaluate_rag_result_fails_answer_when_expected_document_is_not_cited():
     item = evaluate_rag_result(case, result)
 
     assert item["passed"] is False
+    assert item["failure_reasons"] == ["expected_document_not_cited"]
     assert item["expected_document_in_citations"] is False
+
+
+def test_build_failure_reasons_for_answer_collects_multiple_reasons():
+    failure_reasons = build_failure_reasons(
+        expected_answer_type="answer",
+        answer="",
+        has_valid_context=False,
+        is_fallback=True,
+        is_timeout=True,
+        citations=[],
+        expected_document_in_citations=False,
+    )
+
+    assert failure_reasons == [
+        "invalid_context",
+        "empty_answer",
+        "fallback_answer",
+        "timeout",
+        "missing_citations",
+        "expected_document_not_cited",
+    ]
 
 
 def test_evaluate_rag_result_passes_refusal_without_context_and_citations():
@@ -109,7 +133,42 @@ def test_evaluate_rag_result_passes_refusal_without_context_and_citations():
     item = evaluate_rag_result(case, result)
 
     assert item["passed"] is True
+    assert item["failure_reasons"] == []
     assert item["citation_count"] == 0
+
+
+def test_evaluate_rag_result_fails_refusal_with_unexpected_citations():
+    case = {
+        "id": "refusal_case",
+        "question": "公司有没有股票期权？",
+        "expected_answer_type": "refusal",
+        "expected_document_title": "",
+        "retriever_backend": "postgresql",
+        "mode": "precomputed_embedding",
+        "top_k": 2,
+        "min_score": 0.8,
+    }
+    result = {
+        "answer": "根据知识库资料生成回答。",
+        "has_valid_context": True,
+        "is_timeout": False,
+        "citations": [
+            {
+                "title": "员工手册",
+                "text": "错误引用",
+                "path": "postgresql://chunk/1",
+            }
+        ],
+        "snippets": [],
+    }
+
+    item = evaluate_rag_result(case, result)
+
+    assert item["passed"] is False
+    assert item["failure_reasons"] == [
+        "unexpected_valid_context",
+        "unexpected_citations_for_refusal",
+    ]
 
 
 def test_run_rag_evaluation_with_fake_runner():
@@ -352,6 +411,7 @@ def test_run_rag_evaluation_skips_postgresql_without_connection_for_real_runner(
     assert evaluation["evaluated"] == 0
     assert evaluation["skipped"] == 1
     assert evaluation["items"][0]["skip_reason"] == "postgresql_connection_not_configured"
+    assert evaluation["items"][0]["failure_reasons"] == []
 
 
 def test_run_langgraph_evaluation_case_uses_sqlite_admin_database_path(monkeypatch):
@@ -490,6 +550,7 @@ def test_build_rag_evaluation_report_contains_summary():
                 "top_k": 3,
                 "min_score": 0.6,
                 "passed": True,
+                "failure_reasons": [],
                 "skipped": False,
                 "skip_reason": "",
                 "answer": "员工每天需要完成 8 小时工作。",
@@ -519,6 +580,7 @@ def test_build_rag_evaluation_report_contains_summary():
     assert "员工手册" in report
     assert "known_answer" in report
     assert "policy" in report
+    assert "失败原因" in report
 
 
 def test_write_rag_evaluation_report(tmp_path):

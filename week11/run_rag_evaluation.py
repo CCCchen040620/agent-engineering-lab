@@ -45,6 +45,59 @@ def is_expected_document_in_snippets(case: dict, snippets: list[dict]) -> bool:
     return False
 
 
+def build_failure_reasons(
+    expected_answer_type: str,
+    answer: str,
+    has_valid_context: bool,
+    is_fallback: bool,
+    is_timeout: bool,
+    citations: list[dict],
+    expected_document_in_citations: bool,
+) -> list[str]:
+    failure_reasons = []
+
+    if expected_answer_type == "answer":
+        if not has_valid_context:
+            failure_reasons.append("invalid_context")
+
+        if answer == "":
+            failure_reasons.append("empty_answer")
+
+        if is_fallback:
+            failure_reasons.append("fallback_answer")
+
+        if is_timeout:
+            failure_reasons.append("timeout")
+
+        if citations == []:
+            failure_reasons.append("missing_citations")
+
+        if not expected_document_in_citations:
+            failure_reasons.append("expected_document_not_cited")
+
+        return failure_reasons
+
+    if expected_answer_type == "refusal":
+        if has_valid_context:
+            failure_reasons.append("unexpected_valid_context")
+
+        if answer == "":
+            failure_reasons.append("empty_answer")
+
+        if is_fallback:
+            failure_reasons.append("fallback_answer")
+
+        if is_timeout:
+            failure_reasons.append("timeout")
+
+        if citations != []:
+            failure_reasons.append("unexpected_citations_for_refusal")
+
+        return failure_reasons
+
+    raise ValueError(f"Unsupported expected_answer_type: {expected_answer_type}")
+
+
 def evaluate_rag_result(case: dict, result: dict) -> dict:
     citations = result.get("citations", [])
     snippets = result.get("snippets", [])
@@ -62,24 +115,15 @@ def evaluate_rag_result(case: dict, result: dict) -> dict:
         snippets,
     )
 
-    if expected_answer_type == "answer":
-        passed = (
-            has_valid_context
-            and answer != ""
-            and not is_fallback
-            and not is_timeout
-            and len(citations) > 0
-            and expected_document_in_citations
-        )
-    elif expected_answer_type == "refusal":
-        passed = (
-            not has_valid_context
-            and answer != ""
-            and not is_timeout
-            and citations == []
-        )
-    else:
-        raise ValueError(f"Unsupported expected_answer_type: {expected_answer_type}")
+    failure_reasons = build_failure_reasons(
+        expected_answer_type=expected_answer_type,
+        answer=answer,
+        has_valid_context=has_valid_context,
+        is_fallback=is_fallback,
+        is_timeout=is_timeout,
+        citations=citations,
+        expected_document_in_citations=expected_document_in_citations,
+    )
 
     return {
         "id": case["id"],
@@ -93,7 +137,8 @@ def evaluate_rag_result(case: dict, result: dict) -> dict:
         "mode": case["mode"],
         "top_k": case["top_k"],
         "min_score": case["min_score"],
-        "passed": passed,
+        "passed": failure_reasons == [],
+        "failure_reasons": failure_reasons,
         "skipped": False,
         "skip_reason": "",
         "answer": answer,
@@ -123,6 +168,7 @@ def build_skipped_evaluation_item(case: dict, reason: str) -> dict:
         "top_k": case["top_k"],
         "min_score": case["min_score"],
         "passed": False,
+        "failure_reasons": [],
         "skipped": True,
         "skip_reason": reason,
         "answer": "",
@@ -402,6 +448,7 @@ def build_rag_evaluation_report(evaluation: dict) -> str:
                 f"- top_k：{item['top_k']}",
                 f"- min_score：{item['min_score']}",
                 f"- 是否通过：{format_bool(item['passed'])}",
+                f"- 失败原因：{', '.join(item['failure_reasons']) if item['failure_reasons'] else '无'}",
                 f"- 是否跳过：{format_bool(item['skipped'])}",
                 f"- 跳过原因：{item['skip_reason']}",
                 f"- has_valid_context：{format_bool(item['has_valid_context'])}",
