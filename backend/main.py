@@ -15,6 +15,7 @@ from backend.routers.memory_demo import router as memory_demo_router
 from backend.routers.conversations import router as conversations_router
 from backend.routers.system import router as system_router
 from backend.routers.postgresql_documents import router as postgresql_documents_router
+from backend.routers.tasks import router as tasks_router
 
 
 configure_logging()
@@ -34,3 +35,4 @@ app.include_router(memory_demo_router)
 app.include_router(conversations_router)
 app.include_router(system_router)
 app.include_router(postgresql_documents_router)
+app.include_router(tasks_router)
