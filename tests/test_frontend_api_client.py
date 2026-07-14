@@ -1351,8 +1351,9 @@ def test_list_tasks_api(monkeypatch):
                 }
             ]
 
-    def fake_get(url, timeout=10):
+    def fake_get(url, params=None, timeout=10):
         assert url.endswith("/api/v1/tasks")
+        assert params == {}
         return FakeResponse()
 
     monkeypatch.setattr(api_client.requests, "get", fake_get)
@@ -1360,6 +1361,45 @@ def test_list_tasks_api(monkeypatch):
     tasks = api_client.list_tasks_api("http://testserver")
 
     assert tasks[0]["status"] == "succeeded"
+
+
+def test_list_tasks_api_can_filter_by_status(monkeypatch):
+    from frontend import api_client
+
+    captured = {}
+
+    class FakeResponse:
+        status_code = 200
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return [
+                {
+                    "id": 2,
+                    "type": "postgresql_embedding_backfill",
+                    "status": "failed",
+                    "payload": {},
+                    "result": {},
+                    "error": "Ollama unavailable",
+                }
+            ]
+
+    def fake_get(url, params=None, timeout=10):
+        captured["url"] = url
+        captured["params"] = params
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr(api_client.requests, "get", fake_get)
+
+    tasks = api_client.list_tasks_api("http://testserver", status="failed")
+
+    assert captured["url"] == "http://testserver/api/v1/tasks"
+    assert captured["params"] == {"status": "failed"}
+    assert captured["timeout"] == 10
+    assert tasks[0]["status"] == "failed"
 
 
 def test_get_task_api(monkeypatch):

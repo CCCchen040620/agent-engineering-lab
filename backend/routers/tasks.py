@@ -1,6 +1,6 @@
 from threading import Thread
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from backend.services.task_queue_service import InMemoryTaskQueue, TaskRunner
 from backend.services.task_dispatcher_service import build_default_task_dispatcher
@@ -74,9 +74,10 @@ def create_task(
 
 @router.get("")
 def list_tasks(
+    status: str | None = Query(default=None),
     queue: InMemoryTaskQueue = Depends(get_task_queue),
 ):
-    return queue.list_tasks()
+    return queue.list_tasks(status=status)
 
     
 @router.get("/{task_id}")

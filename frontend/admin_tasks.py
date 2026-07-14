@@ -121,14 +121,17 @@ with refresh_column:
         st.rerun()
 
 try:
-    tasks = list_tasks_api(BACKEND_API_BASE_URL)
+    tasks = list_tasks_api(
+        BACKEND_API_BASE_URL,
+        status=status_filter,
+    )
 
     if not tasks:
         st.info("暂无任务。")
     else:
         display_tasks = build_task_list_rows(
             tasks,
-            status_filter=status_filter,
+            status_filter="全部",
             newest_first=newest_first,
         )
 

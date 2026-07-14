@@ -41,6 +41,25 @@ def test_list_tasks():
     assert tasks == [first, second]
 
 
+def test_list_tasks_can_filter_by_status():
+    queue = InMemoryTaskQueue()
+
+    first = queue.create_task(
+        task_type="embedding_backfill",
+        payload={"source": "postgresql"},
+    )
+    second = queue.create_task(
+        task_type="rag_evaluation",
+        payload={"scope": "lightweight"},
+    )
+
+    queue.mark_task_failed(first["id"], "Ollama unavailable")
+
+    tasks = queue.list_tasks(status="pending")
+
+    assert tasks == [second]
+
+
 def test_get_task_by_id():
     queue = InMemoryTaskQueue()
 

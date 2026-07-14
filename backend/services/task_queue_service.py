@@ -34,8 +34,15 @@ class InMemoryTaskQueue:
 
         return task
 
-    def list_tasks(self) -> list[dict]:
-        return self.tasks
+    def list_tasks(self, status: str | None = None) -> list[dict]:
+        if status in (None, ""):
+            return self.tasks
+
+        return [
+            task
+            for task in self.tasks
+            if task["status"] == status
+        ]
 
     def get_task(self, task_id: int) -> dict | None:
         for task in self.tasks:

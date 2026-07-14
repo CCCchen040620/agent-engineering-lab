@@ -332,3 +332,22 @@ def test_list_tasks_endpoint():
 
     assert response.status_code == 200
     assert response.json() == [first_task, second_task]
+
+
+def test_list_tasks_endpoint_can_filter_by_status():
+    test_queue = InMemoryTaskQueue()
+    first_task = test_queue.create_task(
+        task_type="echo",
+        payload={"message": "first"},
+    )
+    second_task = test_queue.create_task(
+        task_type="postgresql_embedding_backfill",
+        payload={},
+    )
+    test_queue.mark_task_failed(first_task["id"], "Task failed")
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.get("/api/v1/tasks?status=pending")
+
+    assert response.status_code == 200
+    assert response.json() == [second_task]
