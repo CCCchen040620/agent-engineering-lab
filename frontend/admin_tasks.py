@@ -9,7 +9,10 @@ from frontend.api_client import (
 )
 from frontend.task_result_summary import (
     build_task_result_summary,
-    summarize_task_result_as_text,
+)
+from frontend.task_list_view import (
+    TASK_STATUS_FILTER_OPTIONS,
+    build_task_list_rows,
 )
 from backend.config import BACKEND_API_BASE_URL
 
@@ -94,8 +97,28 @@ if st.button("查看任务详情"):
 
 st.divider()
 
-if st.button("刷新任务列表"):
-    st.rerun()
+st.subheader("任务列表")
+
+filter_column, sort_column, refresh_column = st.columns([2, 2, 1])
+
+with filter_column:
+    status_filter = st.selectbox(
+        "任务状态筛选",
+        TASK_STATUS_FILTER_OPTIONS,
+    )
+
+with sort_column:
+    newest_first = st.checkbox(
+        "最新任务优先",
+        value=True,
+    )
+
+with refresh_column:
+    st.write("")
+    st.write("")
+
+    if st.button("刷新列表"):
+        st.rerun()
 
 try:
     tasks = list_tasks_api(BACKEND_API_BASE_URL)
@@ -103,13 +126,17 @@ try:
     if not tasks:
         st.info("暂无任务。")
     else:
-        display_tasks = []
+        display_tasks = build_task_list_rows(
+            tasks,
+            status_filter=status_filter,
+            newest_first=newest_first,
+        )
 
-        for task in tasks:
-            display_task = dict(task)
-            display_task["result_summary"] = summarize_task_result_as_text(task)
-            display_tasks.append(display_task)
+        st.caption(f"当前显示 {len(display_tasks)} / {len(tasks)} 个任务。")
 
-        st.dataframe(display_tasks, use_container_width=True)
+        if not display_tasks:
+            st.info("当前筛选条件下没有任务。")
+        else:
+            st.dataframe(display_tasks, use_container_width=True)
 except Exception as error:
     st.error(f"无法读取任务列表：{error}")
