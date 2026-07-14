@@ -4,6 +4,9 @@ from week11.run_rag_evaluation import (
     build_failure_stages,
     build_rag_evaluation_report,
     evaluate_rag_result,
+    is_business_passed,
+    is_generation_passed,
+    is_retrieval_passed,
     main,
     parse_rag_evaluation_args,
     run_langgraph_evaluation_case,
@@ -47,6 +50,10 @@ def test_evaluate_rag_result_passes_answer_when_expected_document_is_cited():
     item = evaluate_rag_result(case, result)
 
     assert item["passed"] is True
+    assert item["end_to_end_passed"] is True
+    assert item["business_passed"] is True
+    assert item["retrieval_passed"] is True
+    assert item["generation_passed"] is True
     assert item["failure_reasons"] == []
     assert item["failure_stages"] == []
     assert item["fallback_reason"] == ""
@@ -90,6 +97,8 @@ def test_evaluate_rag_result_fails_answer_when_expected_document_is_not_cited():
 
     assert item["passed"] is False
     assert item["failure_reasons"] == ["expected_document_not_cited"]
+    assert item["business_passed"] is False
+    assert item["retrieval_passed"] is False
     assert item["expected_document_in_citations"] is False
 
 
@@ -129,6 +138,10 @@ def test_evaluate_rag_result_keeps_fallback_reason():
     item = evaluate_rag_result(case, result)
 
     assert item["passed"] is False
+    assert item["end_to_end_passed"] is False
+    assert item["business_passed"] is True
+    assert item["retrieval_passed"] is True
+    assert item["generation_passed"] is False
     assert item["failure_reasons"] == ["fallback_answer"]
     assert item["failure_stages"] == ["generation"]
     assert item["fallback_reason"] == "模型生成失败"
@@ -151,6 +164,37 @@ def test_build_failure_stages_classifies_retrieval_validation_and_citation():
     assert retrieval_stages == ["retrieval"]
     assert validation_stages == ["validation"]
     assert citation_stages == ["citation"]
+
+
+def test_stage_pass_helpers_classify_answer_and_refusal_cases():
+    assert (
+        is_retrieval_passed(
+            expected_answer_type="answer",
+            has_valid_context=True,
+            expected_document_in_snippets=True,
+        )
+        is True
+    )
+    assert (
+        is_retrieval_passed(
+            expected_answer_type="refusal",
+            has_valid_context=False,
+            expected_document_in_snippets=True,
+        )
+        is True
+    )
+    assert is_generation_passed("模型回答", is_fallback=False, is_timeout=False) is True
+    assert is_generation_passed("兜底回答", is_fallback=True, is_timeout=False) is False
+    assert (
+        is_business_passed(
+            expected_answer_type="answer",
+            answer="兜底回答",
+            retrieval_passed=True,
+            citations=[{"title": "员工手册"}],
+            expected_document_in_citations=True,
+        )
+        is True
+    )
 
 
 def test_build_failure_reasons_for_answer_collects_multiple_reasons():
@@ -197,6 +241,9 @@ def test_evaluate_rag_result_passes_refusal_without_context_and_citations():
 
     assert item["passed"] is True
     assert item["failure_reasons"] == []
+    assert item["business_passed"] is True
+    assert item["retrieval_passed"] is True
+    assert item["generation_passed"] is True
     assert item["citation_count"] == 0
 
 
@@ -232,6 +279,9 @@ def test_evaluate_rag_result_fails_refusal_with_unexpected_citations():
         "unexpected_valid_context",
         "unexpected_citations_for_refusal",
     ]
+    assert item["business_passed"] is False
+    assert item["retrieval_passed"] is False
+    assert item["generation_passed"] is True
 
 
 def test_run_rag_evaluation_with_fake_runner():
@@ -278,6 +328,10 @@ def test_run_rag_evaluation_with_fake_runner():
     assert evaluation["failed"] == 0
     assert evaluation["skipped"] == 0
     assert evaluation["pass_rate"] == 1.0
+    assert evaluation["business_pass_rate"] == 1.0
+    assert evaluation["retrieval_pass_rate"] == 1.0
+    assert evaluation["generation_pass_rate"] == 1.0
+    assert evaluation["end_to_end_pass_rate"] == 1.0
     assert captured_cases == cases
 
 
@@ -397,6 +451,14 @@ def test_main_passes_cli_filters_to_evaluation_runner(monkeypatch, tmp_path):
             "failed": 0,
             "skipped": 0,
             "pass_rate": 0,
+            "end_to_end_passed": 0,
+            "end_to_end_pass_rate": 0,
+            "business_passed": 0,
+            "business_pass_rate": 0,
+            "retrieval_passed": 0,
+            "retrieval_pass_rate": 0,
+            "generation_passed": 0,
+            "generation_pass_rate": 0,
             "by_backend": {},
             "by_answer_type": {},
             "by_scenario": {},
@@ -475,6 +537,12 @@ def test_run_rag_evaluation_skips_postgresql_without_connection_for_real_runner(
     assert evaluation["skipped"] == 1
     assert evaluation["items"][0]["skip_reason"] == "postgresql_connection_not_configured"
     assert evaluation["items"][0]["failure_reasons"] == []
+    assert evaluation["items"][0]["business_passed"] is False
+    assert evaluation["items"][0]["retrieval_passed"] is False
+    assert evaluation["items"][0]["generation_passed"] is False
+    assert evaluation["business_pass_rate"] == 0
+    assert evaluation["retrieval_pass_rate"] == 0
+    assert evaluation["generation_pass_rate"] == 0
 
 
 def test_run_langgraph_evaluation_case_uses_sqlite_admin_database_path(monkeypatch):
@@ -567,6 +635,14 @@ def test_build_rag_evaluation_report_contains_summary():
         "failed": 0,
         "skipped": 0,
         "pass_rate": 1.0,
+        "end_to_end_passed": 1,
+        "end_to_end_pass_rate": 1.0,
+        "business_passed": 1,
+        "business_pass_rate": 1.0,
+        "retrieval_passed": 1,
+        "retrieval_pass_rate": 1.0,
+        "generation_passed": 1,
+        "generation_pass_rate": 1.0,
         "by_backend": {
             "sqlite": {
                 "total": 1,
@@ -613,6 +689,10 @@ def test_build_rag_evaluation_report_contains_summary():
                 "top_k": 3,
                 "min_score": 0.6,
                 "passed": True,
+                "end_to_end_passed": True,
+                "business_passed": True,
+                "retrieval_passed": True,
+                "generation_passed": True,
                 "failure_reasons": [],
                 "failure_stages": [],
                 "skipped": False,
@@ -645,6 +725,11 @@ def test_build_rag_evaluation_report_contains_summary():
     assert "员工手册" in report
     assert "known_answer" in report
     assert "policy" in report
+    assert "业务通过率：1.0" in report
+    assert "检索通过率：1.0" in report
+    assert "生成通过率：1.0" in report
+    assert "端到端通过率：1.0" in report
+    assert "业务是否通过：是" in report
     assert "失败原因" in report
     assert "失败阶段：无" in report
     assert "兜底原因：无" in report

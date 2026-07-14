@@ -132,6 +132,45 @@ def build_failure_stages(
     return failure_stages
 
 
+def is_retrieval_passed(
+    expected_answer_type: str,
+    has_valid_context: bool,
+    expected_document_in_snippets: bool,
+) -> bool:
+    if expected_answer_type == "answer":
+        return has_valid_context and expected_document_in_snippets
+
+    if expected_answer_type == "refusal":
+        return not has_valid_context
+
+    raise ValueError(f"Unsupported expected_answer_type: {expected_answer_type}")
+
+
+def is_generation_passed(answer: str, is_fallback: bool, is_timeout: bool) -> bool:
+    return answer != "" and not is_fallback and not is_timeout
+
+
+def is_business_passed(
+    expected_answer_type: str,
+    answer: str,
+    retrieval_passed: bool,
+    citations: list[dict],
+    expected_document_in_citations: bool,
+) -> bool:
+    if expected_answer_type == "answer":
+        return (
+            answer != ""
+            and retrieval_passed
+            and citations != []
+            and expected_document_in_citations
+        )
+
+    if expected_answer_type == "refusal":
+        return answer != "" and retrieval_passed and citations == []
+
+    raise ValueError(f"Unsupported expected_answer_type: {expected_answer_type}")
+
+
 def evaluate_rag_result(case: dict, result: dict) -> dict:
     citations = result.get("citations", [])
     snippets = result.get("snippets", [])
@@ -163,6 +202,23 @@ def evaluate_rag_result(case: dict, result: dict) -> dict:
         failure_reasons=failure_reasons,
         snippet_count=len(snippets),
     )
+    retrieval_passed = is_retrieval_passed(
+        expected_answer_type=expected_answer_type,
+        has_valid_context=has_valid_context,
+        expected_document_in_snippets=expected_document_in_snippets,
+    )
+    generation_passed = is_generation_passed(
+        answer=answer,
+        is_fallback=is_fallback,
+        is_timeout=is_timeout,
+    )
+    business_passed = is_business_passed(
+        expected_answer_type=expected_answer_type,
+        answer=answer,
+        retrieval_passed=retrieval_passed,
+        citations=citations,
+        expected_document_in_citations=expected_document_in_citations,
+    )
 
     return {
         "id": case["id"],
@@ -177,6 +233,10 @@ def evaluate_rag_result(case: dict, result: dict) -> dict:
         "top_k": case["top_k"],
         "min_score": case["min_score"],
         "passed": failure_reasons == [],
+        "end_to_end_passed": failure_reasons == [],
+        "business_passed": business_passed,
+        "retrieval_passed": retrieval_passed,
+        "generation_passed": generation_passed,
         "failure_reasons": failure_reasons,
         "failure_stages": failure_stages,
         "skipped": False,
@@ -209,6 +269,10 @@ def build_skipped_evaluation_item(case: dict, reason: str) -> dict:
         "top_k": case["top_k"],
         "min_score": case["min_score"],
         "passed": False,
+        "end_to_end_passed": False,
+        "business_passed": False,
+        "retrieval_passed": False,
+        "generation_passed": False,
         "failure_reasons": [],
         "failure_stages": ["skipped"],
         "skipped": True,
@@ -250,6 +314,11 @@ def summarize_rag_evaluation(items: list[dict]) -> dict:
     passed_items = [item for item in evaluated_items if item["passed"]]
     failed_items = [item for item in evaluated_items if not item["passed"]]
     skipped_items = [item for item in items if item["skipped"]]
+    business_passed_items = [item for item in evaluated_items if item["business_passed"]]
+    retrieval_passed_items = [item for item in evaluated_items if item["retrieval_passed"]]
+    generation_passed_items = [
+        item for item in evaluated_items if item["generation_passed"]
+    ]
     by_backend = {}
     by_answer_type = {}
     by_scenario = {}
@@ -337,6 +406,22 @@ def summarize_rag_evaluation(items: list[dict]) -> dict:
         "failed": len(failed_items),
         "skipped": len(skipped_items),
         "pass_rate": len(passed_items) / evaluated_count if evaluated_count else 0,
+        "end_to_end_passed": len(passed_items),
+        "end_to_end_pass_rate": (
+            len(passed_items) / evaluated_count if evaluated_count else 0
+        ),
+        "business_passed": len(business_passed_items),
+        "business_pass_rate": (
+            len(business_passed_items) / evaluated_count if evaluated_count else 0
+        ),
+        "retrieval_passed": len(retrieval_passed_items),
+        "retrieval_pass_rate": (
+            len(retrieval_passed_items) / evaluated_count if evaluated_count else 0
+        ),
+        "generation_passed": len(generation_passed_items),
+        "generation_pass_rate": (
+            len(generation_passed_items) / evaluated_count if evaluated_count else 0
+        ),
         "by_backend": by_backend,
         "by_answer_type": by_answer_type,
         "by_scenario": by_scenario,
@@ -415,6 +500,13 @@ def build_rag_evaluation_report(evaluation: dict) -> str:
         f"- 跳过数：{evaluation['skipped']}",
         f"- 通过率：{evaluation['pass_rate']}",
         "",
+        "## 分阶段通过率",
+        "",
+        f"- 业务通过数：{evaluation['business_passed']}，业务通过率：{evaluation['business_pass_rate']}",
+        f"- 检索通过数：{evaluation['retrieval_passed']}，检索通过率：{evaluation['retrieval_pass_rate']}",
+        f"- 生成通过数：{evaluation['generation_passed']}，生成通过率：{evaluation['generation_pass_rate']}",
+        f"- 端到端通过数：{evaluation['end_to_end_passed']}，端到端通过率：{evaluation['end_to_end_pass_rate']}",
+        "",
         "## 按检索后端统计",
         "",
     ]
@@ -491,6 +583,10 @@ def build_rag_evaluation_report(evaluation: dict) -> str:
                 f"- top_k：{item['top_k']}",
                 f"- min_score：{item['min_score']}",
                 f"- 是否通过：{format_bool(item['passed'])}",
+                f"- 业务是否通过：{format_bool(item['business_passed'])}",
+                f"- 检索是否通过：{format_bool(item['retrieval_passed'])}",
+                f"- 生成是否通过：{format_bool(item['generation_passed'])}",
+                f"- 端到端是否通过：{format_bool(item['end_to_end_passed'])}",
                 f"- 失败原因：{', '.join(item['failure_reasons']) if item['failure_reasons'] else '无'}",
                 f"- 失败阶段：{', '.join(item['failure_stages']) if item['failure_stages'] else '无'}",
                 f"- 是否跳过：{format_bool(item['skipped'])}",
@@ -609,6 +705,10 @@ def main(argv: list[str] | None = None):
         print("失败数：", evaluation["failed"])
         print("跳过数：", evaluation["skipped"])
         print("通过率：", evaluation["pass_rate"])
+        print("业务通过率：", evaluation["business_pass_rate"])
+        print("检索通过率：", evaluation["retrieval_pass_rate"])
+        print("生成通过率：", evaluation["generation_pass_rate"])
+        print("端到端通过率：", evaluation["end_to_end_pass_rate"])
         print("评测报告已保存：", report_path)
     finally:
         if postgresql_connection is not None:
