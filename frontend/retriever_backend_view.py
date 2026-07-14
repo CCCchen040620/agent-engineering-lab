@@ -21,6 +21,13 @@ def get_retriever_backend_radio_index(info: dict | None) -> int:
     return 0
 
 
+def get_chat_engine_radio_index(info: dict | None) -> int:
+    if get_default_retriever_backend_from_info(info) == POSTGRESQL_BACKEND:
+        return 2
+
+    return 0
+
+
 def get_retriever_backend_override(
     info: dict | None,
     selected_backend: str,

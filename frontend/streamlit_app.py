@@ -19,6 +19,7 @@ from frontend.api_client import (
 )
 from frontend.retriever_backend_view import (
     build_retriever_backend_caption,
+    get_chat_engine_radio_index,
     get_retriever_backend_override,
     get_retriever_backend_radio_index,
 )
@@ -204,7 +205,7 @@ with st.sidebar:
     chat_engine = st.radio(
         "问答引擎",
         ["普通 RAG 问答", "Simple Agent 问答", "LangGraph Agent 问答"],
-        index=0,
+        index=get_chat_engine_radio_index(info),
     )
 
     retriever_backend_label = st.radio(

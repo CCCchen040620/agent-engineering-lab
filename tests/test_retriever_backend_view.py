@@ -1,5 +1,6 @@
 from frontend.retriever_backend_view import (
     build_retriever_backend_caption,
+    get_chat_engine_radio_index,
     get_default_retriever_backend_from_info,
     get_retriever_backend_override,
     get_retriever_backend_radio_index,
@@ -9,6 +10,7 @@ from frontend.retriever_backend_view import (
 def test_get_default_retriever_backend_from_info_defaults_to_sqlite():
     assert get_default_retriever_backend_from_info(None) == "sqlite"
     assert get_retriever_backend_radio_index(None) == 0
+    assert get_chat_engine_radio_index(None) == 0
 
 
 def test_get_default_retriever_backend_from_info_uses_postgresql():
@@ -19,6 +21,7 @@ def test_get_default_retriever_backend_from_info_uses_postgresql():
 
     assert get_default_retriever_backend_from_info(info) == "postgresql"
     assert get_retriever_backend_radio_index(info) == 1
+    assert get_chat_engine_radio_index(info) == 2
 
 
 def test_build_retriever_backend_caption():
