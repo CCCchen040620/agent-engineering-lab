@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-
 from backend.services.task_queue_service import InMemoryTaskQueue, TaskRunner
+from backend.services.task_dispatcher_service import TaskDispatcher
 
 
 router = APIRouter(prefix="/api/v1/tasks", tags=["tasks"])
@@ -16,6 +16,16 @@ class TaskCreateRequest(BaseModel):
 
 def get_task_queue() -> InMemoryTaskQueue:
     return task_queue
+
+
+def echo_task_handler(payload: dict) -> dict:
+    return payload
+
+
+def build_task_dispatcher() -> TaskDispatcher:
+    dispatcher = TaskDispatcher()
+    dispatcher.register("echo", echo_task_handler)
+    return dispatcher
 
 
 @router.post("", status_code=201)
@@ -42,10 +52,6 @@ def get_task(
     return task
 
 
-def echo_task_handler(payload: dict) -> dict:
-    return payload
-
-
 @router.post("/{task_id}/run")
 def run_task(
     task_id: int,
@@ -56,5 +62,10 @@ def run_task(
     if task is None:
         raise HTTPException(status_code=404, detail="任务不存在。")
 
+    dispatcher = build_task_dispatcher()
+
+    def dispatch_payload(payload: dict) -> dict:
+        return dispatcher.dispatch(task["type"], payload)
+
     runner = TaskRunner(queue=queue)
-    return runner.run_task(task_id, echo_task_handler)
+    return runner.run_task(task_id, dispatch_payload)

@@ -84,3 +84,21 @@ def test_run_task_endpoint_returns_404_when_task_not_found():
     response = client.post("/api/v1/tasks/999/run")
 
     assert response.status_code == 404
+
+
+def test_run_task_endpoint_marks_task_failed_when_task_type_is_unsupported():
+    test_queue = InMemoryTaskQueue()
+    task = test_queue.create_task(
+        task_type="unknown_task",
+        payload={},
+    )
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.post(f"/api/v1/tasks/{task['id']}/run")
+
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["id"] == task["id"]
+    assert data["status"] == "failed"
+    assert "Unsupported task type" in data["error"]
