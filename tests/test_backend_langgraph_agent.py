@@ -1036,3 +1036,128 @@ def test_langgraph_agent_chat_endpoint_passes_postgresql_connection(
 
     assert data["retriever_backend"] == "postgresql"
     assert data["snippets"][0]["path"] == "postgresql://chunk/2"
+
+
+def test_langgraph_agent_conversation_chat_accepts_postgresql_retriever(
+    monkeypatch,
+    tmp_path,
+):
+    database_path = tmp_path / "test.db"
+    fake_connection = FakePostgresqlConnection()
+    captured = {}
+
+    def fake_connect(database_url: str):
+        captured["database_url"] = database_url
+        return fake_connection
+
+    def fake_run_langgraph_agent(**kwargs):
+        captured["question"] = kwargs["question"]
+        captured["database_path"] = kwargs["database_path"]
+        captured["retriever_backend"] = kwargs["retriever_backend"]
+        captured["postgresql_connection"] = kwargs["postgresql_connection"]
+        captured["messages"] = kwargs["messages"]
+        captured["conversation_summary"] = kwargs["conversation_summary"]
+
+        return {
+            "question": kwargs["question"],
+            "intent": "answer_question",
+            "keyword": "每天工作多久",
+            "contextual_question": kwargs["question"],
+            "context_document_title": "",
+            "snippets": [
+                {
+                    "title": "员工手册",
+                    "path": "postgresql://chunk/2",
+                    "text": "员工每天需要完成 8 小时工作。",
+                    "score": 0.9,
+                }
+            ],
+            "has_valid_context": True,
+            "document_title": "",
+            "document": None,
+            "document_match_type": None,
+            "missing_field": "",
+            "answer": "员工每天需要完成 8 小时工作。",
+            "citations": [
+                {
+                    "title": "员工手册",
+                    "text": "员工每天需要完成 8 小时工作。",
+                    "path": "postgresql://chunk/2",
+                }
+            ],
+            "steps": [],
+            "database_path": kwargs["database_path"],
+            "top_k": kwargs["top_k"],
+            "mode": kwargs["mode"],
+            "min_score": kwargs["min_score"],
+            "retriever_backend": kwargs["retriever_backend"],
+            "timeout_seconds": kwargs["timeout_seconds"],
+            "is_timeout": False,
+            "is_fallback": False,
+        }
+
+    monkeypatch.setattr(
+        "backend.routers.langgraph_agent.psycopg.connect",
+        fake_connect,
+    )
+    monkeypatch.setattr(
+        "backend.routers.langgraph_agent.run_langgraph_agent",
+        fake_run_langgraph_agent,
+    )
+
+    app.dependency_overrides[get_database_path] = lambda: str(database_path)
+    app.dependency_overrides[get_langgraph_postgresql_database_url] = lambda: (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+
+    conversation_response = client.post(
+        "/api/v1/conversations",
+        json={"title": "PostgreSQL 会话检索"},
+    )
+
+    conversation_id = conversation_response.json()["id"]
+
+    response = client.post(
+        f"/api/v1/langgraph-agent/conversations/{conversation_id}/chat",
+        params={
+            "retriever_backend": "postgresql",
+            "top_k": 2,
+            "mode": "precomputed_embedding",
+            "min_score": 0.6,
+        },
+        json={"question": "员工每天需要工作多久？"},
+    )
+
+    messages_response = client.get(
+        f"/api/v1/conversations/{conversation_id}/messages"
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert messages_response.status_code == 200
+
+    data = response.json()
+    messages = messages_response.json()
+
+    assert captured["database_url"] == (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+    assert captured["question"] == "员工每天需要工作多久？"
+    assert captured["database_path"] == str(database_path)
+    assert captured["retriever_backend"] == "postgresql"
+    assert captured["postgresql_connection"] == fake_connection
+    assert captured["messages"] == []
+    assert captured["conversation_summary"] == ""
+    assert fake_connection.closed is True
+
+    assert data["conversation_id"] == conversation_id
+    assert data["retriever_backend"] == "postgresql"
+    assert data["snippets"][0]["path"] == "postgresql://chunk/2"
+    assert len(data["saved_messages"]) == 2
+
+    assert messages[0]["role"] == "user"
+    assert messages[0]["content"] == "员工每天需要工作多久？"
+    assert messages[1]["role"] == "assistant"
+    assert messages[1]["content"] == "员工每天需要完成 8 小时工作。"
+    assert messages[1]["metadata"]["citations"][0]["path"] == "postgresql://chunk/2"

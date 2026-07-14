@@ -170,6 +170,7 @@ def langgraph_agent_chat_stream(
     ),
     retriever_backend: str = Query(default=RAG_RETRIEVER_BACKEND),
     database_path: str = Depends(get_database_path),
+    postgresql_database_url: str = Depends(get_langgraph_postgresql_database_url),
     generator: Callable[[str], str] = Depends(get_langgraph_agent_generator),
     _rate_limit: None = Depends(enforce_heavy_request_rate_limit),
 ):
@@ -208,6 +209,7 @@ def langgraph_agent_conversation_chat(
     ),
     retriever_backend: str = Query(default=RAG_RETRIEVER_BACKEND),
     database_path: str = Depends(get_database_path),
+    postgresql_database_url: str = Depends(get_langgraph_postgresql_database_url),
     generator: Callable[[str], str] = Depends(get_langgraph_agent_generator),
     _rate_limit: None = Depends(enforce_heavy_request_rate_limit),
 ):
@@ -232,20 +234,29 @@ def langgraph_agent_conversation_chat(
         connection,
         conversation_id=conversation_id,
     )
-    ensure_postgresql_retriever_not_enabled_for_endpoint(retriever_backend)
 
-    result = run_langgraph_agent(
-        question=request.question,
-        database_path=database_path,
-        top_k=top_k,
-        mode=mode,
-        min_score=min_score,
-        timeout_seconds=timeout_seconds,
+    postgresql_connection = create_postgresql_connection_for_retriever(
         retriever_backend=retriever_backend,
-        generator=generator,
-        messages=messages,
-        conversation_summary=conversation["summary"],
+        database_url=postgresql_database_url,
     )
+
+    try:
+        result = run_langgraph_agent(
+            question=request.question,
+            database_path=database_path,
+            top_k=top_k,
+            mode=mode,
+            min_score=min_score,
+            timeout_seconds=timeout_seconds,
+            retriever_backend=retriever_backend,
+            postgresql_connection=postgresql_connection,
+            generator=generator,
+            messages=messages,
+            conversation_summary=conversation["summary"],
+        )
+    finally:
+        if postgresql_connection is not None:
+            postgresql_connection.close()
 
     user_metadata = {
         "question": request.question,
