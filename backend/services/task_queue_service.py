@@ -82,3 +82,17 @@ class InMemoryTaskQueue:
         task["result"] = {}
         task["error"] = error
         return task
+
+
+class TaskRunner:
+    def __init__(self, queue: InMemoryTaskQueue):
+        self.queue = queue
+
+    def run_task(self, task_id: int, handler) -> dict:
+        task = self.queue.mark_task_running(task_id)
+
+        try:
+            result = handler(task["payload"])
+            return self.queue.mark_task_succeeded(task_id, result)
+        except Exception as error:
+            return self.queue.mark_task_failed(task_id, str(error))

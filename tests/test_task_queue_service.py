@@ -4,6 +4,7 @@ from backend.services.task_queue_service import (
     InMemoryTaskQueue,
     InvalidTaskStatusTransitionError,
     TaskNotFoundError,
+    TaskRunner,
 )
 
 
@@ -128,3 +129,48 @@ def test_missing_task_raises_task_not_found_error():
 
     with pytest.raises(TaskNotFoundError):
         queue.mark_task_running(999)
+
+
+def test_task_runner_marks_task_succeeded_when_handler_returns_result():
+    queue = InMemoryTaskQueue()
+    task = queue.create_task("embedding_backfill", {"source": "postgresql"})
+    runner = TaskRunner(queue)
+
+    def handler(payload):
+        return {"updated": 10, "source": payload["source"]}
+
+    result = runner.run_task(task["id"], handler)
+
+    assert result["status"] == "succeeded"
+    assert result["result"] == {"updated": 10, "source": "postgresql"}
+    assert result["error"] == ""
+
+
+def test_task_runner_marks_task_failed_when_handler_raises_error():
+    queue = InMemoryTaskQueue()
+    task = queue.create_task("embedding_backfill", {})
+    runner = TaskRunner(queue)
+
+    def handler(payload):
+        raise RuntimeError("Ollama unavailable")
+
+    result = runner.run_task(task["id"], handler)
+
+    assert result["status"] == "failed"
+    assert result["result"] == {}
+    assert result["error"] == "Ollama unavailable"
+
+
+def test_task_runner_passes_payload_to_handler():
+    queue = InMemoryTaskQueue()
+    task = queue.create_task("rag_evaluation", {"scope": "lightweight"})
+    runner = TaskRunner(queue)
+    captured = {}
+
+    def handler(payload):
+        captured["payload"] = payload
+        return {"ok": True}
+
+    runner.run_task(task["id"], handler)
+
+    assert captured["payload"] == {"scope": "lightweight"}
