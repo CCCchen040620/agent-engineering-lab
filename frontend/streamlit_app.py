@@ -212,7 +212,8 @@ with st.sidebar:
 
     if retriever_backend == "postgresql":
         st.info(
-            "PostgreSQL / pgvector 模式需要先启动 postgres，并用 PostgreSQL DATABASE_URL 启动后端。"
+            "PostgreSQL / pgvector 模式需要先启动 postgres，并用 PostgreSQL DATABASE_URL 启动后端；"
+            "当前支持普通 LangGraph Agent 问答和会话保存，暂不支持学习版流式输出。"
         )
 
     chat_engine_feature = CHAT_ENGINE_FEATURES[chat_engine]
@@ -495,6 +496,7 @@ if st.button("提问"):
                             mode=mode,
                             min_score=min_score,
                             timeout_seconds=timeout_seconds,
+                            retriever_backend=retriever_backend,
                         )
                     else:
                         response, error_message = chat_with_langgraph_agent_api(

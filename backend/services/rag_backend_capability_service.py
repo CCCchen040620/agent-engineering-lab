@@ -40,17 +40,18 @@ RAG_BACKEND_CAPABILITIES = {
             "chunk_listing",
             "pgvector_retrieval",
             "langgraph_agent_chat",
+            "conversation_chat",
             "embedding_backfill",
         ],
         "unsupported_features": [
-            "conversation_chat",
             "streaming_chat",
             "feedback_storage",
             "txt_file_upload",
         ],
         "notes": [
             "PostgreSQL is currently used for pgvector retrieval experiments.",
-            "Conversation memory and feedback still use SQLite.",
+            "Conversation messages are still stored in SQLite.",
+            "Streaming chat and feedback still use SQLite-only workflows.",
         ],
     },
 }

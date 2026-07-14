@@ -47,6 +47,7 @@ def test_info_endpoint():
     assert data["rag_backends"][0]["backend"] == "sqlite"
     assert data["rag_backends"][1]["backend"] == "postgresql"
     assert "conversation_chat" in data["rag_backends"][0]["supported_features"]
-    assert "conversation_chat" in data["rag_backends"][1]["unsupported_features"]
+    assert "conversation_chat" in data["rag_backends"][1]["supported_features"]
+    assert "streaming_chat" in data["rag_backends"][1]["unsupported_features"]
     assert "txt_file_upload" in data["rag_backends"][0]["supported_features"]
     assert "txt_file_upload" in data["rag_backends"][1]["unsupported_features"]

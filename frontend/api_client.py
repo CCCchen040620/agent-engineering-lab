@@ -319,6 +319,7 @@ def chat_with_langgraph_agent_conversation_api(
     mode: str,
     min_score: float,
     timeout_seconds: int,
+    retriever_backend: str = "sqlite",
 ) -> tuple[dict | None, str | None]:
     """Ask the LangGraph Agent endpoint and save messages to a conversation."""
     try:
@@ -330,6 +331,7 @@ def chat_with_langgraph_agent_conversation_api(
                 "mode": mode,
                 "min_score": min_score,
                 "timeout_seconds": timeout_seconds,
+                "retriever_backend": retriever_backend,
             },
             json={"question": question},
             timeout=300,

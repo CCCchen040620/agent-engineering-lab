@@ -5,6 +5,7 @@ from frontend.api_client import (
     chat_with_agent_api,
     chat_with_llm_api,
     chat_with_langgraph_agent_api,
+    chat_with_langgraph_agent_conversation_api,
     create_document_with_content_api,
     create_postgresql_document_with_content_api,
     delete_postgresql_document_api,
@@ -173,7 +174,7 @@ def test_find_rag_backend_capabilities():
             },
             {
                 "backend": "postgresql",
-                "supported_features": ["langgraph_agent_chat"],
+                "supported_features": ["langgraph_agent_chat", "conversation_chat"],
             },
         ]
     }
@@ -182,7 +183,7 @@ def test_find_rag_backend_capabilities():
 
     assert capabilities == {
         "backend": "postgresql",
-        "supported_features": ["langgraph_agent_chat"],
+        "supported_features": ["langgraph_agent_chat", "conversation_chat"],
     }
 
 
@@ -195,13 +196,13 @@ def test_rag_backend_supports_feature():
             },
             {
                 "backend": "postgresql",
-                "supported_features": ["langgraph_agent_chat"],
+                "supported_features": ["langgraph_agent_chat", "conversation_chat"],
             },
         ]
     }
 
     assert rag_backend_supports_feature(info, "sqlite", "conversation_chat") is True
-    assert rag_backend_supports_feature(info, "postgresql", "conversation_chat") is False
+    assert rag_backend_supports_feature(info, "postgresql", "conversation_chat") is True
 
 
 def test_rag_backend_supports_feature_falls_back_to_true_without_capabilities():
@@ -775,6 +776,67 @@ def test_chat_with_langgraph_agent_api_sends_timeout_and_retriever_backend(monke
     assert data["answer"] == "30 天内完成安全培训。"
     assert captured["params"]["timeout_seconds"] == 30
     assert captured["params"]["retriever_backend"] == "postgresql"
+
+
+def test_chat_with_langgraph_agent_conversation_api_sends_retriever_backend(
+    monkeypatch,
+):
+    captured = {}
+
+    def fake_post(url, params, json, timeout):
+        captured["url"] = url
+        captured["params"] = params
+        captured["json"] = json
+        captured["timeout"] = timeout
+
+        return FakeResponse(
+            200,
+            {
+                "conversation_id": 7,
+                "question": "How long does an employee work every day?",
+                "keyword": "work hours",
+                "answer": "8 hours.",
+                "citations": [
+                    {
+                        "title": "Employee handbook",
+                        "text": "Employees work 8 hours every day.",
+                        "path": "postgresql://chunk/2",
+                    }
+                ],
+                "saved_messages": [],
+                "retriever_backend": "postgresql",
+            },
+        )
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    data, error_message = chat_with_langgraph_agent_conversation_api(
+        base_url="http://127.0.0.1:8000",
+        conversation_id=7,
+        question="How long does an employee work every day?",
+        top_k=2,
+        mode="precomputed_embedding",
+        min_score=0.6,
+        timeout_seconds=30,
+        retriever_backend="postgresql",
+    )
+
+    assert error_message is None
+    assert data["retriever_backend"] == "postgresql"
+    assert captured["url"] == (
+        "http://127.0.0.1:8000/api/v1/langgraph-agent/conversations/7/chat"
+    )
+    assert captured["json"] == {
+        "question": "How long does an employee work every day?",
+    }
+    assert captured["params"] == {
+        "top_k": 2,
+        "mode": "precomputed_embedding",
+        "min_score": 0.6,
+        "timeout_seconds": 30,
+        "retriever_backend": "postgresql",
+    }
+    assert captured["timeout"] == 300
 
 
 def test_submit_feedback_api_posts_feedback(monkeypatch):
