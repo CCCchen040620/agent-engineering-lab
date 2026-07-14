@@ -1,0 +1,74 @@
+[
+  {
+    "id": "migration_employee_handbook_safety_training",
+    "title": "员工手册",
+    "question": "新员工什么时候完成安全培训？",
+    "source": "migration",
+    "mode": "precomputed_embedding",
+    "top_k": 3,
+    "min_score": 0.6
+  },
+  {
+    "id": "migration_leave_policy_annual_leave",
+    "title": "请假制度",
+    "question": "年假需要提前几个工作日申请？",
+    "source": "migration",
+    "mode": "precomputed_embedding",
+    "top_k": 3,
+    "min_score": 0.6
+  },
+  {
+    "id": "migration_remote_work_policy",
+    "title": "远程办公制度",
+    "question": "每周可以申请几天远程办公？",
+    "source": "migration",
+    "mode": "precomputed_embedding",
+    "top_k": 3,
+    "min_score": 0.6
+  },
+  {
+    "id": "migration_overtime_policy",
+    "title": "加班制度",
+    "question": "员工加班需要提前做什么？",
+    "source": "migration",
+    "mode": "precomputed_embedding",
+    "top_k": 3,
+    "min_score": 0.6
+  },
+  {
+    "id": "migration_mixed_punctuation_policy",
+    "title": "混合标点制度",
+    "question": "主管审批后什么时候生效？",
+    "source": "migration",
+    "mode": "precomputed_embedding",
+    "top_k": 3,
+    "min_score": 0.6
+  },
+  {
+    "id": "migration_equipment_policy",
+    "title": "设备借用制度",
+    "question": "员工借用公司设备需要做什么？",
+    "source": "migration",
+    "mode": "precomputed_embedding",
+    "top_k": 3,
+    "min_score": 0.6
+  },
+  {
+    "id": "migration_visitor_policy",
+    "title": "visitor_policy.txt",
+    "question": "访客进入办公区需要做什么？",
+    "source": "migration",
+    "mode": "precomputed_embedding",
+    "top_k": 3,
+    "min_score": 0.6
+  },
+  {
+    "id": "migration_sqlite_sample_policy",
+    "title": "SQLite 迁移验收文档",
+    "question": "SQLite 迁移测试片段一是什么？",
+    "source": "migration",
+    "mode": "precomputed_embedding",
+    "top_k": 3,
+    "min_score": 0.6
+  }
+]
