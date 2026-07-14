@@ -1,3 +1,19 @@
+VALID_STATUS_TRANSITIONS = {
+    "pending": ["running", "failed"],
+    "running": ["succeeded", "failed"],
+    "succeeded": [],
+    "failed": [],
+}
+
+
+class TaskNotFoundError(Exception):
+    pass
+
+
+class InvalidTaskStatusTransitionError(Exception):
+    pass
+
+
 class InMemoryTaskQueue:
     def __init__(self):
         self.tasks = []
@@ -28,20 +44,40 @@ class InMemoryTaskQueue:
 
         return None
 
-    def mark_task_running(self, task_id: int) -> dict:
+    def get_task_or_raise(self, task_id: int) -> dict:
         task = self.get_task(task_id)
+
+        if task is None:
+            raise TaskNotFoundError(f"Task not found: {task_id}")
+
+        return task
+
+    def validate_status_transition(self, task: dict, next_status: str) -> None:
+        current_status = task["status"]
+        allowed_next_statuses = VALID_STATUS_TRANSITIONS[current_status]
+
+        if next_status not in allowed_next_statuses:
+            raise InvalidTaskStatusTransitionError(
+                f"Cannot change task {task['id']} from {current_status} to {next_status}."
+            )
+
+    def mark_task_running(self, task_id: int) -> dict:
+        task = self.get_task_or_raise(task_id)
+        self.validate_status_transition(task, "running")
         task["status"] = "running"
         return task
 
     def mark_task_succeeded(self, task_id: int, result: dict) -> dict:
-        task = self.get_task(task_id)
+        task = self.get_task_or_raise(task_id)
+        self.validate_status_transition(task, "succeeded")
         task["status"] = "succeeded"
         task["result"] = result
         task["error"] = ""
         return task
 
     def mark_task_failed(self, task_id: int, error: str) -> dict:
-        task = self.get_task(task_id)
+        task = self.get_task_or_raise(task_id)
+        self.validate_status_transition(task, "failed")
         task["status"] = "failed"
         task["result"] = {}
         task["error"] = error

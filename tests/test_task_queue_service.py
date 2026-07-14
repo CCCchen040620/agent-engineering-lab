@@ -1,4 +1,10 @@
-from backend.services.task_queue_service import InMemoryTaskQueue
+import pytest
+
+from backend.services.task_queue_service import (
+    InMemoryTaskQueue,
+    InvalidTaskStatusTransitionError,
+    TaskNotFoundError,
+)
 
 
 def test_create_task():
@@ -62,6 +68,8 @@ def test_mark_task_succeeded():
     queue = InMemoryTaskQueue()
     task = queue.create_task("embedding_backfill", {})
 
+    queue.mark_task_running(task["id"])
+
     updated = queue.mark_task_succeeded(
         task_id=task["id"],
         result={"updated": 10},
@@ -84,3 +92,39 @@ def test_mark_task_failed():
     assert updated["status"] == "failed"
     assert updated["result"] == {}
     assert updated["error"] == "Ollama unavailable"
+
+
+def test_succeeded_task_cannot_be_marked_running_again():
+    queue = InMemoryTaskQueue()
+    task = queue.create_task("embedding_backfill", {})
+
+    queue.mark_task_running(task["id"])
+    queue.mark_task_succeeded(task["id"], {"updated": 10})
+
+    with pytest.raises(InvalidTaskStatusTransitionError):
+        queue.mark_task_running(task["id"])
+
+
+def test_pending_task_cannot_be_marked_succeeded_directly():
+    queue = InMemoryTaskQueue()
+    task = queue.create_task("embedding_backfill", {})
+
+    with pytest.raises(InvalidTaskStatusTransitionError):
+        queue.mark_task_succeeded(task["id"], {"updated": 10})
+
+
+def test_failed_task_cannot_be_marked_succeeded():
+    queue = InMemoryTaskQueue()
+    task = queue.create_task("embedding_backfill", {})
+
+    queue.mark_task_failed(task["id"], "Ollama unavailable")
+
+    with pytest.raises(InvalidTaskStatusTransitionError):
+        queue.mark_task_succeeded(task["id"], {"updated": 10})
+
+
+def test_missing_task_raises_task_not_found_error():
+    queue = InMemoryTaskQueue()
+
+    with pytest.raises(TaskNotFoundError):
+        queue.mark_task_running(999)
