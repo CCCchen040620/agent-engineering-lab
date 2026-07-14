@@ -1362,6 +1362,47 @@ def test_list_tasks_api(monkeypatch):
     assert tasks[0]["status"] == "succeeded"
 
 
+def test_get_task_api(monkeypatch):
+    from frontend import api_client
+
+    captured = {}
+
+    class FakeResponse:
+        status_code = 200
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {
+                "id": 7,
+                "type": "postgresql_embedding_backfill",
+                "status": "succeeded",
+                "payload": {},
+                "result": {
+                    "total_chunks": 29,
+                    "updated_embeddings": 0,
+                    "skipped_embeddings": 29,
+                    "model": "bge-m3:latest",
+                },
+                "error": "",
+            }
+
+    def fake_get(url, timeout=10):
+        captured["url"] = url
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr(api_client.requests, "get", fake_get)
+
+    task = api_client.get_task_api("http://testserver", task_id=7)
+
+    assert captured["url"] == "http://testserver/api/v1/tasks/7"
+    assert captured["timeout"] == 10
+    assert task["id"] == 7
+    assert task["status"] == "succeeded"
+
+
 def test_run_postgresql_embedding_backfill_task_api(monkeypatch):
     from frontend import api_client
 

@@ -552,6 +552,15 @@ def list_tasks_api(base_url: str) -> list[dict]:
     return response.json()
 
 
+def get_task_api(base_url: str, task_id: int) -> dict:
+    response = requests.get(
+        base_url + f"/api/v1/tasks/{task_id}",
+        timeout=10,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
 def create_task_api(
     base_url: str,
     task_type: str,
