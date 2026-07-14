@@ -1,5 +1,25 @@
 # Streamlit 网页界面说明
 
+## 后台任务中心页面
+
+启动方式：
+
+```powershell
+python -m streamlit run frontend/admin_tasks.py
+```
+
+该页面用于查看后台任务状态，并手动触发 PostgreSQL embedding 回填任务。
+
+当前支持：
+
+- 查看任务列表
+- 查看任务状态：`pending`、`running`、`succeeded`、`failed`
+- 一键运行 PostgreSQL embedding 回填
+- 查看任务结果摘要，例如 `total_chunks`、`updated_embeddings`、`skipped_embeddings` 和 `model`
+- 查看失败任务的错误信息
+
+说明：当前任务中心仍是学习版同步执行，不是真正的后台异步 worker。它的价值是先把“任务创建、执行、状态查询、结果展示”这条链路打通。
+
 本项目提供了一个基于 Streamlit 的网页界面，用于演示企业知识库 Agent 的 RAG 问答能力。
 
 ## 启动前准备

@@ -1,5 +1,38 @@
 # 项目运行手册
 
+## 后台任务中心
+
+任务中心用于查看后台任务状态，并手动触发 PostgreSQL embedding 回填。
+
+启动前请先确认 FastAPI 后端已经运行。如果要执行 PostgreSQL embedding 回填，请同时确认：
+
+```powershell
+docker compose up -d postgres
+$env:DATABASE_URL="postgresql://agent_user:agent_password@localhost:5432/agent_db"
+```
+
+启动任务中心页面：
+
+```powershell
+python -m streamlit run frontend/admin_tasks.py
+```
+
+当前支持的操作：
+
+- 查看任务列表
+- 查看任务状态和错误信息
+- 一键触发 PostgreSQL embedding 回填
+- 查看任务结果摘要：`total_chunks`、`updated_embeddings`、`skipped_embeddings`、`model`
+
+验收重点：
+
+- 点击“运行 PostgreSQL embedding 回填”后，页面不应崩溃
+- 成功时任务状态为 `succeeded`
+- 如果 PostgreSQL、Ollama 或 embedding 模型不可用，任务状态应为 `failed`，并在 `error` 中记录原因
+- 如果所有 chunks 已经有 embedding，结果中 `updated_embeddings` 可以为 `0`，`skipped_embeddings` 等于已有 embedding 的 chunks 数量
+
+说明：当前任务中心是学习版同步执行流程，不是真正的后台异步 worker。后续如果要接近生产形态，可以再引入独立 worker、持久化任务表、任务进度和重试机制。
+
 本手册用于记录企业知识库 Agent 项目的常用启动和维护命令。
 
 ## 1. 检查测试
