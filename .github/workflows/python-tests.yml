@@ -27,6 +27,10 @@ jobs:
       - name: Run tests
         run: pytest
 
+      - name: Run lightweight RAG evaluation
+        shell: pwsh
+        run: ./scripts/check_rag_evaluation_ci.ps1
+
   docker-build:
     runs-on: ubuntu-latest
 
