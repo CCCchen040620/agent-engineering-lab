@@ -2,9 +2,11 @@ from fastapi.testclient import TestClient
 
 from backend.main import app
 from backend.routers.db_documents import get_database_path
+from backend.routers import langgraph_agent as langgraph_agent_router
 from backend.routers.langgraph_agent import (
     get_langgraph_agent_generator,
     get_langgraph_postgresql_database_url,
+    resolve_retriever_backend,
 )
 from backend.services.sqlite_document_repository import (
     create_chunks_table,
@@ -22,6 +24,27 @@ from backend.services.sqlite_conversation_repository import (
 
 
 client = TestClient(app)
+
+
+def test_resolve_retriever_backend_marks_default_from_config(monkeypatch):
+    monkeypatch.setattr(
+        langgraph_agent_router,
+        "RAG_RETRIEVER_BACKEND",
+        "postgresql",
+    )
+
+    assert resolve_retriever_backend(None) == ("postgresql", "default")
+    assert resolve_retriever_backend("") == ("postgresql", "default")
+
+
+def test_resolve_retriever_backend_marks_override(monkeypatch):
+    monkeypatch.setattr(
+        langgraph_agent_router,
+        "RAG_RETRIEVER_BACKEND",
+        "postgresql",
+    )
+
+    assert resolve_retriever_backend("sqlite") == ("sqlite", "override")
 
 
 def test_langgraph_agent_chat_endpoint_accepts_timeout_seconds(monkeypatch, tmp_path):

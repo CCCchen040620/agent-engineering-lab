@@ -47,6 +47,15 @@ def test_get_retriever_backend_override_returns_none_for_default_backend():
     assert get_retriever_backend_override(info, "postgresql") is None
 
 
+def test_get_retriever_backend_override_returns_none_for_sqlite_default():
+    info = {
+        "database_backend": "sqlite",
+        "default_rag_retriever_backend": "sqlite",
+    }
+
+    assert get_retriever_backend_override(info, "sqlite") is None
+
+
 def test_get_retriever_backend_override_returns_selected_backend_when_overridden():
     info = {
         "database_backend": "postgresql",
@@ -54,6 +63,15 @@ def test_get_retriever_backend_override_returns_selected_backend_when_overridden
     }
 
     assert get_retriever_backend_override(info, "sqlite") == "sqlite"
+
+
+def test_get_retriever_backend_override_can_select_postgresql_from_sqlite_default():
+    info = {
+        "database_backend": "sqlite",
+        "default_rag_retriever_backend": "sqlite",
+    }
+
+    assert get_retriever_backend_override(info, "postgresql") == "postgresql"
 
 
 def test_format_retriever_backend_source():
