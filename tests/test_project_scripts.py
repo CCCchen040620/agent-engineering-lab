@@ -21,6 +21,12 @@ def test_required_project_scripts_exist():
         assert Path(script_path).exists()
 
 
+def test_local_generated_outputs_are_ignored():
+    gitignore = Path(".gitignore").read_text(encoding="utf-8")
+
+    assert ".local/" in gitignore
+
+
 def test_environment_check_mentions_required_commands():
     script = Path("scripts/check_environment.ps1").read_text(encoding="utf-8")
 
@@ -149,6 +155,10 @@ def test_postgresql_agent_check_runs_required_steps():
     assert "RunBatchDocumentIngestionCheck" in script
     assert "BatchDocumentIngestionCaseFile" in script
     assert "BatchDocumentIngestionReportPath" in script
+    assert (
+        ".local/evaluations/document-ingestion-agent-batch-run.md"
+        in script
+    )
     assert "BatchDocumentIngestionTimeoutSeconds" in script
     assert "BatchDocumentIngestionFullGeneration" in script
     assert "BatchDocumentIngestionArguments" in script

@@ -16,7 +16,7 @@ from week11.evaluation_cases import (
 )
 
 
-DEFAULT_EVALUATION_REPORT_PATH = Path("docs/evaluations/rag-evaluation-run.md")
+DEFAULT_EVALUATION_REPORT_PATH = Path(".local/evaluations/rag-evaluation-run.md")
 
 
 def is_expected_document_in_citations(case: dict, citations: list[dict]) -> bool:

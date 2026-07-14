@@ -109,8 +109,10 @@ docs/evaluations/rag-cases.json
 并生成：
 
 ```text
-docs/evaluations/rag-evaluation-run.md
+.local/evaluations/rag-evaluation-run.md
 ```
+
+默认报告写入 `.local/evaluations/`，该目录不会提交到 Git，避免本地评测污染工作区。如果需要把某次报告作为正式记录，可以显式传入 `--report-path docs/evaluations/xxx.md`。
 
 报告中的核心指标分为四层：
 

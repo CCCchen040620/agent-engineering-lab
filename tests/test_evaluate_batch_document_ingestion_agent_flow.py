@@ -3,6 +3,7 @@ import json
 import pytest
 
 from week11.evaluate_batch_document_ingestion_agent_flow import (
+    DEFAULT_BATCH_DOCUMENT_INGESTION_AGENT_REPORT_PATH,
     RETRIEVAL_ONLY_GENERATION_FAILURE_REASON,
     build_batch_document_ingestion_agent_report,
     evaluate_batch_document_ingestion_agent_case,
@@ -12,6 +13,12 @@ from week11.evaluate_batch_document_ingestion_agent_flow import (
     validate_batch_document_ingestion_agent_case,
     write_batch_document_ingestion_agent_report,
 )
+
+
+def test_default_batch_document_ingestion_agent_report_path_is_local_ignored_output():
+    assert DEFAULT_BATCH_DOCUMENT_INGESTION_AGENT_REPORT_PATH.as_posix() == (
+        ".local/evaluations/document-ingestion-agent-batch-run.md"
+    )
 
 
 class FakeConnection:

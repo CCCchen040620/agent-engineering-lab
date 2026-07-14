@@ -9,7 +9,7 @@ param(
     [int]$IngestedDocumentTopK = 3,
     [double]$IngestedDocumentMinScore = 0.6,
     [string]$BatchDocumentIngestionCaseFile = "docs/evaluations/document-ingestion-agent-cases.json",
-    [string]$BatchDocumentIngestionReportPath = "docs/evaluations/document-ingestion-agent-batch-run.md",
+    [string]$BatchDocumentIngestionReportPath = ".local/evaluations/document-ingestion-agent-batch-run.md",
     [double]$BatchDocumentIngestionTimeoutSeconds = 30,
     [switch]$BatchDocumentIngestionFullGeneration
 )

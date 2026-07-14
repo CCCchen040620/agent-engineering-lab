@@ -1,5 +1,6 @@
 from week11.evaluation_cases import load_evaluation_cases
 from week11.run_rag_evaluation import (
+    DEFAULT_EVALUATION_REPORT_PATH,
     build_failure_reasons,
     build_failure_stages,
     build_rag_evaluation_report,
@@ -13,6 +14,12 @@ from week11.run_rag_evaluation import (
     run_rag_evaluation,
     write_rag_evaluation_report,
 )
+
+
+def test_default_rag_evaluation_report_path_is_local_ignored_output():
+    assert DEFAULT_EVALUATION_REPORT_PATH.as_posix() == (
+        ".local/evaluations/rag-evaluation-run.md"
+    )
 
 
 def test_evaluate_rag_result_passes_answer_when_expected_document_is_cited():

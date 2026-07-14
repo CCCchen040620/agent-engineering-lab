@@ -18,7 +18,7 @@ DEFAULT_BATCH_DOCUMENT_INGESTION_AGENT_CASES_PATH = Path(
     "docs/evaluations/document-ingestion-agent-cases.json"
 )
 DEFAULT_BATCH_DOCUMENT_INGESTION_AGENT_REPORT_PATH = Path(
-    "docs/evaluations/document-ingestion-agent-batch-run.md"
+    ".local/evaluations/document-ingestion-agent-batch-run.md"
 )
 
 REQUIRED_BATCH_CASE_FIELDS = {"id", "title", "question"}
