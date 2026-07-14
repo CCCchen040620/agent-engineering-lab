@@ -50,6 +50,14 @@ python -m streamlit run frontend/admin_tasks.py
 
 ## 1. 检查测试
 
+如果不确定当前应该跑哪个验收命令，先运行检查命令菜单：
+
+```powershell
+.\scripts\list_project_checks.ps1
+```
+
+该脚本只会按依赖范围列出常用检查命令，不会执行测试、启动服务或修改数据。
+
 第一次拉取项目、换电脑、重装依赖或排查环境问题时，先运行开发环境自检：
 
 ```powershell

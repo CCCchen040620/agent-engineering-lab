@@ -202,6 +202,13 @@ def test_project_check_list_groups_commands_by_runtime_dependency():
     assert ".\\scripts\\check_rag_evaluation.ps1" in script
 
 
+def test_runbook_points_to_project_check_list():
+    runbook = Path("docs/runbook.md").read_text(encoding="utf-8")
+
+    assert ".\\scripts\\list_project_checks.ps1" in runbook
+    assert "该脚本只会按依赖范围列出常用检查命令" in runbook
+
+
 def test_rag_evaluation_check_runs_unified_runner():
     script = Path("scripts/check_rag_evaluation.ps1").read_text(encoding="utf-8")
 
