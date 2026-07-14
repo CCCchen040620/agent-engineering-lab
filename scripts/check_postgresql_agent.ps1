@@ -5,6 +5,11 @@ param(
 
 $ProjectRoot = Resolve-Path "$PSScriptRoot\.."
 Set-Location $ProjectRoot
+$PythonExecutable = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
+
+if (-not (Test-Path $PythonExecutable)) {
+    $PythonExecutable = "python"
+}
 
 function Invoke-PostgresqlAgentStep {
     param(
@@ -31,6 +36,7 @@ $env:DATABASE_URL = $DatabaseUrl
 
 Write-Host "Checking PostgreSQL LangGraph Agent flow..."
 Write-Host "DATABASE_URL: $DatabaseUrl"
+Write-Host "Python executable: $PythonExecutable"
 Write-Host "This check assumes Ollama is running and the required models are available."
 
 Invoke-PostgresqlAgentStep "Step 1/7: Checking PostgreSQL Docker service..." {
@@ -38,7 +44,7 @@ Invoke-PostgresqlAgentStep "Step 1/7: Checking PostgreSQL Docker service..." {
 }
 
 Invoke-PostgresqlAgentStep "Step 2/7: Initializing PostgreSQL schema..." {
-    python -m week10.init_postgresql_schema
+    & $PythonExecutable -m week10.init_postgresql_schema
 }
 
 if ($SkipEmbeddingBackfill) {
@@ -47,24 +53,24 @@ if ($SkipEmbeddingBackfill) {
 }
 else {
     Invoke-PostgresqlAgentStep "Step 3/7: Backfilling PostgreSQL chunk embeddings..." {
-        python -m week10.backfill_postgresql_chunk_embeddings
+        & $PythonExecutable -m week10.backfill_postgresql_chunk_embeddings
     }
 }
 
 Invoke-PostgresqlAgentStep "Step 4/7: Evaluating PostgreSQL retrieval..." {
-    python -m week10.evaluate_postgresql_retrieval
+    & $PythonExecutable -m week10.evaluate_postgresql_retrieval
 }
 
 Invoke-PostgresqlAgentStep "Step 5/7: Evaluating PostgreSQL LangGraph Agent flow..." {
-    python -m week10.evaluate_postgresql_agent
+    & $PythonExecutable -m week10.evaluate_postgresql_agent
 }
 
 Invoke-PostgresqlAgentStep "Step 6/7: Evaluating PostgreSQL Agent end-to-end indexing flow..." {
-    python -m week10.evaluate_postgresql_agent_end_to_end
+    & $PythonExecutable -m week10.evaluate_postgresql_agent_end_to_end
 }
 
 Invoke-PostgresqlAgentStep "Step 7/7: Evaluating PostgreSQL conversation chat flow..." {
-    python -m week10.evaluate_postgresql_conversation_chat
+    & $PythonExecutable -m week10.evaluate_postgresql_conversation_chat
 }
 
 Write-Host ""
