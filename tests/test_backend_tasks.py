@@ -140,3 +140,38 @@ def test_run_task_endpoint_can_run_postgresql_embedding_backfill(monkeypatch):
         "skipped_embeddings": 1,
         "model": "fake-model",
     }
+
+
+def test_create_and_run_postgresql_embedding_backfill_task(monkeypatch):
+    from backend.services import task_dispatcher_service
+
+    def fake_backfill_postgresql_chunk_embeddings():
+        return {
+            "total_chunks": 5,
+            "updated_embeddings": 4,
+            "skipped_embeddings": 1,
+            "model": "fake-model",
+        }
+
+    monkeypatch.setattr(
+        task_dispatcher_service,
+        "backfill_postgresql_chunk_embeddings",
+        fake_backfill_postgresql_chunk_embeddings,
+    )
+
+    test_queue = InMemoryTaskQueue()
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.post("/api/v1/tasks/postgresql-embedding-backfill")
+
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["type"] == "postgresql_embedding_backfill"
+    assert data["status"] == "succeeded"
+    assert data["result"] == {
+        "total_chunks": 5,
+        "updated_embeddings": 4,
+        "skipped_embeddings": 1,
+        "model": "fake-model",
+    }
