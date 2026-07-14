@@ -45,18 +45,11 @@ def top_citation_matches_document(citations: list[dict], title: str) -> bool:
     return citation_matches_document(citations[0], title)
 
 
-def get_agent_flow_failure_reason(result: dict, title: str) -> str:
+def get_retrieval_failure_reason(result: dict, title: str) -> str:
     citations = result.get("citations", [])
-    answer = result.get("answer", "")
 
     if result.get("has_valid_context") is not True:
         return "invalid_context"
-
-    if result.get("is_fallback") is True:
-        return "fallback_answer"
-
-    if answer_is_refusal(answer):
-        return "refusal_answer"
 
     if not citations_include_document(citations, title):
         return "expected_document_not_cited"
@@ -67,13 +60,46 @@ def get_agent_flow_failure_reason(result: dict, title: str) -> str:
     return ""
 
 
+def get_generation_failure_reason(result: dict) -> str:
+    answer = result.get("answer", "")
+
+    if result.get("is_fallback") is True:
+        return "fallback_answer"
+
+    if answer_is_refusal(answer):
+        return "refusal_answer"
+
+    return ""
+
+
+def get_agent_flow_failure_reason(result: dict, title: str) -> str:
+    retrieval_failure_reason = get_retrieval_failure_reason(result, title)
+
+    if retrieval_failure_reason != "":
+        return retrieval_failure_reason
+
+    return get_generation_failure_reason(result)
+
+
 def evaluate_agent_result_for_document(result: dict, title: str) -> dict:
     citations = result.get("citations", [])
-    failure_reason = get_agent_flow_failure_reason(result, title)
+    retrieval_failure_reason = get_retrieval_failure_reason(result, title)
+    generation_failure_reason = get_generation_failure_reason(result)
+    failure_reason = (
+        retrieval_failure_reason
+        if retrieval_failure_reason != ""
+        else generation_failure_reason
+    )
+    retrieval_passed = retrieval_failure_reason == ""
+    generation_passed = generation_failure_reason == ""
 
     return {
-        "passed": failure_reason == "",
+        "passed": retrieval_passed,
         "failure_reason": failure_reason,
+        "retrieval_passed": retrieval_passed,
+        "retrieval_failure_reason": retrieval_failure_reason,
+        "generation_passed": generation_passed,
+        "generation_failure_reason": generation_failure_reason,
         "answer": result.get("answer", ""),
         "has_valid_context": result.get("has_valid_context") is True,
         "is_fallback": result.get("is_fallback", False),
@@ -102,6 +128,10 @@ def evaluate_document_ingestion_agent_flow(
         return {
             "passed": False,
             "failure_reason": "document_not_found",
+            "retrieval_passed": False,
+            "retrieval_failure_reason": "document_not_found",
+            "generation_passed": False,
+            "generation_failure_reason": "not_evaluated",
             "title": title,
             "question": question,
             "document": None,
@@ -159,6 +189,10 @@ def print_evaluation_result(result: dict) -> None:
     print("PostgreSQL 文档入库 Agent 验收完成。")
     print("是否通过：", result["passed"])
     print("失败原因：", result["failure_reason"])
+    print("检索层是否通过：", result["retrieval_passed"])
+    print("检索层失败原因：", result["retrieval_failure_reason"])
+    print("生成层是否通过：", result["generation_passed"])
+    print("生成层失败原因：", result["generation_failure_reason"])
     print("文档标题：", result["title"])
     print("问题：", result["question"])
     print("检索后端：", result["retriever_backend"])

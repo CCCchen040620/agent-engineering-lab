@@ -5,6 +5,8 @@ from week11.evaluate_document_ingestion_agent_flow import (
     evaluate_agent_result_for_document,
     evaluate_document_ingestion_agent_flow,
     get_agent_flow_failure_reason,
+    get_generation_failure_reason,
+    get_retrieval_failure_reason,
     top_citation_matches_document,
 )
 
@@ -295,3 +297,45 @@ def test_evaluate_document_ingestion_agent_flow_runs_agent_with_postgresql_backe
     assert captured["retriever_backend"] == "postgresql"
     assert captured["postgresql_connection"] is connection
     assert captured["generator"] is generator
+
+
+def test_retrieval_and_generation_failures_are_separated():
+    result = {
+        "answer": "fallback answer",
+        "has_valid_context": True,
+        "is_fallback": True,
+        "citations": [
+            {
+                "title": "Target Policy",
+                "path": "postgresql://chunk/1",
+            }
+        ],
+    }
+
+    assert get_retrieval_failure_reason(result, "Target Policy") == ""
+    assert get_generation_failure_reason(result) == "fallback_answer"
+    assert get_agent_flow_failure_reason(result, "Target Policy") == "fallback_answer"
+
+
+def test_evaluate_agent_result_passes_when_only_generation_fallbacks():
+    result = {
+        "answer": "fallback answer",
+        "has_valid_context": True,
+        "is_fallback": True,
+        "citations": [
+            {
+                "title": "Target Policy",
+                "text": "Target evidence.",
+                "path": "postgresql://chunk/1",
+            }
+        ],
+    }
+
+    evaluation = evaluate_agent_result_for_document(result, "Target Policy")
+
+    assert evaluation["passed"] is True
+    assert evaluation["failure_reason"] == "fallback_answer"
+    assert evaluation["retrieval_passed"] is True
+    assert evaluation["retrieval_failure_reason"] == ""
+    assert evaluation["generation_passed"] is False
+    assert evaluation["generation_failure_reason"] == "fallback_answer"
