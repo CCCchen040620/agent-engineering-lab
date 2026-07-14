@@ -3,10 +3,14 @@ param(
     [switch]$SkipEmbeddingBackfill,
     [switch]$SkipConversationChat,
     [switch]$SkipIngestedDocumentCheck,
+    [switch]$RunBatchDocumentIngestionCheck,
     [string]$IngestedDocumentTitle = "",
     [string]$IngestedDocumentQuestion = "",
     [int]$IngestedDocumentTopK = 3,
-    [double]$IngestedDocumentMinScore = 0.6
+    [double]$IngestedDocumentMinScore = 0.6,
+    [string]$BatchDocumentIngestionCaseFile = "docs/evaluations/document-ingestion-agent-cases.json",
+    [string]$BatchDocumentIngestionReportPath = "docs/evaluations/document-ingestion-agent-batch-run.md",
+    [double]$BatchDocumentIngestionTimeoutSeconds = 30
 )
 
 $ProjectRoot = Resolve-Path "$PSScriptRoot\.."
@@ -105,6 +109,20 @@ else {
             --top-k $IngestedDocumentTopK `
             --min-score $IngestedDocumentMinScore
     }
+}
+
+if ($RunBatchDocumentIngestionCheck) {
+    Invoke-PostgresqlAgentStep "Optional: Evaluating batch document ingestion Agent flow..." {
+        & $PythonExecutable -m week11.evaluate_batch_document_ingestion_agent_flow `
+            --case-file $BatchDocumentIngestionCaseFile `
+            --report-path $BatchDocumentIngestionReportPath `
+            --timeout-seconds $BatchDocumentIngestionTimeoutSeconds
+    }
+}
+else {
+    Write-Host ""
+    Write-Host "Optional: Skipping batch document ingestion Agent flow."
+    Write-Host "Use -RunBatchDocumentIngestionCheck to enable this check."
 }
 
 Write-Host ""
