@@ -80,6 +80,8 @@ def evaluate_rag_result(case: dict, result: dict) -> dict:
         "question": case["question"],
         "expected_answer_type": expected_answer_type,
         "expected_document_title": case["expected_document_title"],
+        "scenario": case.get("scenario", ""),
+        "tags": case.get("tags", []),
         "retriever_backend": case["retriever_backend"],
         "mode": case["mode"],
         "top_k": case["top_k"],
@@ -106,6 +108,8 @@ def build_skipped_evaluation_item(case: dict, reason: str) -> dict:
         "question": case["question"],
         "expected_answer_type": case["expected_answer_type"],
         "expected_document_title": case["expected_document_title"],
+        "scenario": case.get("scenario", ""),
+        "tags": case.get("tags", []),
         "retriever_backend": case["retriever_backend"],
         "mode": case["mode"],
         "top_k": case["top_k"],
@@ -150,10 +154,13 @@ def summarize_rag_evaluation(items: list[dict]) -> dict:
     skipped_items = [item for item in items if item["skipped"]]
     by_backend = {}
     by_answer_type = {}
+    by_scenario = {}
+    by_tag = {}
 
     for item in items:
         backend = item["retriever_backend"]
         answer_type = item["expected_answer_type"]
+        scenario = item["scenario"]
 
         if backend not in by_backend:
             by_backend[backend] = {
@@ -171,24 +178,57 @@ def summarize_rag_evaluation(items: list[dict]) -> dict:
                 "skipped": 0,
             }
 
+        if scenario not in by_scenario:
+            by_scenario[scenario] = {
+                "total": 0,
+                "passed": 0,
+                "failed": 0,
+                "skipped": 0,
+            }
+
+        for tag in item["tags"]:
+            if tag not in by_tag:
+                by_tag[tag] = {
+                    "total": 0,
+                    "passed": 0,
+                    "failed": 0,
+                    "skipped": 0,
+                }
+
         by_backend[backend]["total"] = by_backend[backend]["total"] + 1
         by_answer_type[answer_type]["total"] = by_answer_type[answer_type]["total"] + 1
+        by_scenario[scenario]["total"] = by_scenario[scenario]["total"] + 1
+
+        for tag in item["tags"]:
+            by_tag[tag]["total"] = by_tag[tag]["total"] + 1
 
         if item["skipped"]:
             by_backend[backend]["skipped"] = by_backend[backend]["skipped"] + 1
             by_answer_type[answer_type]["skipped"] = (
                 by_answer_type[answer_type]["skipped"] + 1
             )
+            by_scenario[scenario]["skipped"] = by_scenario[scenario]["skipped"] + 1
+
+            for tag in item["tags"]:
+                by_tag[tag]["skipped"] = by_tag[tag]["skipped"] + 1
         elif item["passed"]:
             by_backend[backend]["passed"] = by_backend[backend]["passed"] + 1
             by_answer_type[answer_type]["passed"] = (
                 by_answer_type[answer_type]["passed"] + 1
             )
+            by_scenario[scenario]["passed"] = by_scenario[scenario]["passed"] + 1
+
+            for tag in item["tags"]:
+                by_tag[tag]["passed"] = by_tag[tag]["passed"] + 1
         else:
             by_backend[backend]["failed"] = by_backend[backend]["failed"] + 1
             by_answer_type[answer_type]["failed"] = (
                 by_answer_type[answer_type]["failed"] + 1
             )
+            by_scenario[scenario]["failed"] = by_scenario[scenario]["failed"] + 1
+
+            for tag in item["tags"]:
+                by_tag[tag]["failed"] = by_tag[tag]["failed"] + 1
 
     evaluated_count = len(evaluated_items)
 
@@ -201,6 +241,8 @@ def summarize_rag_evaluation(items: list[dict]) -> dict:
         "pass_rate": len(passed_items) / evaluated_count if evaluated_count else 0,
         "by_backend": by_backend,
         "by_answer_type": by_answer_type,
+        "by_scenario": by_scenario,
+        "by_tag": by_tag,
     }
 
 
@@ -286,6 +328,34 @@ def build_rag_evaluation_report(evaluation: dict) -> str:
     lines.extend(
         [
             "",
+            "## 按场景统计",
+            "",
+        ]
+    )
+
+    for scenario, summary in evaluation["by_scenario"].items():
+        lines.append(
+            f"- {scenario}：total={summary['total']}，passed={summary['passed']}，"
+            f"failed={summary['failed']}，skipped={summary['skipped']}"
+        )
+
+    lines.extend(
+        [
+            "",
+            "## 按标签统计",
+            "",
+        ]
+    )
+
+    for tag, summary in evaluation["by_tag"].items():
+        lines.append(
+            f"- {tag}：total={summary['total']}，passed={summary['passed']}，"
+            f"failed={summary['failed']}，skipped={summary['skipped']}"
+        )
+
+    lines.extend(
+        [
+            "",
             "## 明细",
             "",
         ]
@@ -299,6 +369,8 @@ def build_rag_evaluation_report(evaluation: dict) -> str:
                 f"- 问题：{item['question']}",
                 f"- 期望类型：{item['expected_answer_type']}",
                 f"- 期望文档：{item['expected_document_title']}",
+                f"- 场景：{item['scenario']}",
+                f"- 标签：{', '.join(item['tags'])}",
                 f"- 检索后端：{item['retriever_backend']}",
                 f"- 检索模式：{item['mode']}",
                 f"- top_k：{item['top_k']}",

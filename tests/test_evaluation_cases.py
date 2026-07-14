@@ -22,6 +22,8 @@ def test_load_evaluation_cases_from_default_file():
         assert case["question"] != ""
         assert case["expected_answer_type"] in {"answer", "refusal"}
         assert case["retriever_backend"] in {"sqlite", "postgresql"}
+        assert case["scenario"] != ""
+        assert case["tags"] != []
         assert case["top_k"] >= 1
         assert 0 <= case["min_score"] <= 1
 
@@ -38,6 +40,18 @@ def test_filter_evaluation_cases_by_backend():
     assert all(case["retriever_backend"] == "postgresql" for case in postgresql_cases)
 
 
+def test_filter_evaluation_cases_by_scenario_and_tag():
+    cases = load_evaluation_cases()
+
+    known_answer_cases = filter_evaluation_cases(cases, scenario="known_answer")
+    policy_cases = filter_evaluation_cases(cases, tag="policy")
+
+    assert len(known_answer_cases) >= 2
+    assert all(case["scenario"] == "known_answer" for case in known_answer_cases)
+    assert len(policy_cases) >= 2
+    assert all("policy" in case["tags"] for case in policy_cases)
+
+
 def test_load_agent_evaluation_cases_maps_expected_answer_type():
     cases = load_agent_evaluation_cases(retriever_backend="postgresql")
     case_types = {case["case_type"] for case in cases}
@@ -46,6 +60,8 @@ def test_load_agent_evaluation_cases_maps_expected_answer_type():
     assert "answer" in case_types
     assert "refusal" in case_types
     assert all("expected_document_title" in case for case in cases)
+    assert all("scenario" in case for case in cases)
+    assert all("tags" in case for case in cases)
 
 
 def test_validate_evaluation_case_requires_expected_document_for_answer():
@@ -54,6 +70,8 @@ def test_validate_evaluation_case_requires_expected_document_for_answer():
         "question": "员工每天需要工作多久？",
         "expected_answer_type": "answer",
         "expected_document_title": "",
+        "scenario": "known_answer",
+        "tags": ["postgresql", "answer"],
         "retriever_backend": "postgresql",
         "mode": "precomputed_embedding",
         "top_k": 2,
@@ -61,6 +79,42 @@ def test_validate_evaluation_case_requires_expected_document_for_answer():
     }
 
     with pytest.raises(ValueError, match="expected_document_title"):
+        validate_evaluation_case(case)
+
+
+def test_validate_evaluation_case_requires_tags():
+    case = {
+        "id": "case_without_tags",
+        "question": "员工每天需要工作多久？",
+        "expected_answer_type": "answer",
+        "expected_document_title": "员工手册",
+        "scenario": "known_answer",
+        "tags": [],
+        "retriever_backend": "postgresql",
+        "mode": "precomputed_embedding",
+        "top_k": 2,
+        "min_score": 0.8,
+    }
+
+    with pytest.raises(ValueError, match="tags"):
+        validate_evaluation_case(case)
+
+
+def test_validate_evaluation_case_rejects_unsupported_scenario():
+    case = {
+        "id": "case_with_bad_scenario",
+        "question": "员工每天需要工作多久？",
+        "expected_answer_type": "answer",
+        "expected_document_title": "员工手册",
+        "scenario": "unsupported",
+        "tags": ["postgresql", "answer"],
+        "retriever_backend": "postgresql",
+        "mode": "precomputed_embedding",
+        "top_k": 2,
+        "min_score": 0.8,
+    }
+
+    with pytest.raises(ValueError, match="scenario"):
         validate_evaluation_case(case)
 
 
@@ -74,3 +128,6 @@ def test_summarize_evaluation_cases():
     assert summary["by_backend"]["sqlite"] >= 1
     assert summary["by_answer_type"]["answer"] >= 2
     assert summary["by_answer_type"]["refusal"] >= 1
+    assert summary["by_scenario"]["known_answer"] >= 2
+    assert summary["by_scenario"]["unknown_answer"] >= 1
+    assert summary["by_tag"]["policy"] >= 2

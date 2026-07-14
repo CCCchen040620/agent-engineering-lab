@@ -236,12 +236,30 @@ def test_build_rag_evaluation_report_contains_summary():
                 "skipped": 0,
             }
         },
+        "by_scenario": {
+            "known_answer": {
+                "total": 1,
+                "passed": 1,
+                "failed": 0,
+                "skipped": 0,
+            }
+        },
+        "by_tag": {
+            "policy": {
+                "total": 1,
+                "passed": 1,
+                "failed": 0,
+                "skipped": 0,
+            }
+        },
         "items": [
             {
                 "id": "case_1",
                 "question": "员工每天需要工作多久？",
                 "expected_answer_type": "answer",
                 "expected_document_title": "员工手册",
+                "scenario": "known_answer",
+                "tags": ["sqlite", "answer", "policy"],
                 "retriever_backend": "sqlite",
                 "mode": "precomputed_embedding",
                 "top_k": 3,
@@ -274,6 +292,8 @@ def test_build_rag_evaluation_report_contains_summary():
     assert "总用例数：1" in report
     assert "### case_1" in report
     assert "员工手册" in report
+    assert "known_answer" in report
+    assert "policy" in report
 
 
 def test_write_rag_evaluation_report(tmp_path):
