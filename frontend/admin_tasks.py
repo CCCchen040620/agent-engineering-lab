@@ -1,8 +1,10 @@
 import streamlit as st
 
 from frontend.api_client import (
+    create_task_api,
     list_tasks_api,
     run_postgresql_embedding_backfill_task_api,
+    run_task_async_api,
 )
 from frontend.task_result_summary import (
     build_task_result_summary,
@@ -11,17 +13,37 @@ from frontend.task_result_summary import (
 from backend.config import BACKEND_API_BASE_URL
 
 
+POSTGRESQL_EMBEDDING_BACKFILL_TASK_TYPE = "postgresql_embedding_backfill"
+
+
 st.set_page_config(page_title="后台任务中心", layout="wide")
 
 st.title("后台任务中心")
 
 st.caption("用于查看后台任务状态，并手动触发 PostgreSQL embedding 回填。")
 
+run_mode = st.radio(
+    "运行方式",
+    ["同步运行（等待完成）", "异步运行（立即返回）"],
+    horizontal=True,
+)
+
 if st.button("运行 PostgreSQL embedding 回填"):
     try:
-        task = run_postgresql_embedding_backfill_task_api(BACKEND_API_BASE_URL)
+        if run_mode == "同步运行（等待完成）":
+            task = run_postgresql_embedding_backfill_task_api(BACKEND_API_BASE_URL)
+        else:
+            created_task = create_task_api(
+                BACKEND_API_BASE_URL,
+                task_type=POSTGRESQL_EMBEDDING_BACKFILL_TASK_TYPE,
+                payload={},
+            )
+            task = run_task_async_api(BACKEND_API_BASE_URL, created_task["id"])
+
         if task["status"] == "succeeded":
             st.success("任务执行成功。")
+        elif task["status"] == "running":
+            st.info(f"任务已开始，任务 ID：{task['id']}。请刷新任务列表查看结果。")
         elif task["status"] == "failed":
             st.error(f"任务执行失败：{task['error']}")
         else:

@@ -1391,3 +1391,82 @@ def test_run_postgresql_embedding_backfill_task_api(monkeypatch):
 
     assert task["type"] == "postgresql_embedding_backfill"
     assert task["status"] == "succeeded"
+
+
+def test_create_task_api(monkeypatch):
+    from frontend import api_client
+
+    captured = {}
+
+    class FakeResponse:
+        status_code = 201
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {
+                "id": 1,
+                "type": "postgresql_embedding_backfill",
+                "status": "pending",
+                "payload": {},
+                "result": {},
+                "error": "",
+            }
+
+    def fake_post(url, json, timeout=10):
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr(api_client.requests, "post", fake_post)
+
+    task = api_client.create_task_api(
+        "http://testserver",
+        task_type="postgresql_embedding_backfill",
+        payload={},
+    )
+
+    assert captured["url"] == "http://testserver/api/v1/tasks"
+    assert captured["json"] == {
+        "type": "postgresql_embedding_backfill",
+        "payload": {},
+    }
+    assert captured["timeout"] == 10
+    assert task["status"] == "pending"
+
+
+def test_run_task_async_api(monkeypatch):
+    from frontend import api_client
+
+    captured = {}
+
+    class FakeResponse:
+        status_code = 202
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {
+                "id": 1,
+                "type": "postgresql_embedding_backfill",
+                "status": "running",
+                "payload": {},
+                "result": {},
+                "error": "",
+            }
+
+    def fake_post(url, timeout=10):
+        captured["url"] = url
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr(api_client.requests, "post", fake_post)
+
+    task = api_client.run_task_async_api("http://testserver", task_id=1)
+
+    assert captured["url"] == "http://testserver/api/v1/tasks/1/run-async"
+    assert captured["timeout"] == 10
+    assert task["status"] == "running"

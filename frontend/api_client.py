@@ -552,6 +552,32 @@ def list_tasks_api(base_url: str) -> list[dict]:
     return response.json()
 
 
+def create_task_api(
+    base_url: str,
+    task_type: str,
+    payload: dict | None = None,
+) -> dict:
+    response = requests.post(
+        base_url + "/api/v1/tasks",
+        json={
+            "type": task_type,
+            "payload": payload or {},
+        },
+        timeout=10,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def run_task_async_api(base_url: str, task_id: int) -> dict:
+    response = requests.post(
+        base_url + f"/api/v1/tasks/{task_id}/run-async",
+        timeout=10,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
 def run_postgresql_embedding_backfill_task_api(base_url: str) -> dict:
     response = requests.post(
         base_url + "/api/v1/tasks/postgresql-embedding-backfill",
