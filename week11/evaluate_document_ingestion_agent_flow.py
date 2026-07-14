@@ -180,7 +180,7 @@ def main():
     if not is_postgresql_database(DATABASE_URL):
         print("DATABASE_URL 不是 PostgreSQL 地址，已停止。")
         print("当前 DATABASE_URL:", DATABASE_URL)
-        return
+        raise SystemExit(1)
 
     parser = build_argument_parser()
     args = parser.parse_args()
@@ -196,6 +196,9 @@ def main():
         )
 
     print_evaluation_result(result)
+
+    if result["passed"] is not True:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

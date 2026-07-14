@@ -138,13 +138,18 @@ def test_postgresql_agent_check_runs_required_steps():
     assert "week10.evaluate_postgresql_conversation_chat" in script
     assert "week11.evaluate_document_ingestion_agent_flow" in script
     assert "Step 7/8: Evaluating PostgreSQL conversation chat flow" in script
+    assert "Step 7/8: Skipping PostgreSQL conversation chat flow" in script
     assert "Step 8/8: Evaluating ingested document Agent answer flow" in script
+    assert "Step 8/8: Skipping ingested document Agent answer flow" in script
     assert "IngestedDocumentTitle" in script
     assert "IngestedDocumentQuestion" in script
     assert "IngestedDocumentTopK" in script
     assert "IngestedDocumentMinScore" in script
-    assert '[string]$IngestedDocumentTitle = "SQLite 迁移验收文档"' in script
-    assert '[string]$IngestedDocumentQuestion = "SQLite 迁移测试片段一是什么？"' in script
+    assert "SkipConversationChat" in script
+    assert "SkipIngestedDocumentCheck" in script
+    assert '[string]$IngestedDocumentTitle = ""' in script
+    assert '[string]$IngestedDocumentQuestion = ""' in script
+    assert "Provide -IngestedDocumentTitle and -IngestedDocumentQuestion" in script
     assert "--title $IngestedDocumentTitle" in script
     assert "--question $IngestedDocumentQuestion" in script
     assert "--top-k $IngestedDocumentTopK" in script

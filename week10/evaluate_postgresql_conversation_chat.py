@@ -318,6 +318,9 @@ def main():
     result = evaluate_postgresql_conversation_chat_flow()
     print_evaluation_result(result)
 
+    if result["passed"] is not True:
+        raise SystemExit(1)
+
 
 if __name__ == "__main__":
     main()
