@@ -14,10 +14,11 @@ def test_load_evaluation_cases_from_default_file():
     cases = load_evaluation_cases()
     case_ids = {case["id"] for case in cases}
 
-    assert len(cases) >= 3
+    assert len(cases) >= 4
     assert "pg_work_hours_answer" in case_ids
     assert "pg_stock_options_refusal" in case_ids
     assert "sqlite_safety_training_answer" in case_ids
+    assert "pg_prompt_injection_stock_options_refusal" in case_ids
 
     for case in cases:
         assert case["question"] != ""
@@ -37,7 +38,7 @@ def test_filter_evaluation_cases_by_backend():
         retriever_backend="postgresql",
     )
 
-    assert len(postgresql_cases) >= 2
+    assert len(postgresql_cases) >= 3
     assert all(case["retriever_backend"] == "postgresql" for case in postgresql_cases)
 
 
@@ -89,6 +90,21 @@ def test_select_evaluation_cases_matches_any_tag_when_requested():
 
     for case in selected_cases:
         assert "sqlite" in case["tags"] or "unknown" in case["tags"]
+
+
+def test_select_evaluation_cases_can_select_prompt_injection_security_cases():
+    cases = load_evaluation_cases()
+
+    selected_cases = select_evaluation_cases(
+        cases,
+        retriever_backend="postgresql",
+        expected_answer_type="refusal",
+        scenario="prompt_injection",
+        tags=["security", "prompt_injection"],
+    )
+
+    assert len(selected_cases) == 1
+    assert selected_cases[0]["id"] == "pg_prompt_injection_stock_options_refusal"
 
 
 def test_select_evaluation_cases_rejects_invalid_tag_match():
@@ -185,7 +201,10 @@ def test_summarize_evaluation_cases():
     assert summary["by_backend"]["postgresql"] >= 2
     assert summary["by_backend"]["sqlite"] >= 1
     assert summary["by_answer_type"]["answer"] >= 2
-    assert summary["by_answer_type"]["refusal"] >= 1
+    assert summary["by_answer_type"]["refusal"] >= 2
     assert summary["by_scenario"]["known_answer"] >= 2
     assert summary["by_scenario"]["unknown_answer"] >= 1
+    assert summary["by_scenario"]["prompt_injection"] >= 1
     assert summary["by_tag"]["policy"] >= 2
+    assert summary["by_tag"]["security"] >= 1
+    assert summary["by_tag"]["prompt_injection"] >= 1
