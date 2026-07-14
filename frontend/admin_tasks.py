@@ -124,6 +124,7 @@ try:
     tasks = list_tasks_api(
         BACKEND_API_BASE_URL,
         status=status_filter,
+        order="desc" if newest_first else "asc",
     )
 
     if not tasks:

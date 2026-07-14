@@ -34,15 +34,25 @@ class InMemoryTaskQueue:
 
         return task
 
-    def list_tasks(self, status: str | None = None) -> list[dict]:
+    def list_tasks(
+        self,
+        status: str | None = None,
+        order: str = "asc",
+    ) -> list[dict]:
         if status in (None, ""):
-            return self.tasks
+            tasks = list(self.tasks)
+        else:
+            tasks = [
+                task
+                for task in self.tasks
+                if task["status"] == status
+            ]
 
-        return [
-            task
-            for task in self.tasks
-            if task["status"] == status
-        ]
+        return sorted(
+            tasks,
+            key=lambda task: task["id"],
+            reverse=order == "desc",
+        )
 
     def get_task(self, task_id: int) -> dict | None:
         for task in self.tasks:

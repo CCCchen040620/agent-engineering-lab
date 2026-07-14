@@ -543,11 +543,18 @@ def get_unified_error_message(data: dict) -> str:
     return "请求失败，请稍后再试。"
 
 
-def list_tasks_api(base_url: str, status: str | None = None) -> list[dict]:
+def list_tasks_api(
+    base_url: str,
+    status: str | None = None,
+    order: str | None = None,
+) -> list[dict]:
     params = {}
 
     if status not in (None, "", "全部"):
         params["status"] = status
+
+    if order in ("asc", "desc"):
+        params["order"] = order
 
     response = requests.get(
         base_url + "/api/v1/tasks",

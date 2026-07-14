@@ -351,3 +351,46 @@ def test_list_tasks_endpoint_can_filter_by_status():
 
     assert response.status_code == 200
     assert response.json() == [second_task]
+
+
+def test_list_tasks_endpoint_can_sort_by_order_desc():
+    test_queue = InMemoryTaskQueue()
+    first_task = test_queue.create_task(
+        task_type="echo",
+        payload={"message": "first"},
+    )
+    second_task = test_queue.create_task(
+        task_type="postgresql_embedding_backfill",
+        payload={},
+    )
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.get("/api/v1/tasks?order=desc")
+
+    assert response.status_code == 200
+    assert response.json() == [second_task, first_task]
+
+
+def test_list_tasks_endpoint_can_filter_and_sort():
+    test_queue = InMemoryTaskQueue()
+    first_task = test_queue.create_task(
+        task_type="echo",
+        payload={"message": "first"},
+    )
+    second_task = test_queue.create_task(
+        task_type="postgresql_embedding_backfill",
+        payload={},
+    )
+    third_task = test_queue.create_task(
+        task_type="rag_evaluation",
+        payload={},
+    )
+    test_queue.mark_task_failed(first_task["id"], "Task failed")
+    test_queue.mark_task_failed(third_task["id"], "Task failed")
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.get("/api/v1/tasks?status=failed&order=desc")
+
+    assert response.status_code == 200
+    assert response.json() == [third_task, first_task]
+    assert second_task not in response.json()

@@ -75,9 +75,10 @@ def create_task(
 @router.get("")
 def list_tasks(
     status: str | None = Query(default=None),
+    order: str = Query(default="asc"),
     queue: InMemoryTaskQueue = Depends(get_task_queue),
 ):
-    return queue.list_tasks(status=status)
+    return queue.list_tasks(status=status, order=order)
 
     
 @router.get("/{task_id}")

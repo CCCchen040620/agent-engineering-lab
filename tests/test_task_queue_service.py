@@ -60,6 +60,39 @@ def test_list_tasks_can_filter_by_status():
     assert tasks == [second]
 
 
+def test_list_tasks_can_sort_by_id_desc():
+    queue = InMemoryTaskQueue()
+
+    first = queue.create_task(
+        task_type="embedding_backfill",
+        payload={"source": "postgresql"},
+    )
+    second = queue.create_task(
+        task_type="rag_evaluation",
+        payload={"scope": "lightweight"},
+    )
+
+    tasks = queue.list_tasks(order="desc")
+
+    assert tasks == [second, first]
+
+
+def test_list_tasks_can_filter_and_sort():
+    queue = InMemoryTaskQueue()
+
+    first = queue.create_task("embedding_backfill", {})
+    second = queue.create_task("rag_evaluation", {})
+    third = queue.create_task("postgresql_embedding_backfill", {})
+
+    queue.mark_task_failed(first["id"], "Ollama unavailable")
+    queue.mark_task_failed(third["id"], "PostgreSQL unavailable")
+
+    tasks = queue.list_tasks(status="failed", order="desc")
+
+    assert tasks == [third, first]
+    assert second not in tasks
+
+
 def test_get_task_by_id():
     queue = InMemoryTaskQueue()
 
