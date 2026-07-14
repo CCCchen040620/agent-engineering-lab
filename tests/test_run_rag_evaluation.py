@@ -1,6 +1,7 @@
 from week11.evaluation_cases import load_evaluation_cases
 from week11.run_rag_evaluation import (
     build_failure_reasons,
+    build_failure_stages,
     build_rag_evaluation_report,
     evaluate_rag_result,
     main,
@@ -47,6 +48,7 @@ def test_evaluate_rag_result_passes_answer_when_expected_document_is_cited():
 
     assert item["passed"] is True
     assert item["failure_reasons"] == []
+    assert item["failure_stages"] == []
     assert item["fallback_reason"] == ""
     assert item["expected_document_in_citations"] is True
     assert item["expected_document_in_snippets"] is True
@@ -128,7 +130,27 @@ def test_evaluate_rag_result_keeps_fallback_reason():
 
     assert item["passed"] is False
     assert item["failure_reasons"] == ["fallback_answer"]
+    assert item["failure_stages"] == ["generation"]
     assert item["fallback_reason"] == "模型生成失败"
+
+
+def test_build_failure_stages_classifies_retrieval_validation_and_citation():
+    retrieval_stages = build_failure_stages(
+        failure_reasons=["invalid_context"],
+        snippet_count=0,
+    )
+    validation_stages = build_failure_stages(
+        failure_reasons=["invalid_context"],
+        snippet_count=2,
+    )
+    citation_stages = build_failure_stages(
+        failure_reasons=["missing_citations", "expected_document_not_cited"],
+        snippet_count=2,
+    )
+
+    assert retrieval_stages == ["retrieval"]
+    assert validation_stages == ["validation"]
+    assert citation_stages == ["citation"]
 
 
 def test_build_failure_reasons_for_answer_collects_multiple_reasons():
@@ -592,6 +614,7 @@ def test_build_rag_evaluation_report_contains_summary():
                 "min_score": 0.6,
                 "passed": True,
                 "failure_reasons": [],
+                "failure_stages": [],
                 "skipped": False,
                 "skip_reason": "",
                 "answer": "员工每天需要完成 8 小时工作。",
@@ -623,6 +646,7 @@ def test_build_rag_evaluation_report_contains_summary():
     assert "known_answer" in report
     assert "policy" in report
     assert "失败原因" in report
+    assert "失败阶段：无" in report
     assert "兜底原因：无" in report
 
 

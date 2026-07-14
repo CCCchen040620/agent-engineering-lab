@@ -98,6 +98,40 @@ def build_failure_reasons(
     raise ValueError(f"Unsupported expected_answer_type: {expected_answer_type}")
 
 
+def build_failure_stages(
+    failure_reasons: list[str],
+    snippet_count: int,
+    skipped: bool = False,
+) -> list[str]:
+    if skipped:
+        return ["skipped"]
+
+    stage_by_reason = {
+        "empty_answer": "generation",
+        "fallback_answer": "generation",
+        "timeout": "timeout",
+        "missing_citations": "citation",
+        "expected_document_not_cited": "citation",
+        "unexpected_valid_context": "validation",
+        "unexpected_citations_for_refusal": "citation",
+    }
+    failure_stages = []
+
+    for reason in failure_reasons:
+        if reason == "invalid_context":
+            if snippet_count == 0:
+                stage = "retrieval"
+            else:
+                stage = "validation"
+        else:
+            stage = stage_by_reason.get(reason, "unknown")
+
+        if stage not in failure_stages:
+            failure_stages.append(stage)
+
+    return failure_stages
+
+
 def evaluate_rag_result(case: dict, result: dict) -> dict:
     citations = result.get("citations", [])
     snippets = result.get("snippets", [])
@@ -125,6 +159,10 @@ def evaluate_rag_result(case: dict, result: dict) -> dict:
         citations=citations,
         expected_document_in_citations=expected_document_in_citations,
     )
+    failure_stages = build_failure_stages(
+        failure_reasons=failure_reasons,
+        snippet_count=len(snippets),
+    )
 
     return {
         "id": case["id"],
@@ -140,6 +178,7 @@ def evaluate_rag_result(case: dict, result: dict) -> dict:
         "min_score": case["min_score"],
         "passed": failure_reasons == [],
         "failure_reasons": failure_reasons,
+        "failure_stages": failure_stages,
         "skipped": False,
         "skip_reason": "",
         "answer": answer,
@@ -171,6 +210,7 @@ def build_skipped_evaluation_item(case: dict, reason: str) -> dict:
         "min_score": case["min_score"],
         "passed": False,
         "failure_reasons": [],
+        "failure_stages": ["skipped"],
         "skipped": True,
         "skip_reason": reason,
         "answer": "",
@@ -452,6 +492,7 @@ def build_rag_evaluation_report(evaluation: dict) -> str:
                 f"- min_score：{item['min_score']}",
                 f"- 是否通过：{format_bool(item['passed'])}",
                 f"- 失败原因：{', '.join(item['failure_reasons']) if item['failure_reasons'] else '无'}",
+                f"- 失败阶段：{', '.join(item['failure_stages']) if item['failure_stages'] else '无'}",
                 f"- 是否跳过：{format_bool(item['skipped'])}",
                 f"- 跳过原因：{item['skip_reason']}",
                 f"- has_valid_context：{format_bool(item['has_valid_context'])}",
