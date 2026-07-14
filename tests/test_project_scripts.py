@@ -139,8 +139,16 @@ def test_postgresql_agent_check_runs_required_steps():
     assert "week11.evaluate_document_ingestion_agent_flow" in script
     assert "Step 7/8: Evaluating PostgreSQL conversation chat flow" in script
     assert "Step 8/8: Evaluating ingested document Agent answer flow" in script
-    assert '--title "SQLite 迁移验收文档"' in script
-    assert '--question "SQLite 迁移测试片段一是什么？"' in script
+    assert "IngestedDocumentTitle" in script
+    assert "IngestedDocumentQuestion" in script
+    assert "IngestedDocumentTopK" in script
+    assert "IngestedDocumentMinScore" in script
+    assert '[string]$IngestedDocumentTitle = "SQLite 迁移验收文档"' in script
+    assert '[string]$IngestedDocumentQuestion = "SQLite 迁移测试片段一是什么？"' in script
+    assert "--title $IngestedDocumentTitle" in script
+    assert "--question $IngestedDocumentQuestion" in script
+    assert "--top-k $IngestedDocumentTopK" in script
+    assert "--min-score $IngestedDocumentMinScore" in script
     assert "PythonExecutable" in script
     assert ".venv\\Scripts\\python.exe" in script
     assert "& $PythonExecutable -m week10.init_postgresql_schema" in script

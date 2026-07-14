@@ -1,6 +1,10 @@
 param(
     [string]$DatabaseUrl = $env:DATABASE_URL,
-    [switch]$SkipEmbeddingBackfill
+    [switch]$SkipEmbeddingBackfill,
+    [string]$IngestedDocumentTitle = "SQLite 迁移验收文档",
+    [string]$IngestedDocumentQuestion = "SQLite 迁移测试片段一是什么？",
+    [int]$IngestedDocumentTopK = 3,
+    [double]$IngestedDocumentMinScore = 0.6
 )
 
 $ProjectRoot = Resolve-Path "$PSScriptRoot\.."
@@ -37,6 +41,8 @@ $env:DATABASE_URL = $DatabaseUrl
 Write-Host "Checking PostgreSQL LangGraph Agent flow..."
 Write-Host "DATABASE_URL: $DatabaseUrl"
 Write-Host "Python executable: $PythonExecutable"
+Write-Host "Ingested document title: $IngestedDocumentTitle"
+Write-Host "Ingested document question: $IngestedDocumentQuestion"
 Write-Host "This check assumes Ollama is running and the required models are available."
 
 Invoke-PostgresqlAgentStep "Step 1/8: Checking PostgreSQL Docker service..." {
@@ -75,10 +81,10 @@ Invoke-PostgresqlAgentStep "Step 7/8: Evaluating PostgreSQL conversation chat fl
 
 Invoke-PostgresqlAgentStep "Step 8/8: Evaluating ingested document Agent answer flow..." {
     & $PythonExecutable -m week11.evaluate_document_ingestion_agent_flow `
-        --title "SQLite 迁移验收文档" `
-        --question "SQLite 迁移测试片段一是什么？" `
-        --top-k 3 `
-        --min-score 0.6
+        --title $IngestedDocumentTitle `
+        --question $IngestedDocumentQuestion `
+        --top-k $IngestedDocumentTopK `
+        --min-score $IngestedDocumentMinScore
 }
 
 Write-Host ""
