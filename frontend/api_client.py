@@ -541,3 +541,21 @@ def get_unified_error_message(data: dict) -> str:
         return str(detail)
 
     return "请求失败，请稍后再试。"
+
+
+def list_tasks_api(base_url: str) -> list[dict]:
+    response = requests.get(
+        base_url + "/api/v1/tasks",
+        timeout=10,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def run_postgresql_embedding_backfill_task_api(base_url: str) -> dict:
+    response = requests.post(
+        base_url + "/api/v1/tasks/postgresql-embedding-backfill",
+        timeout=60,
+    )
+    response.raise_for_status()
+    return response.json()

@@ -1328,3 +1328,66 @@ def test_stream_langgraph_agent_api_yields_error_when_backend_returns_error(monk
             "message": "请求失败。",
         }
     ]
+
+
+def test_list_tasks_api(monkeypatch):
+    from frontend import api_client
+
+    class FakeResponse:
+        status_code = 200
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return [
+                {
+                    "id": 1,
+                    "type": "postgresql_embedding_backfill",
+                    "status": "succeeded",
+                    "payload": {},
+                    "result": {"updated_embeddings": 3},
+                    "error": "",
+                }
+            ]
+
+    def fake_get(url, timeout=10):
+        assert url.endswith("/api/v1/tasks")
+        return FakeResponse()
+
+    monkeypatch.setattr(api_client.requests, "get", fake_get)
+
+    tasks = api_client.list_tasks_api("http://testserver")
+
+    assert tasks[0]["status"] == "succeeded"
+
+
+def test_run_postgresql_embedding_backfill_task_api(monkeypatch):
+    from frontend import api_client
+
+    class FakeResponse:
+        status_code = 200
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {
+                "id": 1,
+                "type": "postgresql_embedding_backfill",
+                "status": "succeeded",
+                "payload": {},
+                "result": {"updated_embeddings": 3},
+                "error": "",
+            }
+
+    def fake_post(url, timeout=10):
+        assert url.endswith("/api/v1/tasks/postgresql-embedding-backfill")
+        return FakeResponse()
+
+    monkeypatch.setattr(api_client.requests, "post", fake_post)
+
+    task = api_client.run_postgresql_embedding_backfill_task_api("http://testserver")
+
+    assert task["type"] == "postgresql_embedding_backfill"
+    assert task["status"] == "succeeded"
