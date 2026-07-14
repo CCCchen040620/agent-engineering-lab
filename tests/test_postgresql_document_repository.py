@@ -1,4 +1,5 @@
 from backend.services.postgresql_document_repository import (
+    delete_document_from_postgresql_by_id,
     find_document_by_title_from_postgresql,
     insert_chunk_to_postgresql,
     insert_document_to_postgresql,
@@ -306,6 +307,37 @@ def test_delete_documents_by_source_from_postgresql():
     assert connection.cursor_instance.params == ("evaluation",)
     assert "DELETE FROM documents" in connection.cursor_instance.sql
     assert "WHERE source = %s" in connection.cursor_instance.sql
+    assert connection.committed is True
+
+
+def test_delete_document_from_postgresql_by_id():
+    connection = FakeConnection()
+    connection.cursor_instance.row = (1,)
+
+    deleted = delete_document_from_postgresql_by_id(
+        connection,
+        document_id=1,
+    )
+
+    assert deleted is True
+    assert connection.cursor_instance.params == (1,)
+    assert "DELETE FROM documents" in connection.cursor_instance.sql
+    assert "WHERE id = %s" in connection.cursor_instance.sql
+    assert "RETURNING id" in connection.cursor_instance.sql
+    assert connection.committed is True
+
+
+def test_delete_document_from_postgresql_by_id_returns_false_when_not_found():
+    connection = FakeConnection()
+    connection.cursor_instance.row = None
+
+    deleted = delete_document_from_postgresql_by_id(
+        connection,
+        document_id=404,
+    )
+
+    assert deleted is False
+    assert connection.cursor_instance.params == (404,)
     assert connection.committed is True
 
 

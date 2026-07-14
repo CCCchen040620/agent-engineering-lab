@@ -214,6 +214,27 @@ def delete_documents_by_source_from_postgresql(
     return len(rows)
 
 
+def delete_document_from_postgresql_by_id(
+    connection,
+    document_id: int,
+) -> bool:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            DELETE FROM documents
+            WHERE id = %s
+            RETURNING id
+            """,
+            (document_id,),
+        )
+
+        row = cursor.fetchone()
+
+    connection.commit()
+
+    return row is not None
+
+
 def summarize_document_sources_from_postgresql(connection) -> list[dict]:
     with connection.cursor() as cursor:
         cursor.execute(

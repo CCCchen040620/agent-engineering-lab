@@ -951,6 +951,101 @@ def test_delete_postgresql_evaluation_documents_requires_confirm(monkeypatch):
     assert "confirm=true" in response.json()["detail"]
 
 
+def test_delete_postgresql_document_endpoint(monkeypatch):
+    captured = {}
+
+    def fake_connect(database_url: str):
+        captured["database_url"] = database_url
+        return FakeConnection()
+
+    def fake_initialize_schema(connection):
+        captured["schema_initialized"] = True
+
+    def fake_delete_document(connection, document_id: int):
+        captured["document_id"] = document_id
+        return True
+
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.psycopg.connect",
+        fake_connect,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.initialize_postgresql_knowledge_schema",
+        fake_initialize_schema,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.delete_document_from_postgresql_by_id",
+        fake_delete_document,
+    )
+
+    app.dependency_overrides[get_postgresql_database_url] = lambda: (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+
+    response = client.delete("/api/v1/postgresql/documents/7")
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 200
+    assert captured["database_url"] == (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+    assert captured["schema_initialized"] is True
+    assert captured["document_id"] == 7
+    assert response.json() == {
+        "message": "文档已删除。",
+        "id": 7,
+    }
+
+
+def test_delete_postgresql_document_endpoint_returns_404_when_not_found(
+    monkeypatch,
+):
+    def fake_connect(database_url: str):
+        return FakeConnection()
+
+    def fake_initialize_schema(connection):
+        pass
+
+    def fake_delete_document(connection, document_id: int):
+        return False
+
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.psycopg.connect",
+        fake_connect,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.initialize_postgresql_knowledge_schema",
+        fake_initialize_schema,
+    )
+    monkeypatch.setattr(
+        "backend.routers.postgresql_documents.delete_document_from_postgresql_by_id",
+        fake_delete_document,
+    )
+
+    app.dependency_overrides[get_postgresql_database_url] = lambda: (
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+
+    response = client.delete("/api/v1/postgresql/documents/404")
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "文档不存在。"
+
+
+def test_delete_postgresql_document_endpoint_rejects_sqlite_url():
+    app.dependency_overrides[get_postgresql_database_url] = lambda: "sqlite:///data/app.db"
+
+    response = client.delete("/api/v1/postgresql/documents/1")
+
+    clear_dependency_overrides()
+
+    assert response.status_code == 400
+    assert "PostgreSQL URL" in response.json()["detail"]
+
+
 def test_preview_postgresql_evaluation_documents_cleanup_endpoint(monkeypatch):
     captured = {}
 

@@ -11,6 +11,7 @@ from backend.services.database_url_service import is_postgresql_database
 from backend.services.postgresql_document_repository import (
     summarize_document_sources_from_postgresql,
     summarize_documents_by_source_from_postgresql,
+    delete_document_from_postgresql_by_id,
     delete_documents_by_source_from_postgresql,
     list_chunks_by_document_from_postgresql,
     list_documents_from_postgresql,
@@ -129,6 +130,36 @@ def delete_postgresql_evaluation_documents(
     return {
         "message": "评测文档已清理。",
         "deleted_count": deleted_count,
+    }
+
+
+@router.delete("/documents/{document_id}")
+def delete_postgresql_document(
+    document_id: int,
+    database_url: str = Depends(get_postgresql_database_url),
+):
+    if not is_postgresql_database(database_url):
+        raise HTTPException(
+            status_code=400,
+            detail="DATABASE_URL must be a PostgreSQL URL.",
+        )
+
+    with psycopg.connect(database_url) as connection:
+        initialize_postgresql_knowledge_schema(connection)
+        deleted = delete_document_from_postgresql_by_id(
+            connection,
+            document_id=document_id,
+        )
+
+    if not deleted:
+        raise HTTPException(
+            status_code=404,
+            detail="文档不存在。",
+        )
+
+    return {
+        "message": "文档已删除。",
+        "id": document_id,
     }
 
 
