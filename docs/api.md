@@ -1350,6 +1350,37 @@ GET /api/v1/postgresql/documents/2/chunks
 - 当前接口用于 PostgreSQL/pgvector 入库链路验收，还没有替代 SQLite 文档上传入口。
 - 可用 `week10/postgresql_document_indexing_api_demo.py` 验证“入库后立刻自然语言检索”的完整闭环。
 
+### DELETE /api/v1/postgresql/documents/{document_id}
+
+按 ID 删除 PostgreSQL 文档。
+
+请求示例：
+
+```text
+DELETE /api/v1/postgresql/documents/7
+```
+
+成功返回示例：
+
+```json
+{
+  "message": "文档已删除。",
+  "id": 7
+}
+```
+
+状态码说明：
+
+- `200 OK`：文档删除成功。
+- `400 Bad Request`：当前 `DATABASE_URL` 不是 PostgreSQL URL。
+- `404 Not Found`：指定 ID 的文档不存在。
+
+说明：
+
+- 该接口会修改 PostgreSQL 数据。
+- 删除文档时，PostgreSQL 会通过外键级联删除该文档对应的 chunks 和 embeddings。
+- 建议先通过 `GET /api/v1/postgresql/documents` 确认文档 ID，再执行删除。
+
 ### POST /api/v1/postgresql/search/vector
 
 使用 PostgreSQL/pgvector 按向量相似度搜索 chunks。
