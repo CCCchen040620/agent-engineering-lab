@@ -203,3 +203,21 @@ def test_create_and_run_postgresql_embedding_backfill_task_returns_failed_task_w
     assert data["status"] == "failed"
     assert data["result"] == {}
     assert "Ollama is not available" in data["error"]
+
+
+def test_list_tasks_endpoint():
+    test_queue = InMemoryTaskQueue()
+    first_task = test_queue.create_task(
+        task_type="echo",
+        payload={"message": "first"},
+    )
+    second_task = test_queue.create_task(
+        task_type="postgresql_embedding_backfill",
+        payload={},
+    )
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.get("/api/v1/tasks")
+
+    assert response.status_code == 200
+    assert response.json() == [first_task, second_task]

@@ -44,6 +44,13 @@ def create_task(
     )
 
 
+@router.get("")
+def list_tasks(
+    queue: InMemoryTaskQueue = Depends(get_task_queue),
+):
+    return queue.list_tasks()
+
+    
 @router.get("/{task_id}")
 def get_task(
     task_id: int,
