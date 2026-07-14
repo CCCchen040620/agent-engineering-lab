@@ -6,6 +6,7 @@ from backend.services.database_url_service import (
     get_sqlite_path_from_database_url,
     is_sqlite_database,
 )
+from backend.services.rag_backend_service import get_default_rag_retriever_backend
 
 
 load_dotenv(find_dotenv(usecwd=True))
@@ -45,7 +46,10 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "bge-m3:latest")
 
 DEFAULT_TOP_K = get_int_env("DEFAULT_TOP_K", 3)
 DEFAULT_MIN_SCORE = get_float_env("DEFAULT_MIN_SCORE", 0.3)
-RAG_RETRIEVER_BACKEND = os.getenv("RAG_RETRIEVER_BACKEND", "sqlite")
+RAG_RETRIEVER_BACKEND = os.getenv(
+    "RAG_RETRIEVER_BACKEND",
+    get_default_rag_retriever_backend(DATABASE_URL),
+)
 
 MAX_DOCUMENT_TITLE_CHARS = get_int_env("MAX_DOCUMENT_TITLE_CHARS", 100)
 MAX_DOCUMENT_CONTENT_CHARS = get_int_env("MAX_DOCUMENT_CONTENT_CHARS", 20000)

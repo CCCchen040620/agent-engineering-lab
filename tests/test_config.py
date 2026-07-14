@@ -182,6 +182,7 @@ def test_default_database_url():
 
 
 def test_config_can_read_postgresql_database_url(monkeypatch):
+    monkeypatch.delenv("RAG_RETRIEVER_BACKEND", raising=False)
     monkeypatch.setenv(
         "DATABASE_URL",
         "postgresql://agent_user:agent_password@localhost:5432/agent_db",
@@ -194,6 +195,7 @@ def test_config_can_read_postgresql_database_url(monkeypatch):
     )
     assert reloaded_config.DATABASE_PATH == ""
     assert reloaded_config.SQLITE_ADMIN_DATABASE_PATH == "data/app.db"
+    assert reloaded_config.RAG_RETRIEVER_BACKEND == "postgresql"
 
     monkeypatch.delenv("DATABASE_URL", raising=False)
     importlib.reload(config)

@@ -2,6 +2,7 @@ import pytest
 
 from backend.services.rag_backend_service import (
     UnsupportedRagRetrieverBackendError,
+    get_default_rag_retriever_backend,
     is_postgresql_retriever_backend,
     normalize_rag_retriever_backend,
 )
@@ -29,3 +30,16 @@ def test_normalize_rag_retriever_backend_rejects_unknown_backend():
 def test_is_postgresql_retriever_backend():
     assert is_postgresql_retriever_backend("postgresql") is True
     assert is_postgresql_retriever_backend("sqlite") is False
+
+
+def test_get_default_rag_retriever_backend_uses_sqlite_for_sqlite_url():
+    assert get_default_rag_retriever_backend("sqlite:///data/app.db") == "sqlite"
+
+
+def test_get_default_rag_retriever_backend_uses_postgresql_for_postgresql_url():
+    assert (
+        get_default_rag_retriever_backend(
+            "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+        )
+        == "postgresql"
+    )

@@ -18,3 +18,10 @@ def normalize_rag_retriever_backend(backend: str) -> str:
 
 def is_postgresql_retriever_backend(backend: str) -> bool:
     return normalize_rag_retriever_backend(backend) == "postgresql"
+
+
+def get_default_rag_retriever_backend(database_url: str) -> str:
+    if database_url.strip().lower().startswith("postgresql://"):
+        return "postgresql"
+
+    return "sqlite"
