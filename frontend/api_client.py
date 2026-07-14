@@ -440,6 +440,25 @@ def create_postgresql_document_with_content_api(
     return None, get_error_detail(response)
 
 
+def delete_postgresql_document_api(
+    base_url: str,
+    document_id: int,
+) -> tuple[dict | None, str | None]:
+    """Delete a PostgreSQL document by id through the backend."""
+    try:
+        response = requests.delete(
+            base_url + f"/api/v1/postgresql/documents/{document_id}",
+            timeout=30,
+        )
+    except requests.RequestException:
+        return None, "后端服务暂时不可用，请确认 FastAPI 已启动。"
+
+    if response.status_code == 200:
+        return response.json(), None
+
+    return None, get_error_detail(response)
+
+
 def upload_text_document_api(
     base_url: str,
     file_name: str,

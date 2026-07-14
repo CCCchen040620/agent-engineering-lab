@@ -12,6 +12,7 @@ from backend.services.sqlite_embedding_repository import (
 )
 from frontend.api_client import (
     backfill_postgresql_embeddings_api,
+    delete_postgresql_document_api,
     get_info_api,
     list_document_chunks_api,
     list_documents_api,
@@ -124,6 +125,42 @@ def render_postgresql_document_source_summary() -> None:
             )
 
 
+def render_postgresql_document_delete_form() -> None:
+    st.subheader("删除 PostgreSQL 文档")
+    st.warning("删除会同时清理该文档的 chunks 和 embeddings，请先确认文档 ID。")
+
+    document_id = st.number_input(
+        "要删除的 PostgreSQL 文档 ID",
+        min_value=1,
+        step=1,
+        key="postgresql_delete_document_id",
+    )
+    confirmed = st.checkbox(
+        "我确认要删除这个 PostgreSQL 文档",
+        key="postgresql_delete_document_confirmed",
+    )
+
+    if st.button(
+        "删除 PostgreSQL 文档",
+        key="postgresql_delete_document_button",
+    ):
+        if not confirmed:
+            st.warning("请先勾选确认删除。")
+            return
+
+        result, error_message = delete_postgresql_document_api(
+            base_url=BACKEND_API_BASE_URL,
+            document_id=int(document_id),
+        )
+
+        if error_message is not None:
+            st.error(error_message)
+            return
+
+        st.success(f"PostgreSQL 文档已删除：ID {result['id']}")
+        st.info("如列表未立即变化，请刷新页面或重新选择筛选条件。")
+
+
 def render_backend_documents(
     title: str,
     documents: list[dict],
@@ -190,6 +227,7 @@ def render_document_overview(info: dict | None) -> None:
             documents=postgresql_documents,
             error_message=postgresql_error,
         )
+        render_postgresql_document_delete_form()
 
 
 def render_sqlite_embedding_status() -> None:

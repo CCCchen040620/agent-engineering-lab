@@ -7,6 +7,7 @@ from frontend.api_client import (
     chat_with_langgraph_agent_api,
     create_document_with_content_api,
     create_postgresql_document_with_content_api,
+    delete_postgresql_document_api,
     find_rag_backend_capabilities,
     get_error_detail,
     get_info_api,
@@ -1001,6 +1002,67 @@ def test_create_postgresql_document_with_content_api_handles_network_failure(
         title="远程办公制度",
         file_type="md",
         content="员工每周可以申请一天远程办公。",
+    )
+
+    assert data is None
+    assert error_message == "后端服务暂时不可用，请确认 FastAPI 已启动。"
+
+
+def test_delete_postgresql_document_api_deletes_document(monkeypatch):
+    captured = {}
+
+    def fake_delete(url, timeout):
+        captured["url"] = url
+        captured["timeout"] = timeout
+
+        return FakeResponse(
+            200,
+            {
+                "message": "文档已删除。",
+                "id": 7,
+            },
+        )
+
+    monkeypatch.setattr(requests, "delete", fake_delete)
+
+    data, error_message = delete_postgresql_document_api(
+        base_url="http://127.0.0.1:8000",
+        document_id=7,
+    )
+
+    assert error_message is None
+    assert data == {
+        "message": "文档已删除。",
+        "id": 7,
+    }
+    assert captured["url"] == "http://127.0.0.1:8000/api/v1/postgresql/documents/7"
+    assert captured["timeout"] == 30
+
+
+def test_delete_postgresql_document_api_returns_backend_error(monkeypatch):
+    def fake_delete(url, timeout):
+        return FakeResponse(404, {"detail": "文档不存在。"})
+
+    monkeypatch.setattr(requests, "delete", fake_delete)
+
+    data, error_message = delete_postgresql_document_api(
+        base_url="http://127.0.0.1:8000",
+        document_id=404,
+    )
+
+    assert data is None
+    assert error_message == "文档不存在。"
+
+
+def test_delete_postgresql_document_api_handles_network_failure(monkeypatch):
+    def fake_delete(url, timeout):
+        raise requests.RequestException
+
+    monkeypatch.setattr(requests, "delete", fake_delete)
+
+    data, error_message = delete_postgresql_document_api(
+        base_url="http://127.0.0.1:8000",
+        document_id=7,
     )
 
     assert data is None
