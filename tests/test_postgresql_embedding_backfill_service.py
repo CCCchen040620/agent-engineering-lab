@@ -105,8 +105,8 @@ def test_backfill_missing_postgresql_chunk_embeddings(monkeypatch):
 
     assert result == {
         "total_chunks": 2,
-        "updated": 1,
-        "skipped": 1,
+        "updated_embeddings": 1,
+        "skipped_embeddings": 1,
         "model": "bge-m3:latest",
     }
 
@@ -157,7 +157,7 @@ def test_backfill_missing_postgresql_chunk_embeddings_skips_all_existing(
 
     assert result == {
         "total_chunks": 1,
-        "updated": 0,
-        "skipped": 1,
+        "updated_embeddings": 0,
+        "skipped_embeddings": 1,
         "model": "bge-m3:latest",
     }

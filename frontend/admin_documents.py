@@ -280,8 +280,8 @@ def render_postgresql_embedding_status(info: dict | None) -> None:
         else:
             st.success("PostgreSQL embedding 回填完成")
             st.write("总 chunks 数量：", result["total_chunks"])
-            st.write("更新 embedding 数量：", result["updated"])
-            st.write("已存在跳过数量：", result["skipped"])
+            st.write("更新 embedding 数量：", result["updated_embeddings"])
+            st.write("已存在跳过数量：", result["skipped_embeddings"])
             st.write("模型：", result["model"])
 
 

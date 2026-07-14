@@ -390,8 +390,8 @@ def test_backfill_postgresql_embeddings_endpoint(monkeypatch):
 
         return {
             "total_chunks": 3,
-            "updated": 1,
-            "skipped": 2,
+            "updated_embeddings": 1,
+            "skipped_embeddings": 2,
             "model": "bge-m3:latest",
         }
 
@@ -428,8 +428,8 @@ def test_backfill_postgresql_embeddings_endpoint(monkeypatch):
     assert captured["backfilled"] is True
     assert data == {
         "total_chunks": 3,
-        "updated": 1,
-        "skipped": 2,
+        "updated_embeddings": 1,
+        "skipped_embeddings": 2,
         "model": "bge-m3:latest",
     }
 

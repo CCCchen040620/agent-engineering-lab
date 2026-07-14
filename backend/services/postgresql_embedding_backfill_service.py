@@ -16,8 +16,8 @@ def backfill_missing_postgresql_chunk_embeddings(
     """Generate embeddings only for PostgreSQL chunks that do not have one."""
     chunks = list_all_chunks_from_postgresql(connection)
 
-    updated = 0
-    skipped = 0
+    updated_embeddings = 0
+    skipped_embeddings = 0
 
     for chunk in chunks:
         existing_embedding = find_chunk_embedding_by_chunk_id_from_postgresql(
@@ -26,7 +26,7 @@ def backfill_missing_postgresql_chunk_embeddings(
         )
 
         if existing_embedding is not None:
-            skipped = skipped + 1
+            skipped_embeddings = skipped_embeddings + 1
             continue
 
         embedding = embed_with_ollama(chunk["text"], model=model)
@@ -38,11 +38,11 @@ def backfill_missing_postgresql_chunk_embeddings(
             model=model,
         )
 
-        updated = updated + 1
+        updated_embeddings = updated_embeddings + 1
 
     return {
         "total_chunks": len(chunks),
-        "updated": updated,
-        "skipped": skipped,
+        "updated_embeddings": updated_embeddings,
+        "skipped_embeddings": skipped_embeddings,
         "model": model,
     }
