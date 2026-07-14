@@ -9,6 +9,7 @@ def test_required_project_scripts_exist():
         "scripts/check_docker_compose.ps1",
         "scripts/check_project.ps1",
         "scripts/migrate_sqlite.ps1",
+        "scripts/list_project_checks.ps1",
         "scripts/start_backend.ps1",
         "scripts/start_frontend.ps1",
         "scripts/check_postgres.ps1",
@@ -177,6 +178,28 @@ def test_postgresql_agent_check_runs_required_steps():
     assert "DATABASE_URL" in script
     assert "SkipEmbeddingBackfill" in script
     assert "PostgreSQL Agent check completed successfully." in script
+
+
+def test_project_check_list_groups_commands_by_runtime_dependency():
+    script = Path("scripts/list_project_checks.ps1").read_text(encoding="utf-8")
+
+    assert "Local quick checks" in script
+    assert "no running PostgreSQL service or Ollama model is required" in script
+    assert ".\\scripts\\check_environment.ps1" in script
+    assert ".\\scripts\\check_project.ps1" in script
+    assert ".\\scripts\\check_rag_evaluation_ci.ps1" in script
+
+    assert "PostgreSQL checks" in script
+    assert "requires Docker PostgreSQL / pgvector" in script
+    assert "docker compose up -d postgres" in script
+    assert ".\\scripts\\check_postgres.ps1" in script
+    assert "week10.init_postgresql_schema" in script
+
+    assert "Pre-delivery full checks" in script
+    assert "requires PostgreSQL, Ollama, embeddings, and local generation models" in script
+    assert ".\\scripts\\check_postgresql_agent.ps1" in script
+    assert "-RunBatchDocumentIngestionCheck" in script
+    assert ".\\scripts\\check_rag_evaluation.ps1" in script
 
 
 def test_rag_evaluation_check_runs_unified_runner():
