@@ -10,7 +10,8 @@ param(
     [double]$IngestedDocumentMinScore = 0.6,
     [string]$BatchDocumentIngestionCaseFile = "docs/evaluations/document-ingestion-agent-cases.json",
     [string]$BatchDocumentIngestionReportPath = "docs/evaluations/document-ingestion-agent-batch-run.md",
-    [double]$BatchDocumentIngestionTimeoutSeconds = 30
+    [double]$BatchDocumentIngestionTimeoutSeconds = 30,
+    [switch]$BatchDocumentIngestionFullGeneration
 )
 
 $ProjectRoot = Resolve-Path "$PSScriptRoot\.."
@@ -113,10 +114,27 @@ else {
 
 if ($RunBatchDocumentIngestionCheck) {
     Invoke-PostgresqlAgentStep "Optional: Evaluating batch document ingestion Agent flow..." {
-        & $PythonExecutable -m week11.evaluate_batch_document_ingestion_agent_flow `
-            --case-file $BatchDocumentIngestionCaseFile `
-            --report-path $BatchDocumentIngestionReportPath `
-            --timeout-seconds $BatchDocumentIngestionTimeoutSeconds
+        $BatchDocumentIngestionArguments = @(
+            "-m",
+            "week11.evaluate_batch_document_ingestion_agent_flow",
+            "--case-file",
+            $BatchDocumentIngestionCaseFile,
+            "--report-path",
+            $BatchDocumentIngestionReportPath,
+            "--timeout-seconds",
+            $BatchDocumentIngestionTimeoutSeconds
+        )
+
+        if (-not $BatchDocumentIngestionFullGeneration) {
+            Write-Host "Batch document ingestion check runs in retrieval-only mode by default."
+            Write-Host "Use -BatchDocumentIngestionFullGeneration to call the local LLM for every batch case."
+            $BatchDocumentIngestionArguments += "--retrieval-only"
+        }
+        else {
+            Write-Host "Batch document ingestion check will call the local LLM for every batch case."
+        }
+
+        & $PythonExecutable @BatchDocumentIngestionArguments
     }
 }
 else {

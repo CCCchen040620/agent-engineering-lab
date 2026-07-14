@@ -3,9 +3,11 @@ import json
 import pytest
 
 from week11.evaluate_batch_document_ingestion_agent_flow import (
+    RETRIEVAL_ONLY_GENERATION_FAILURE_REASON,
     build_batch_document_ingestion_agent_report,
     evaluate_batch_document_ingestion_agent_case,
     evaluate_batch_document_ingestion_agent_flow,
+    generate_retrieval_only_answer,
     load_batch_document_ingestion_agent_cases,
     validate_batch_document_ingestion_agent_case,
     write_batch_document_ingestion_agent_report,
@@ -144,6 +146,34 @@ def test_evaluate_batch_document_ingestion_agent_case_passes_with_generation_fal
     assert captured["timeout_seconds"] == 12
 
 
+def test_evaluate_batch_document_ingestion_agent_case_can_skip_generation():
+    connection = FakeConnection()
+    captured = {}
+
+    def fake_evaluator(connection, **kwargs):
+        captured.update(kwargs)
+        answer = kwargs["generator"]("prompt")
+        return build_single_result(answer=answer, generation_passed=True)
+
+    result = evaluate_batch_document_ingestion_agent_case(
+        connection,
+        build_case(),
+        generator=lambda prompt: "real model answer",
+        retrieval_only=True,
+        evaluator=fake_evaluator,
+    )
+
+    assert result["passed"] is True
+    assert result["generation_skipped"] is True
+    assert result["generation_passed"] is False
+    assert (
+        result["generation_failure_reason"]
+        == RETRIEVAL_ONLY_GENERATION_FAILURE_REASON
+    )
+    assert result["answer"] == generate_retrieval_only_answer("prompt")
+    assert captured["generator"] is generate_retrieval_only_answer
+
+
 def test_evaluate_batch_document_ingestion_agent_case_fails_on_source_mismatch():
     connection = FakeConnection()
 
@@ -208,8 +238,31 @@ def test_evaluate_batch_document_ingestion_agent_flow_summarizes_items():
     assert evaluation["pass_rate"] == 0.5
     assert evaluation["retrieval_passed"] == 1
     assert evaluation["generation_passed"] == 0
+    assert evaluation["generation_skipped"] == 0
     assert evaluation["source_matched"] == 1
     assert evaluation["retriever_backend"] == "postgresql"
+    assert evaluation["retrieval_only"] is False
+
+
+def test_evaluate_batch_document_ingestion_agent_flow_summarizes_retrieval_only_items():
+    connection = FakeConnection()
+
+    def fake_evaluator(connection, **kwargs):
+        return build_single_result(generation_passed=True)
+
+    evaluation = evaluate_batch_document_ingestion_agent_flow(
+        connection,
+        cases=[build_case()],
+        retrieval_only=True,
+        evaluator=fake_evaluator,
+    )
+
+    assert evaluation["total"] == 1
+    assert evaluation["passed"] == 1
+    assert evaluation["retrieval_passed"] == 1
+    assert evaluation["generation_passed"] == 0
+    assert evaluation["generation_skipped"] == 1
+    assert evaluation["retrieval_only"] is True
 
 
 def test_build_batch_document_ingestion_agent_report():
@@ -220,14 +273,17 @@ def test_build_batch_document_ingestion_agent_report():
         "pass_rate": 1.0,
         "retrieval_passed": 1,
         "generation_passed": 0,
+        "generation_skipped": 1,
         "source_matched": 1,
         "retriever_backend": "postgresql",
+        "retrieval_only": True,
         "items": [
             {
                 "case_id": "case_1",
                 "expected_source": "migration",
                 "document_source": "migration",
                 "source_matched": True,
+                "generation_skipped": True,
                 **build_single_result(),
             }
         ],
@@ -239,6 +295,8 @@ def test_build_batch_document_ingestion_agent_report():
     assert "case_1" in report
     assert "Target Policy" in report
     assert "fallback_answer" in report
+    assert "生成层跳过数：1" in report
+    assert "生成层是否跳过" in report
 
 
 def test_write_batch_document_ingestion_agent_report(tmp_path):
@@ -250,8 +308,10 @@ def test_write_batch_document_ingestion_agent_report(tmp_path):
         "pass_rate": 0,
         "retrieval_passed": 0,
         "generation_passed": 0,
+        "generation_skipped": 0,
         "source_matched": 0,
         "retriever_backend": "postgresql",
+        "retrieval_only": False,
         "items": [],
     }
 

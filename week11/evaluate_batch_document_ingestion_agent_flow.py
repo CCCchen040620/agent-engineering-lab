@@ -23,6 +23,11 @@ DEFAULT_BATCH_DOCUMENT_INGESTION_AGENT_REPORT_PATH = Path(
 
 REQUIRED_BATCH_CASE_FIELDS = {"id", "title", "question"}
 SUPPORTED_BATCH_MODES = {"keyword", "vector", "embedding", "precomputed_embedding"}
+RETRIEVAL_ONLY_GENERATION_FAILURE_REASON = "generation_skipped"
+
+
+def generate_retrieval_only_answer(prompt: str) -> str:
+    return "Retrieval-only batch validation skipped local LLM generation."
 
 
 def validate_batch_document_ingestion_agent_case(case: dict) -> dict:
@@ -84,8 +89,11 @@ def evaluate_batch_document_ingestion_agent_case(
     case: dict,
     timeout_seconds: float = 30,
     generator=generate_with_ollama,
+    retrieval_only: bool = False,
     evaluator=evaluate_document_ingestion_agent_flow,
 ) -> dict:
+    selected_generator = generate_retrieval_only_answer if retrieval_only else generator
+
     result = evaluator(
         connection,
         title=case["title"],
@@ -94,8 +102,26 @@ def evaluate_batch_document_ingestion_agent_case(
         min_score=case["min_score"],
         mode=case["mode"],
         timeout_seconds=timeout_seconds,
-        generator=generator,
+        generator=selected_generator,
     )
+
+    if retrieval_only:
+        result = {
+            **result,
+            "generation_skipped": True,
+        }
+
+        if result.get("retrieval_passed") is True:
+            result["generation_passed"] = False
+            result[
+                "generation_failure_reason"
+            ] = RETRIEVAL_ONLY_GENERATION_FAILURE_REASON
+    else:
+        result = {
+            **result,
+            "generation_skipped": False,
+        }
+
     document = result.get("document")
     document_source = document.get("source", "") if document is not None else ""
     source_matched = document_source == case["source"]
@@ -122,6 +148,7 @@ def evaluate_batch_document_ingestion_agent_flow(
     cases: list[dict],
     timeout_seconds: float = 30,
     generator=generate_with_ollama,
+    retrieval_only: bool = False,
     evaluator=evaluate_document_ingestion_agent_flow,
 ) -> dict:
     validated_cases = [
@@ -133,6 +160,7 @@ def evaluate_batch_document_ingestion_agent_flow(
             case=case,
             timeout_seconds=timeout_seconds,
             generator=generator,
+            retrieval_only=retrieval_only,
             evaluator=evaluator,
         )
         for case in validated_cases
@@ -140,7 +168,12 @@ def evaluate_batch_document_ingestion_agent_flow(
 
     passed_count = sum(1 for item in items if item["passed"])
     retrieval_passed_count = sum(1 for item in items if item["retrieval_passed"])
-    generation_passed_count = sum(1 for item in items if item["generation_passed"])
+    generation_passed_count = sum(
+        1
+        for item in items
+        if item["generation_skipped"] is not True and item["generation_passed"]
+    )
+    generation_skipped_count = sum(1 for item in items if item["generation_skipped"])
     source_matched_count = sum(1 for item in items if item["source_matched"])
 
     return {
@@ -150,8 +183,10 @@ def evaluate_batch_document_ingestion_agent_flow(
         "pass_rate": passed_count / len(items) if items else 0,
         "retrieval_passed": retrieval_passed_count,
         "generation_passed": generation_passed_count,
+        "generation_skipped": generation_skipped_count,
         "source_matched": source_matched_count,
         "retriever_backend": "postgresql",
+        "retrieval_only": retrieval_only,
         "items": items,
     }
 
@@ -168,8 +203,10 @@ def build_batch_document_ingestion_agent_report(evaluation: dict) -> str:
         f"- 通过率：{evaluation['pass_rate']}",
         f"- 检索层通过数：{evaluation['retrieval_passed']}",
         f"- 生成层通过数：{evaluation['generation_passed']}",
+        f"- 生成层跳过数：{evaluation['generation_skipped']}",
         f"- source 匹配数：{evaluation['source_matched']}",
         f"- 检索后端：{evaluation['retriever_backend']}",
+        f"- 是否仅验证检索层：{format_bool(evaluation['retrieval_only'])}",
         "",
         "## 明细",
         "",
@@ -192,6 +229,7 @@ def build_batch_document_ingestion_agent_report(evaluation: dict) -> str:
                     f"- source 是否匹配：{format_bool(item['source_matched'])}",
                     f"- 检索层是否通过：{format_bool(item['retrieval_passed'])}",
                     f"- 生成层是否通过：{format_bool(item['generation_passed'])}",
+                    f"- 生成层是否跳过：{format_bool(item['generation_skipped'])}",
                     f"- 引用数量：{item['citation_count']}",
                     "",
                 ]
@@ -223,7 +261,9 @@ def print_batch_document_ingestion_agent_result(evaluation: dict) -> None:
     print("通过率：", evaluation["pass_rate"])
     print("检索层通过数：", evaluation["retrieval_passed"])
     print("生成层通过数：", evaluation["generation_passed"])
+    print("生成层跳过数：", evaluation["generation_skipped"])
     print("source 匹配数：", evaluation["source_matched"])
+    print("是否仅验证检索层：", evaluation["retrieval_only"])
 
     for item in evaluation["items"]:
         print("-" * 50)
@@ -234,6 +274,7 @@ def print_batch_document_ingestion_agent_result(evaluation: dict) -> None:
         print("失败原因：", item["failure_reason"])
         print("检索层是否通过：", item["retrieval_passed"])
         print("生成层是否通过：", item["generation_passed"])
+        print("生成层是否跳过：", item["generation_skipped"])
 
 
 def build_argument_parser() -> argparse.ArgumentParser:
@@ -249,6 +290,11 @@ def build_argument_parser() -> argparse.ArgumentParser:
         default=str(DEFAULT_BATCH_DOCUMENT_INGESTION_AGENT_REPORT_PATH),
     )
     parser.add_argument("--timeout-seconds", type=float, default=30)
+    parser.add_argument(
+        "--retrieval-only",
+        action="store_true",
+        help="Skip local LLM generation and validate retrieval/source/citations only.",
+    )
     return parser
 
 
@@ -267,6 +313,7 @@ def main() -> None:
             connection,
             cases=cases,
             timeout_seconds=args.timeout_seconds,
+            retrieval_only=args.retrieval_only,
         )
 
     print_batch_document_ingestion_agent_result(evaluation)

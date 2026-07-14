@@ -149,13 +149,19 @@ def test_postgresql_agent_check_runs_required_steps():
     assert "BatchDocumentIngestionCaseFile" in script
     assert "BatchDocumentIngestionReportPath" in script
     assert "BatchDocumentIngestionTimeoutSeconds" in script
+    assert "BatchDocumentIngestionFullGeneration" in script
+    assert "BatchDocumentIngestionArguments" in script
+    assert "--retrieval-only" in script
     assert "week11.evaluate_batch_document_ingestion_agent_flow" in script
     assert "Optional: Evaluating batch document ingestion Agent flow" in script
     assert "Optional: Skipping batch document ingestion Agent flow" in script
     assert "Use -RunBatchDocumentIngestionCheck to enable this check." in script
-    assert "--case-file $BatchDocumentIngestionCaseFile" in script
-    assert "--report-path $BatchDocumentIngestionReportPath" in script
-    assert "--timeout-seconds $BatchDocumentIngestionTimeoutSeconds" in script
+    assert '"--case-file"' in script
+    assert "$BatchDocumentIngestionCaseFile" in script
+    assert '"--report-path"' in script
+    assert "$BatchDocumentIngestionReportPath" in script
+    assert '"--timeout-seconds"' in script
+    assert "$BatchDocumentIngestionTimeoutSeconds" in script
     assert "SkipConversationChat" in script
     assert "SkipIngestedDocumentCheck" in script
     assert '[string]$IngestedDocumentTitle = ""' in script
