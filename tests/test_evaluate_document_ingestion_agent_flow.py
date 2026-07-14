@@ -1,18 +1,72 @@
 from week11.evaluate_document_ingestion_agent_flow import (
     answer_is_refusal,
+    build_document_ingestion_agent_report,
     citation_matches_document,
     citations_include_document,
     evaluate_agent_result_for_document,
     evaluate_document_ingestion_agent_flow,
+    format_bool,
     get_agent_flow_failure_reason,
     get_generation_failure_reason,
     get_retrieval_failure_reason,
     top_citation_matches_document,
+    write_document_ingestion_agent_report,
 )
 
 
 class FakeConnection:
     pass
+
+
+def build_report_result() -> dict:
+    return {
+        "passed": True,
+        "failure_reason": "fallback_answer",
+        "retrieval_passed": True,
+        "retrieval_failure_reason": "",
+        "generation_passed": False,
+        "generation_failure_reason": "fallback_answer",
+        "title": "Target Policy",
+        "question": "What is the target rule?",
+        "document": {
+            "id": 1,
+            "title": "Target Policy",
+            "file_type": "md",
+            "chunk_count": 1,
+            "is_indexed": True,
+            "source": "migration",
+        },
+        "top_k": 3,
+        "min_score": 0.6,
+        "mode": "precomputed_embedding",
+        "retriever_backend": "postgresql",
+        "answer": "fallback answer",
+        "has_valid_context": True,
+        "is_fallback": True,
+        "citation_count": 1,
+        "cited_expected_document": True,
+        "top_citation_matched": True,
+        "citations": [
+            {
+                "title": "Target Policy",
+                "text": "Target evidence.",
+                "path": "postgresql://chunk/1",
+            }
+        ],
+        "snippets": [
+            {
+                "title": "Target Policy",
+                "text": "Target evidence.",
+                "path": "postgresql://chunk/1",
+                "score": 0.91,
+            }
+        ],
+    }
+
+
+def test_format_bool():
+    assert format_bool(True) == "是"
+    assert format_bool(False) == "否"
 
 
 def test_answer_is_refusal():
@@ -339,3 +393,28 @@ def test_evaluate_agent_result_passes_when_only_generation_fallbacks():
     assert evaluation["retrieval_failure_reason"] == ""
     assert evaluation["generation_passed"] is False
     assert evaluation["generation_failure_reason"] == "fallback_answer"
+
+
+def test_build_document_ingestion_agent_report():
+    report = build_document_ingestion_agent_report(build_report_result())
+
+    assert "# PostgreSQL 文档入库 Agent 验收报告" in report
+    assert "Target Policy" in report
+    assert "What is the target rule?" in report
+    assert "fallback_answer" in report
+    assert "postgresql://chunk/1" in report
+    assert "Target evidence." in report
+    assert "0.91" in report
+
+
+def test_write_document_ingestion_agent_report(tmp_path):
+    report_path = tmp_path / "document-ingestion-agent-run.md"
+
+    written_path = write_document_ingestion_agent_report(
+        build_report_result(),
+        report_path,
+    )
+
+    assert written_path == report_path
+    assert report_path.exists()
+    assert "Target Policy" in report_path.read_text(encoding="utf-8")
