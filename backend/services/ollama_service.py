@@ -7,7 +7,14 @@ from backend.config import LLM_MODEL, OLLAMA_BASE_URL
 logger = logging.getLogger(__name__)
 
 
-def generate_with_ollama(prompt: str, model: str = LLM_MODEL) -> str:
+def generate_with_ollama(
+    prompt: str,
+    model: str = LLM_MODEL,
+    max_attempts: int = 2,
+) -> str:
+    if max_attempts < 1:
+        raise ValueError("max_attempts must be at least 1.")
+
     url = OLLAMA_BASE_URL + "/api/generate"
 
     body = {
@@ -17,20 +24,36 @@ def generate_with_ollama(prompt: str, model: str = LLM_MODEL) -> str:
     }
 
     data = json.dumps(body).encode("utf-8")
+    last_error = None
 
-    http_request = request.Request(
-        url,
-        data=data,
-        headers={"Content-Type": "application/json; charset=utf-8"},
-        method="POST",
-    )
+    for attempt in range(1, max_attempts + 1):
+        http_request = request.Request(
+            url,
+            data=data,
+            headers={"Content-Type": "application/json; charset=utf-8"},
+            method="POST",
+        )
 
-    with request.urlopen(http_request, timeout=120) as response:
-        response_text = response.read().decode("utf-8")
+        try:
+            with request.urlopen(http_request, timeout=120) as response:
+                response_text = response.read().decode("utf-8")
 
-    result = json.loads(response_text)
+            result = json.loads(response_text)
 
-    return result["response"]
+            return result["response"]
+        except Exception as error:
+            last_error = error
+
+            if attempt < max_attempts:
+                logger.warning(
+                    "ollama_generation_retry model=%s attempt=%s max_attempts=%s error=%s",
+                    model,
+                    attempt,
+                    max_attempts,
+                    error,
+                )
+
+    raise last_error
 
 
 def try_generate_with_ollama(prompt: str, model: str = LLM_MODEL) -> dict:
