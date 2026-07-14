@@ -21,6 +21,10 @@ python -m streamlit run frontend/admin_tasks.py
 
 - 查看任务列表
 - 查看任务状态和错误信息
+- 按状态筛选任务
+- 按任务 ID 正序/倒序查看任务
+- 限制任务列表最多显示数量
+- 按任务 ID 查看单个任务详情
 - 一键触发 PostgreSQL embedding 回填
 - 选择同步或异步运行方式
 - 查看任务结果摘要：`total_chunks`、`updated_embeddings`、`skipped_embeddings`、`model`
@@ -38,7 +42,9 @@ python -m streamlit run frontend/admin_tasks.py
 - 如果 PostgreSQL、Ollama 或 embedding 模型不可用，任务状态应为 `failed`，并在 `error` 中记录原因
 - 如果所有 chunks 已经有 embedding，结果中 `updated_embeddings` 可以为 `0`，`skipped_embeddings` 等于已有 embedding 的 chunks 数量
 
-说明：当前任务中心是学习版任务流程，异步运行使用后端进程内的轻量后台线程。后续如果要接近生产形态，可以再引入独立 worker、持久化任务表、任务进度和重试机制。
+说明：当前任务中心是学习版任务流程。任务记录保存在后端进程内存中，后端重启后会清空；异步运行使用后端进程内的轻量后台线程。
+
+当前仓库中已经有 SQLite Task Repository 作为任务表结构学习样本，但它暂时没有接入任务 API。考虑到学习时间预算，后续不继续重复实现 SQLite -> PostgreSQL 两套任务 repository；如果要走生产化方向，优先考虑 PostgreSQL 保存任务记录和审计数据，Redis / worker 负责排队、执行、重试和进度。
 
 本手册用于记录企业知识库 Agent 项目的常用启动和维护命令。
 

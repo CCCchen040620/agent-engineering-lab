@@ -14,6 +14,10 @@ python -m streamlit run frontend/admin_tasks.py
 
 - 查看任务列表
 - 查看任务状态：`pending`、`running`、`succeeded`、`failed`
+- 按任务状态筛选任务列表
+- 按任务 ID 正序/倒序查看任务
+- 限制任务列表最多显示数量：`20`、`50`、`100` 或 `全部`
+- 按任务 ID 查看单个任务详情
 - 一键运行 PostgreSQL embedding 回填
 - 支持两种运行方式：
   - `同步运行（等待完成）`：点击后等待任务执行完成，再展示最终状态和结果。
@@ -21,7 +25,9 @@ python -m streamlit run frontend/admin_tasks.py
 - 查看任务结果摘要，例如 `total_chunks`、`updated_embeddings`、`skipped_embeddings` 和 `model`
 - 查看失败任务的错误信息
 
-说明：当前任务中心仍是学习版实现，异步运行使用的是后端进程内的轻量后台线程，不是生产级独立 worker。它的价值是先把“任务创建、执行、状态查询、结果展示”这条链路打通。
+说明：当前任务中心仍是学习版实现，任务状态保存在后端进程内存中，后端重启后任务记录会清空。异步运行使用的是后端进程内的轻量后台线程，不是生产级独立 worker。
+
+当前项目中已经保留了 SQLite Task Repository 作为任务表结构的学习样本，但它还没有接入任务 API。后续如果要生产化，更合理的方向是用 PostgreSQL 保存任务记录和审计数据，再用 Redis / worker 负责排队与执行。
 
 本项目提供了一个基于 Streamlit 的网页界面，用于演示企业知识库 Agent 的 RAG 问答能力。
 
