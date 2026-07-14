@@ -102,3 +102,41 @@ def test_run_task_endpoint_marks_task_failed_when_task_type_is_unsupported():
     assert data["id"] == task["id"]
     assert data["status"] == "failed"
     assert "Unsupported task type" in data["error"]
+
+
+def test_run_task_endpoint_can_run_postgresql_embedding_backfill(monkeypatch):
+    from backend.services import task_dispatcher_service
+
+    def fake_backfill_postgresql_chunk_embeddings():
+        return {
+            "total_chunks": 3,
+            "updated_embeddings": 2,
+            "skipped_embeddings": 1,
+            "model": "fake-model",
+        }
+
+    monkeypatch.setattr(
+        task_dispatcher_service,
+        "backfill_postgresql_chunk_embeddings",
+        fake_backfill_postgresql_chunk_embeddings,
+    )
+
+    test_queue = InMemoryTaskQueue()
+    task = test_queue.create_task(
+        task_type="postgresql_embedding_backfill",
+        payload={},
+    )
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.post(f"/api/v1/tasks/{task['id']}/run")
+
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["status"] == "succeeded"
+    assert data["result"] == {
+        "total_chunks": 3,
+        "updated_embeddings": 2,
+        "skipped_embeddings": 1,
+        "model": "fake-model",
+    }
