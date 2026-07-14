@@ -1,5 +1,11 @@
-from week10.backfill_postgresql_chunk_embeddings import (
-    backfill_postgresql_chunk_embeddings,
+import psycopg
+
+from backend.config import DATABASE_URL
+from backend.services.postgresql_embedding_backfill_service import (
+    backfill_missing_postgresql_chunk_embeddings,
+)
+from backend.services.postgresql_schema_service import (
+    initialize_postgresql_knowledge_schema,
 )
 
 
@@ -24,7 +30,9 @@ class TaskDispatcher:
 
 
 def run_postgresql_embedding_backfill(payload: dict) -> dict:
-    return backfill_postgresql_chunk_embeddings()
+    with psycopg.connect(DATABASE_URL) as connection:
+        initialize_postgresql_knowledge_schema(connection)
+        return backfill_missing_postgresql_chunk_embeddings(connection)
 
 
 def build_default_task_dispatcher() -> TaskDispatcher:

@@ -6,6 +6,14 @@ from backend.services.task_dispatcher_service import (
 )
 
 
+class FakePostgreSQLConnection:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        return False
+
+
 def test_task_dispatcher_runs_registered_handler():
     dispatcher = TaskDispatcher()
 
@@ -35,7 +43,18 @@ def test_task_dispatcher_raises_error_for_unsupported_task_type():
 def test_build_default_task_dispatcher_supports_postgresql_embedding_backfill(monkeypatch):
     from backend.services import task_dispatcher_service
 
-    def fake_backfill_postgresql_chunk_embeddings():
+    monkeypatch.setattr(
+        task_dispatcher_service.psycopg,
+        "connect",
+        lambda database_url: FakePostgreSQLConnection(),
+    )
+    monkeypatch.setattr(
+        task_dispatcher_service,
+        "initialize_postgresql_knowledge_schema",
+        lambda connection: None,
+    )
+
+    def fake_backfill_missing_postgresql_chunk_embeddings(connection):
         return {
             "total_chunks": 3,
             "updated_embeddings": 2,
@@ -45,8 +64,8 @@ def test_build_default_task_dispatcher_supports_postgresql_embedding_backfill(mo
 
     monkeypatch.setattr(
         task_dispatcher_service,
-        "backfill_postgresql_chunk_embeddings",
-        fake_backfill_postgresql_chunk_embeddings,
+        "backfill_missing_postgresql_chunk_embeddings",
+        fake_backfill_missing_postgresql_chunk_embeddings,
     )
 
     dispatcher = task_dispatcher_service.build_default_task_dispatcher()

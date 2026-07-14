@@ -8,6 +8,27 @@ from backend.services.task_queue_service import InMemoryTaskQueue
 client = TestClient(app)
 
 
+class FakePostgreSQLConnection:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        return False
+
+
+def isolate_postgresql_backfill_connection(monkeypatch, task_dispatcher_service):
+    monkeypatch.setattr(
+        task_dispatcher_service.psycopg,
+        "connect",
+        lambda database_url: FakePostgreSQLConnection(),
+    )
+    monkeypatch.setattr(
+        task_dispatcher_service,
+        "initialize_postgresql_knowledge_schema",
+        lambda connection: None,
+    )
+
+
 def setup_function():
     app.dependency_overrides.clear()
 
@@ -107,7 +128,9 @@ def test_run_task_endpoint_marks_task_failed_when_task_type_is_unsupported():
 def test_run_task_endpoint_can_run_postgresql_embedding_backfill(monkeypatch):
     from backend.services import task_dispatcher_service
 
-    def fake_backfill_postgresql_chunk_embeddings():
+    isolate_postgresql_backfill_connection(monkeypatch, task_dispatcher_service)
+
+    def fake_backfill_missing_postgresql_chunk_embeddings(connection):
         return {
             "total_chunks": 3,
             "updated_embeddings": 2,
@@ -117,8 +140,8 @@ def test_run_task_endpoint_can_run_postgresql_embedding_backfill(monkeypatch):
 
     monkeypatch.setattr(
         task_dispatcher_service,
-        "backfill_postgresql_chunk_embeddings",
-        fake_backfill_postgresql_chunk_embeddings,
+        "backfill_missing_postgresql_chunk_embeddings",
+        fake_backfill_missing_postgresql_chunk_embeddings,
     )
 
     test_queue = InMemoryTaskQueue()
@@ -145,7 +168,9 @@ def test_run_task_endpoint_can_run_postgresql_embedding_backfill(monkeypatch):
 def test_create_and_run_postgresql_embedding_backfill_task(monkeypatch):
     from backend.services import task_dispatcher_service
 
-    def fake_backfill_postgresql_chunk_embeddings():
+    isolate_postgresql_backfill_connection(monkeypatch, task_dispatcher_service)
+
+    def fake_backfill_missing_postgresql_chunk_embeddings(connection):
         return {
             "total_chunks": 5,
             "updated_embeddings": 4,
@@ -155,8 +180,8 @@ def test_create_and_run_postgresql_embedding_backfill_task(monkeypatch):
 
     monkeypatch.setattr(
         task_dispatcher_service,
-        "backfill_postgresql_chunk_embeddings",
-        fake_backfill_postgresql_chunk_embeddings,
+        "backfill_missing_postgresql_chunk_embeddings",
+        fake_backfill_missing_postgresql_chunk_embeddings,
     )
 
     test_queue = InMemoryTaskQueue()
@@ -182,13 +207,15 @@ def test_create_and_run_postgresql_embedding_backfill_task_returns_failed_task_w
 ):
     from backend.services import task_dispatcher_service
 
-    def fake_backfill_postgresql_chunk_embeddings():
+    isolate_postgresql_backfill_connection(monkeypatch, task_dispatcher_service)
+
+    def fake_backfill_missing_postgresql_chunk_embeddings(connection):
         raise RuntimeError("Ollama is not available")
 
     monkeypatch.setattr(
         task_dispatcher_service,
-        "backfill_postgresql_chunk_embeddings",
-        fake_backfill_postgresql_chunk_embeddings,
+        "backfill_missing_postgresql_chunk_embeddings",
+        fake_backfill_missing_postgresql_chunk_embeddings,
     )
 
     test_queue = InMemoryTaskQueue()
