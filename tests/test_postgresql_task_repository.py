@@ -8,8 +8,11 @@ from backend.services.postgresql_task_repository import (
     encode_json,
     find_task_from_postgresql,
     increment_task_retry_count_in_postgresql,
+    insert_task_event_to_postgresql,
     insert_task_to_postgresql,
+    list_task_events_from_postgresql,
     list_tasks_from_postgresql,
+    row_to_task_event,
     row_to_task,
     update_task_status_in_postgresql,
 )
@@ -102,6 +105,28 @@ def test_row_to_task():
     }
 
 
+def test_row_to_task_event():
+    row = (
+        1,
+        7,
+        "task_started",
+        "Task started.",
+        {"run_count": 1},
+        "2026-07-15T10:00:00",
+    )
+
+    event = row_to_task_event(row)
+
+    assert event == {
+        "id": 1,
+        "task_id": 7,
+        "event_type": "task_started",
+        "message": "Task started.",
+        "metadata": {"run_count": 1},
+        "created_at": "2026-07-15T10:00:00",
+    }
+
+
 def test_create_tasks_table_in_postgresql():
     connection = FakeConnection()
 
@@ -116,6 +141,7 @@ def test_create_tasks_table_in_postgresql():
     assert "progress_message TEXT" in sql_text
     assert "run_count INTEGER" in sql_text
     assert "retry_count INTEGER" in sql_text
+    assert "CREATE TABLE IF NOT EXISTS task_events" in sql_text
     assert "ADD COLUMN IF NOT EXISTS progress_percent" in sql_text
     assert "ADD COLUMN IF NOT EXISTS progress_message" in sql_text
     assert "ADD COLUMN IF NOT EXISTS run_count" in sql_text
@@ -185,6 +211,68 @@ def test_insert_retry_task_to_postgresql():
         "{}",
         1,
     )
+
+
+def test_insert_task_event_to_postgresql():
+    connection = FakeConnection()
+    connection.cursor_instance.row = (
+        1,
+        2,
+        "task_started",
+        "Task started.",
+        {"run_count": 1},
+        "2026-07-15T10:00:00",
+    )
+
+    event = insert_task_event_to_postgresql(
+        connection,
+        task_id=2,
+        event_type="task_started",
+        message="Task started.",
+        metadata={"run_count": 1},
+    )
+
+    assert event["event_type"] == "task_started"
+    assert event["metadata"] == {"run_count": 1}
+    assert connection.cursor_instance.params == (
+        2,
+        "task_started",
+        "Task started.",
+        '{"run_count": 1}',
+    )
+    assert "INSERT INTO task_events" in connection.cursor_instance.sql
+    assert connection.committed is True
+
+
+def test_list_task_events_from_postgresql():
+    connection = FakeConnection()
+    connection.cursor_instance.rows = [
+        (
+            1,
+            2,
+            "task_created",
+            "Task created.",
+            {},
+            "2026-07-15T10:00:00",
+        ),
+        (
+            2,
+            2,
+            "task_started",
+            "Task started.",
+            {"run_count": 1},
+            "2026-07-15T10:01:00",
+        ),
+    ]
+
+    events = list_task_events_from_postgresql(connection, task_id=2)
+
+    assert [event["event_type"] for event in events] == [
+        "task_created",
+        "task_started",
+    ]
+    assert connection.cursor_instance.params == (2,)
+    assert "ORDER BY id ASC" in connection.cursor_instance.sql
 
 
 def test_list_tasks_from_postgresql():

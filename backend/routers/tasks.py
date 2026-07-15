@@ -152,6 +152,16 @@ def get_task(
     return task
 
 
+@router.get("/{task_id}/events")
+def list_task_events(
+    task_id: int,
+    queue=Depends(get_task_queue),
+):
+    get_task_or_404(task_id, queue)
+
+    return queue.list_task_events(task_id)
+
+
 @router.post("/{task_id}/run")
 def run_task(
     task_id: int,

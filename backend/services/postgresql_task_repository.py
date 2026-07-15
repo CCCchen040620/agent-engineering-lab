@@ -2,6 +2,7 @@ import json
 
 from backend.services.task_queue_service import (
     TaskNotFoundError,
+    build_task_event,
     build_task_progress,
     validate_task_status_transition,
 )
@@ -42,6 +43,21 @@ def row_to_task(row) -> dict:
         "run_count": run_count,
         "retry_count": retry_count,
     }
+
+
+def row_to_task_event(row) -> dict:
+    event = build_task_event(
+        event_id=row[0],
+        task_id=row[1],
+        event_type=row[2],
+        message=row[3],
+        metadata=decode_json(row[4]),
+    )
+
+    if len(row) > 5:
+        event["created_at"] = row[5]
+
+    return event
 
 
 def create_tasks_table_in_postgresql(connection) -> None:
@@ -95,6 +111,18 @@ def create_tasks_table_in_postgresql(connection) -> None:
             ADD COLUMN IF NOT EXISTS retry_count INTEGER NOT NULL DEFAULT 0
             """
         )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS task_events (
+                id SERIAL PRIMARY KEY,
+                task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+                event_type TEXT NOT NULL,
+                message TEXT NOT NULL DEFAULT '',
+                metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            """
+        )
 
     connection.commit()
 
@@ -122,6 +150,58 @@ def insert_task_to_postgresql(
     connection.commit()
 
     return row_to_task(row)
+
+
+def insert_task_event_to_postgresql(
+    connection,
+    task_id: int,
+    event_type: str,
+    message: str = "",
+    metadata: dict | None = None,
+) -> dict:
+    metadata = metadata or {}
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO task_events (task_id, event_type, message, metadata)
+            VALUES (%s, %s, %s, %s::jsonb)
+            RETURNING id, task_id, event_type, message, metadata, created_at
+            """,
+            (task_id, event_type, message, encode_json(metadata)),
+        )
+
+        row = cursor.fetchone()
+
+    connection.commit()
+
+    if row is None:
+        return build_task_event(
+            event_id=0,
+            task_id=task_id,
+            event_type=event_type,
+            message=message,
+            metadata=metadata,
+        )
+
+    return row_to_task_event(row)
+
+
+def list_task_events_from_postgresql(connection, task_id: int) -> list[dict]:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT id, task_id, event_type, message, metadata, created_at
+            FROM task_events
+            WHERE task_id = %s
+            ORDER BY id ASC
+            """,
+            (task_id,),
+        )
+
+        rows = cursor.fetchall()
+
+    return [row_to_task_event(row) for row in rows]
 
 
 def list_tasks_from_postgresql(
@@ -282,12 +362,21 @@ class PostgresqlTaskQueue:
         self.ensure_tasks_table_ready()
 
         with self.connection_factory() as connection:
-            return insert_task_to_postgresql(
+            task = insert_task_to_postgresql(
                 connection,
                 task_type=task_type,
                 payload=payload,
                 retry_of_task_id=retry_of_task_id,
             )
+            insert_task_event_to_postgresql(
+                connection,
+                task_id=task["id"],
+                event_type="task_created",
+                message="Task created.",
+                metadata={"retry_of_task_id": retry_of_task_id},
+            )
+
+            return task
 
     def list_tasks(
         self,
@@ -324,7 +413,7 @@ class PostgresqlTaskQueue:
         validate_task_status_transition(task, "running")
 
         with self.connection_factory() as connection:
-            return update_task_status_in_postgresql(
+            updated_task = update_task_status_in_postgresql(
                 connection,
                 task_id=task_id,
                 status="running",
@@ -332,48 +421,121 @@ class PostgresqlTaskQueue:
                 error=task["error"],
                 run_count=task.get("run_count", 0) + 1,
             )
+            insert_task_event_to_postgresql(
+                connection,
+                task_id=task_id,
+                event_type="task_started",
+                message="Task started.",
+                metadata={
+                    "run_count": updated_task.get(
+                        "run_count",
+                        task.get("run_count", 0) + 1,
+                    )
+                },
+            )
+
+            return updated_task
 
     def mark_task_succeeded(self, task_id: int, result: dict) -> dict:
         task = self.get_task_or_raise(task_id)
         validate_task_status_transition(task, "succeeded")
 
         with self.connection_factory() as connection:
-            return update_task_status_in_postgresql(
+            updated_task = update_task_status_in_postgresql(
                 connection,
                 task_id=task_id,
                 status="succeeded",
                 result=result,
                 error="",
             )
+            insert_task_event_to_postgresql(
+                connection,
+                task_id=task_id,
+                event_type="task_succeeded",
+                message="Task succeeded.",
+                metadata={"result": result},
+            )
+
+            return updated_task
 
     def mark_task_failed(self, task_id: int, error: str) -> dict:
         task = self.get_task_or_raise(task_id)
         validate_task_status_transition(task, "failed")
 
         with self.connection_factory() as connection:
-            return update_task_status_in_postgresql(
+            updated_task = update_task_status_in_postgresql(
                 connection,
                 task_id=task_id,
                 status="failed",
                 result={},
                 error=error,
             )
+            insert_task_event_to_postgresql(
+                connection,
+                task_id=task_id,
+                event_type="task_failed",
+                message="Task failed.",
+                metadata={"error": error},
+            )
+
+            return updated_task
 
     def mark_task_canceled(self, task_id: int) -> dict:
         task = self.get_task_or_raise(task_id)
         validate_task_status_transition(task, "canceled")
 
         with self.connection_factory() as connection:
-            return update_task_status_in_postgresql(
+            updated_task = update_task_status_in_postgresql(
                 connection,
                 task_id=task_id,
                 status="canceled",
                 result={},
                 error="",
             )
+            insert_task_event_to_postgresql(
+                connection,
+                task_id=task_id,
+                event_type="task_canceled",
+                message="Task canceled.",
+            )
+
+            return updated_task
 
     def increment_task_retry_count(self, task_id: int) -> dict:
         self.ensure_tasks_table_ready()
 
         with self.connection_factory() as connection:
-            return increment_task_retry_count_in_postgresql(connection, task_id)
+            updated_task = increment_task_retry_count_in_postgresql(connection, task_id)
+            insert_task_event_to_postgresql(
+                connection,
+                task_id=task_id,
+                event_type="task_retry_created",
+                message="Retry task created.",
+                metadata={"retry_count": updated_task["retry_count"]},
+            )
+
+            return updated_task
+
+    def record_task_event(
+        self,
+        task_id: int,
+        event_type: str,
+        message: str = "",
+        metadata: dict | None = None,
+    ) -> dict:
+        self.ensure_tasks_table_ready()
+
+        with self.connection_factory() as connection:
+            return insert_task_event_to_postgresql(
+                connection,
+                task_id=task_id,
+                event_type=event_type,
+                message=message,
+                metadata=metadata,
+            )
+
+    def list_task_events(self, task_id: int) -> list[dict]:
+        self.ensure_tasks_table_ready()
+
+        with self.connection_factory() as connection:
+            return list_task_events_from_postgresql(connection, task_id)

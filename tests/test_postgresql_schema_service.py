@@ -50,6 +50,7 @@ def test_initialize_postgresql_knowledge_schema_creates_core_tables():
     assert "retry_of_task_id INTEGER" in sql_text
     assert "run_count INTEGER" in sql_text
     assert "retry_count INTEGER" in sql_text
+    assert "CREATE TABLE IF NOT EXISTS task_events" in sql_text
     assert "ADD COLUMN IF NOT EXISTS progress_percent" in sql_text
     assert "ADD COLUMN IF NOT EXISTS progress_message" in sql_text
     assert "ADD COLUMN IF NOT EXISTS retry_of_task_id" in sql_text
@@ -68,4 +69,5 @@ def test_initialize_postgresql_knowledge_schema_creates_core_tables():
         "tasks_retry_source_column_ready": True,
         "tasks_run_count_column_ready": True,
         "tasks_retry_count_column_ready": True,
+        "task_events_table_ready": True,
     }

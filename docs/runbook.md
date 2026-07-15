@@ -12,6 +12,7 @@
 - 任务会显示轻量进度：`pending/running/succeeded/failed/canceled`。
 - 失败任务支持异步重试，并记录 `retry_of_task_id`，方便追溯来源。
 - 任务会记录 `run_count` 和 `retry_count`，用于观察运行次数和重试派生次数。
+- 任务详情支持查看事件时间线，例如创建、开始、成功、失败、取消和重试派生。
 - 等待执行的 `pending` 任务支持取消。
 - 当前仍然不是生产级队列系统：异步执行仍使用 FastAPI 进程内的轻量线程，还没有独立 worker、自动重试策略、运行中任务取消、并发控制和分布式队列。
 
@@ -61,6 +62,7 @@ python -m streamlit run frontend/admin_tasks.py
 - 查看任务进度：`progress_percent` 和 `progress_message`
 - 重试失败任务：基于旧任务的 `type` 和 `payload` 创建新任务，并记录 `retry_of_task_id`
 - 查看任务统计：`run_count` 和 `retry_count`
+- 查看任务事件：通过任务详情查看事件时间线
 - 取消等待任务：只允许取消尚未开始执行的 `pending` 任务
 
 运行方式说明：

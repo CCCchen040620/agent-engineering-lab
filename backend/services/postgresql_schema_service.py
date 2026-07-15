@@ -103,6 +103,18 @@ def initialize_postgresql_knowledge_schema(connection) -> dict:
             ADD COLUMN IF NOT EXISTS retry_count INTEGER NOT NULL DEFAULT 0
             """
         )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS task_events (
+                id SERIAL PRIMARY KEY,
+                task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+                event_type TEXT NOT NULL,
+                message TEXT NOT NULL DEFAULT '',
+                metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            """
+        )
 
     connection.commit()
 
@@ -117,4 +129,5 @@ def initialize_postgresql_knowledge_schema(connection) -> dict:
         "tasks_retry_source_column_ready": True,
         "tasks_run_count_column_ready": True,
         "tasks_retry_count_column_ready": True,
+        "task_events_table_ready": True,
     }

@@ -16,6 +16,7 @@ from frontend.api_client import (
     get_system_status_api,
     list_document_chunks_api,
     list_documents_api,
+    list_task_events_api,
     list_postgresql_document_source_summary_api,
     list_postgresql_document_embedding_status_api,
     rag_backend_supports_feature,
@@ -1709,6 +1710,40 @@ def test_get_task_api(monkeypatch):
     assert captured["timeout"] == 10
     assert task["id"] == 7
     assert task["status"] == "succeeded"
+
+
+def test_list_task_events_api(monkeypatch):
+    captured = {}
+
+    class FakeResponse:
+        status_code = 200
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return [
+                {
+                    "id": 1,
+                    "task_id": 7,
+                    "event_type": "task_created",
+                    "message": "Task created.",
+                    "metadata": {},
+                }
+            ]
+
+    def fake_get(url, timeout=10):
+        captured["url"] = url
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    events = list_task_events_api("http://testserver", task_id=7)
+
+    assert captured["url"] == "http://testserver/api/v1/tasks/7/events"
+    assert captured["timeout"] == 10
+    assert events[0]["event_type"] == "task_created"
 
 
 def test_run_postgresql_embedding_backfill_task_api(monkeypatch):

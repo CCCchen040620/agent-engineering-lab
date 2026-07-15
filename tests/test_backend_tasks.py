@@ -119,6 +119,33 @@ def test_get_task_endpoint_returns_404_when_task_not_found():
     assert response.status_code == 404
 
 
+def test_list_task_events_endpoint():
+    test_queue = InMemoryTaskQueue()
+    task = test_queue.create_task(
+        task_type="echo",
+        payload={"message": "hello"},
+    )
+    test_queue.mark_task_running(task["id"])
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.get(f"/api/v1/tasks/{task['id']}/events")
+
+    assert response.status_code == 200
+    assert [event["event_type"] for event in response.json()] == [
+        "task_created",
+        "task_started",
+    ]
+
+
+def test_list_task_events_endpoint_returns_404_when_task_not_found():
+    test_queue = InMemoryTaskQueue()
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.get("/api/v1/tasks/999/events")
+
+    assert response.status_code == 404
+
+
 def test_run_task_endpoint_marks_task_succeeded():
     test_queue = InMemoryTaskQueue()
     task = test_queue.create_task(

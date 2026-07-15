@@ -61,10 +61,54 @@ def apply_task_progress(task: dict, status: str) -> dict:
     return task
 
 
+def build_task_event(
+    event_id: int,
+    task_id: int,
+    event_type: str,
+    message: str = "",
+    metadata: dict | None = None,
+) -> dict:
+    return {
+        "id": event_id,
+        "task_id": task_id,
+        "event_type": event_type,
+        "message": message,
+        "metadata": metadata or {},
+    }
+
+
 class InMemoryTaskQueue:
     def __init__(self):
         self.tasks = []
         self.next_id = 1
+        self.task_events = []
+        self.next_event_id = 1
+
+    def record_task_event(
+        self,
+        task_id: int,
+        event_type: str,
+        message: str = "",
+        metadata: dict | None = None,
+    ) -> dict:
+        event = build_task_event(
+            event_id=self.next_event_id,
+            task_id=task_id,
+            event_type=event_type,
+            message=message,
+            metadata=metadata,
+        )
+        self.task_events.append(event)
+        self.next_event_id = self.next_event_id + 1
+
+        return event
+
+    def list_task_events(self, task_id: int) -> list[dict]:
+        return [
+            event
+            for event in self.task_events
+            if event["task_id"] == task_id
+        ]
 
     def create_task(
         self,
@@ -87,6 +131,12 @@ class InMemoryTaskQueue:
 
         self.tasks.append(task)
         self.next_id = self.next_id + 1
+        self.record_task_event(
+            task_id=task["id"],
+            event_type="task_created",
+            message="Task created.",
+            metadata={"retry_of_task_id": retry_of_task_id},
+        )
 
         return task
 
@@ -140,6 +190,12 @@ class InMemoryTaskQueue:
         task["status"] = "running"
         task["run_count"] = task["run_count"] + 1
         apply_task_progress(task, "running")
+        self.record_task_event(
+            task_id=task_id,
+            event_type="task_started",
+            message="Task started.",
+            metadata={"run_count": task["run_count"]},
+        )
         return task
 
     def mark_task_succeeded(self, task_id: int, result: dict) -> dict:
@@ -149,6 +205,12 @@ class InMemoryTaskQueue:
         task["result"] = result
         task["error"] = ""
         apply_task_progress(task, "succeeded")
+        self.record_task_event(
+            task_id=task_id,
+            event_type="task_succeeded",
+            message="Task succeeded.",
+            metadata={"result": result},
+        )
         return task
 
     def mark_task_failed(self, task_id: int, error: str) -> dict:
@@ -158,6 +220,12 @@ class InMemoryTaskQueue:
         task["result"] = {}
         task["error"] = error
         apply_task_progress(task, "failed")
+        self.record_task_event(
+            task_id=task_id,
+            event_type="task_failed",
+            message="Task failed.",
+            metadata={"error": error},
+        )
         return task
 
     def mark_task_canceled(self, task_id: int) -> dict:
@@ -167,11 +235,22 @@ class InMemoryTaskQueue:
         task["result"] = {}
         task["error"] = ""
         apply_task_progress(task, "canceled")
+        self.record_task_event(
+            task_id=task_id,
+            event_type="task_canceled",
+            message="Task canceled.",
+        )
         return task
 
     def increment_task_retry_count(self, task_id: int) -> dict:
         task = self.get_task_or_raise(task_id)
         task["retry_count"] = task["retry_count"] + 1
+        self.record_task_event(
+            task_id=task_id,
+            event_type="task_retry_created",
+            message="Retry task created.",
+            metadata={"retry_count": task["retry_count"]},
+        )
         return task
 
 

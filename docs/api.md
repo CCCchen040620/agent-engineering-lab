@@ -1163,6 +1163,21 @@ GET /api/v1/tasks?status=failed&order=desc&limit=20
 
 如果任务不存在，返回 `404`。
 
+### GET /api/v1/tasks/{task_id}/events
+
+查看单个任务的事件时间线。
+
+当前记录的主要事件：
+
+- `task_created`
+- `task_started`
+- `task_succeeded`
+- `task_failed`
+- `task_canceled`
+- `task_retry_created`
+
+如果任务不存在，返回 `404`。
+
 ### POST /api/v1/tasks
 
 创建一个通用任务。

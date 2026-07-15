@@ -5,6 +5,7 @@ from frontend.api_client import (
     create_task_api,
     get_info_api,
     get_task_api,
+    list_task_events_api,
     list_tasks_api,
     retry_task_async_api,
     run_postgresql_embedding_backfill_task_api,
@@ -68,6 +69,15 @@ def render_task_retry_source(task: dict) -> None:
         return
 
     st.caption(f"重试来源：{retry_source_text}")
+
+
+def render_task_events(events: list[dict]) -> None:
+    if not events:
+        st.info("暂无任务事件。")
+        return
+
+    st.subheader("任务事件")
+    st.dataframe(events, use_container_width=True)
 
 
 st.set_page_config(page_title="后台任务中心", layout="wide")
@@ -154,6 +164,10 @@ with cancel_column:
 if view_task_detail:
     try:
         task = get_task_api(BACKEND_API_BASE_URL, int(task_id_to_view))
+        task_events = list_task_events_api(
+            BACKEND_API_BASE_URL,
+            int(task_id_to_view),
+        )
         st.write(f"任务状态：`{task['status']}`")
 
         render_task_progress(task)
@@ -170,6 +184,7 @@ if view_task_detail:
                 column.metric(item["label"], item["value"])
 
         render_task_failure_summary(task)
+        render_task_events(task_events)
 
         st.json(task)
     except Exception as error:
