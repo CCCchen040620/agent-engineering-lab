@@ -334,3 +334,35 @@ def test_postgresql_document_ingestion_raises_embedding_error_when_indexing_fail
 
     assert error.value.code == "embedding_generation_error"
     assert "Ollama embedding model unavailable" in str(error.value)
+
+
+def test_postgresql_document_ingestion_raises_connection_error_when_postgresql_unavailable(
+    monkeypatch,
+):
+    from backend.services import task_dispatcher_service
+
+    def fake_connect(database_url: str):
+        raise task_dispatcher_service.psycopg.OperationalError(
+            "PostgreSQL unavailable"
+        )
+
+    monkeypatch.setattr(
+        task_dispatcher_service.psycopg,
+        "connect",
+        fake_connect,
+    )
+
+    dispatcher = task_dispatcher_service.build_default_task_dispatcher()
+
+    with pytest.raises(TaskExecutionError) as error:
+        dispatcher.dispatch(
+            task_type="postgresql_document_ingestion",
+            payload={
+                "title": "Connection failure document",
+                "file_type": "md",
+                "content": "Connection failure content.",
+            },
+        )
+
+    assert error.value.code == "postgresql_connection_error"
+    assert "PostgreSQL unavailable" in str(error.value)

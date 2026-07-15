@@ -219,6 +219,23 @@ def test_mark_task_failed():
     assert updated["progress_message"] == "任务失败"
 
 
+def test_mark_task_failed_records_failure_event_metadata():
+    queue = InMemoryTaskQueue()
+    task = queue.create_task("postgresql_document_ingestion", {})
+
+    queue.mark_task_failed(
+        task_id=task["id"],
+        error="embedding_generation_error: Ollama embedding model unavailable",
+    )
+
+    event = queue.list_task_events(task["id"])[-1]
+
+    assert event["event_type"] == "task_failed"
+    assert event["metadata"] == {
+        "error": "embedding_generation_error: Ollama embedding model unavailable"
+    }
+
+
 def test_mark_task_canceled():
     queue = InMemoryTaskQueue()
     task = queue.create_task("embedding_backfill", {})

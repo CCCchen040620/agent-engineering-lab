@@ -832,7 +832,111 @@ def test_create_and_run_postgresql_document_ingestion_task_marks_failed_when_not
     assert data["type"] == "postgresql_document_ingestion"
     assert data["status"] == "failed"
     assert data["result"] == {}
+    assert data["error"].startswith("duplicate_document:")
     assert "duplicate title or empty content" in data["error"]
+
+
+def test_create_and_run_postgresql_document_ingestion_task_marks_failed_when_embedding_fails(
+    monkeypatch,
+):
+    from backend.services import task_dispatcher_service
+
+    isolate_postgresql_backfill_connection(monkeypatch, task_dispatcher_service)
+
+    def fake_create_postgresql_document_with_chunks_and_embeddings(
+        connection,
+        title: str,
+        file_type: str,
+        content: str,
+        source: str,
+    ):
+        raise RuntimeError("Ollama embedding model unavailable")
+
+    monkeypatch.setattr(
+        task_dispatcher_service,
+        "create_postgresql_document_with_chunks_and_embeddings",
+        fake_create_postgresql_document_with_chunks_and_embeddings,
+    )
+
+    test_queue = InMemoryTaskQueue()
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.post(
+        "/api/v1/tasks/postgresql-document-ingestion",
+        json={
+            "title": "Embedding failure document",
+            "file_type": "md",
+            "content": "Embedding failure content.",
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["type"] == "postgresql_document_ingestion"
+    assert data["status"] == "failed"
+    assert data["result"] == {}
+    assert data["error"] == (
+        "embedding_generation_error: Ollama embedding model unavailable"
+    )
+
+    events = test_queue.list_task_events(data["id"])
+    assert events[-1]["event_type"] == "task_failed"
+    assert events[-1]["metadata"] == {
+        "error": "embedding_generation_error: Ollama embedding model unavailable"
+    }
+
+
+def test_create_and_run_postgresql_document_ingestion_task_async_marks_failed_when_embedding_fails(
+    monkeypatch,
+):
+    from backend.services import task_dispatcher_service
+
+    isolate_postgresql_backfill_connection(monkeypatch, task_dispatcher_service)
+    handler_started = Event()
+
+    def fake_create_postgresql_document_with_chunks_and_embeddings(
+        connection,
+        title: str,
+        file_type: str,
+        content: str,
+        source: str,
+    ):
+        handler_started.set()
+        raise RuntimeError("Ollama embedding model unavailable")
+
+    monkeypatch.setattr(
+        task_dispatcher_service,
+        "create_postgresql_document_with_chunks_and_embeddings",
+        fake_create_postgresql_document_with_chunks_and_embeddings,
+    )
+
+    test_queue = InMemoryTaskQueue()
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.post(
+        "/api/v1/tasks/postgresql-document-ingestion/run-async",
+        json={
+            "title": "Async embedding failure document",
+            "file_type": "md",
+            "content": "Async embedding failure content.",
+        },
+    )
+
+    assert response.status_code == 202
+
+    data = response.json()
+    assert data["type"] == "postgresql_document_ingestion"
+    assert data["status"] in ["running", "failed"]
+    assert handler_started.wait(timeout=1)
+
+    failed_task = wait_for_task_status(test_queue, data["id"], "failed")
+
+    assert failed_task["result"] == {}
+    assert failed_task["error"] == (
+        "embedding_generation_error: Ollama embedding model unavailable"
+    )
+    assert test_queue.list_task_events(data["id"])[-1]["event_type"] == "task_failed"
 
 
 def test_create_and_run_postgresql_document_ingestion_task_rejects_invalid_payload():
