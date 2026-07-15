@@ -9,6 +9,26 @@ VALID_STATUS_TRANSITIONS = {
 }
 
 
+TASK_STATUS_PROGRESS = {
+    "pending": {
+        "progress_percent": 0,
+        "progress_message": "等待执行",
+    },
+    "running": {
+        "progress_percent": 50,
+        "progress_message": "任务运行中",
+    },
+    "succeeded": {
+        "progress_percent": 100,
+        "progress_message": "任务完成",
+    },
+    "failed": {
+        "progress_percent": 100,
+        "progress_message": "任务失败",
+    },
+}
+
+
 class TaskNotFoundError(Exception):
     pass
 
@@ -27,6 +47,15 @@ def validate_task_status_transition(task: dict, next_status: str) -> None:
         )
 
 
+def build_task_progress(status: str) -> dict:
+    return dict(TASK_STATUS_PROGRESS[status])
+
+
+def apply_task_progress(task: dict, status: str) -> dict:
+    task.update(build_task_progress(status))
+    return task
+
+
 class InMemoryTaskQueue:
     def __init__(self):
         self.tasks = []
@@ -41,6 +70,7 @@ class InMemoryTaskQueue:
             "result": {},
             "error": "",
         }
+        apply_task_progress(task, "pending")
 
         self.tasks.append(task)
         self.next_id = self.next_id + 1
@@ -95,6 +125,7 @@ class InMemoryTaskQueue:
         task = self.get_task_or_raise(task_id)
         self.validate_status_transition(task, "running")
         task["status"] = "running"
+        apply_task_progress(task, "running")
         return task
 
     def mark_task_succeeded(self, task_id: int, result: dict) -> dict:
@@ -103,6 +134,7 @@ class InMemoryTaskQueue:
         task["status"] = "succeeded"
         task["result"] = result
         task["error"] = ""
+        apply_task_progress(task, "succeeded")
         return task
 
     def mark_task_failed(self, task_id: int, error: str) -> dict:
@@ -111,6 +143,7 @@ class InMemoryTaskQueue:
         task["status"] = "failed"
         task["result"] = {}
         task["error"] = error
+        apply_task_progress(task, "failed")
         return task
 
 

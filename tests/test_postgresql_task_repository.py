@@ -21,12 +21,14 @@ from backend.services.task_queue_service import (
 class FakeCursor:
     def __init__(self):
         self.sql = ""
+        self.executed_sql = []
         self.params = None
         self.rows = []
         self.row = None
 
     def execute(self, sql: str, params=None):
         self.sql = sql
+        self.executed_sql.append(sql)
         self.params = params
 
     def fetchall(self):
@@ -91,6 +93,8 @@ def test_row_to_task():
         "payload": {"source": "postgresql"},
         "result": {"updated_embeddings": 3},
         "error": "",
+        "progress_percent": 0,
+        "progress_message": "等待执行",
     }
 
 
@@ -99,9 +103,15 @@ def test_create_tasks_table_in_postgresql():
 
     create_tasks_table_in_postgresql(connection)
 
-    assert "CREATE TABLE IF NOT EXISTS tasks" in connection.cursor_instance.sql
-    assert "payload JSONB" in connection.cursor_instance.sql
-    assert "result JSONB" in connection.cursor_instance.sql
+    sql_text = "\n".join(connection.cursor_instance.executed_sql)
+
+    assert "CREATE TABLE IF NOT EXISTS tasks" in sql_text
+    assert "payload JSONB" in sql_text
+    assert "result JSONB" in sql_text
+    assert "progress_percent INTEGER" in sql_text
+    assert "progress_message TEXT" in sql_text
+    assert "ADD COLUMN IF NOT EXISTS progress_percent" in sql_text
+    assert "ADD COLUMN IF NOT EXISTS progress_message" in sql_text
     assert connection.committed is True
 
 
@@ -124,6 +134,8 @@ def test_insert_task_to_postgresql():
 
     assert task["id"] == 1
     assert task["status"] == "pending"
+    assert task["progress_percent"] == 0
+    assert task["progress_message"] == "等待执行"
     assert connection.cursor_instance.params == (
         "postgresql_embedding_backfill",
         '{"source": "postgresql"}',
@@ -132,6 +144,7 @@ def test_insert_task_to_postgresql():
     assert "RETURNING id, type, status, payload, result, error" in (
         connection.cursor_instance.sql
     )
+    assert "progress_percent, progress_message" in connection.cursor_instance.sql
     assert connection.committed is True
 
 
@@ -220,10 +233,14 @@ def test_update_task_status_in_postgresql():
 
     assert task["status"] == "succeeded"
     assert task["result"] == {"message": "hello"}
+    assert task["progress_percent"] == 100
+    assert task["progress_message"] == "任务完成"
     assert connection.cursor_instance.params == (
         "succeeded",
         '{"message": "hello"}',
         "",
+        100,
+        "任务完成",
         1,
     )
     assert "UPDATE tasks" in connection.cursor_instance.sql
@@ -255,6 +272,8 @@ def test_postgresql_task_queue_marks_task_running(monkeypatch):
             "payload": {},
             "result": {},
             "error": "",
+            "progress_percent": 0,
+            "progress_message": "等待执行",
         }
     }
 
@@ -311,6 +330,8 @@ def test_postgresql_task_queue_auto_initializes_tasks_table(monkeypatch):
             "payload": payload,
             "result": {},
             "error": "",
+            "progress_percent": 0,
+            "progress_message": "等待执行",
         }
 
     monkeypatch.setattr(
@@ -358,6 +379,8 @@ def test_postgresql_task_queue_can_disable_auto_initialize(monkeypatch):
             "payload": payload,
             "result": {},
             "error": "",
+            "progress_percent": 0,
+            "progress_message": "等待执行",
         }
 
     monkeypatch.setattr(
@@ -404,6 +427,8 @@ def test_postgresql_task_queue_reads_task_after_queue_is_recreated(monkeypatch):
             "payload": payload,
             "result": {},
             "error": "",
+            "progress_percent": 0,
+            "progress_message": "等待执行",
         }
         persistent_tasks[task_id] = task
 
@@ -453,6 +478,15 @@ def test_postgresql_task_queue_reads_task_after_queue_is_recreated(monkeypatch):
         persistent_tasks[task_id]["status"] = status
         persistent_tasks[task_id]["result"] = result
         persistent_tasks[task_id]["error"] = error
+        if status == "running":
+            persistent_tasks[task_id]["progress_percent"] = 50
+            persistent_tasks[task_id]["progress_message"] = "任务运行中"
+        elif status == "succeeded":
+            persistent_tasks[task_id]["progress_percent"] = 100
+            persistent_tasks[task_id]["progress_message"] = "任务完成"
+        elif status == "failed":
+            persistent_tasks[task_id]["progress_percent"] = 100
+            persistent_tasks[task_id]["progress_message"] = "任务失败"
 
         return dict(persistent_tasks[task_id])
 
@@ -505,6 +539,8 @@ def test_postgresql_task_queue_reads_task_after_queue_is_recreated(monkeypatch):
         "payload": {"message": "persist me"},
         "result": {"message": "persist me"},
         "error": "",
+        "progress_percent": 100,
+        "progress_message": "任务完成",
     }
     assert listed_tasks == [found_task]
     assert recreated_queue_instance is not first_queue_instance

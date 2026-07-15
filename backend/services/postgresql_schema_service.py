@@ -60,9 +60,25 @@ def initialize_postgresql_knowledge_schema(connection) -> dict:
                 payload JSONB NOT NULL DEFAULT '{}'::jsonb,
                 result JSONB NOT NULL DEFAULT '{}'::jsonb,
                 error TEXT NOT NULL DEFAULT '',
+                progress_percent INTEGER NOT NULL DEFAULT 0,
+                progress_message TEXT NOT NULL DEFAULT '等待执行',
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
+            """
+        )
+
+        cursor.execute(
+            """
+            ALTER TABLE tasks
+            ADD COLUMN IF NOT EXISTS progress_percent INTEGER NOT NULL DEFAULT 0
+            """
+        )
+
+        cursor.execute(
+            """
+            ALTER TABLE tasks
+            ADD COLUMN IF NOT EXISTS progress_message TEXT NOT NULL DEFAULT '等待执行'
             """
         )
 
@@ -75,4 +91,5 @@ def initialize_postgresql_knowledge_schema(connection) -> dict:
         "chunks_table_ready": True,
         "chunk_embeddings_table_ready": True,
         "tasks_table_ready": True,
+        "tasks_progress_columns_ready": True,
     }

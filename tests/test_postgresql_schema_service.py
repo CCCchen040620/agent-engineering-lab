@@ -45,6 +45,10 @@ def test_initialize_postgresql_knowledge_schema_creates_core_tables():
     assert "vector(1024)" in sql_text
     assert "CREATE TABLE IF NOT EXISTS tasks" in sql_text
     assert "payload JSONB" in sql_text
+    assert "progress_percent INTEGER" in sql_text
+    assert "progress_message TEXT" in sql_text
+    assert "ADD COLUMN IF NOT EXISTS progress_percent" in sql_text
+    assert "ADD COLUMN IF NOT EXISTS progress_message" in sql_text
     assert connection.committed is True
 
     assert result == {
@@ -54,4 +58,5 @@ def test_initialize_postgresql_knowledge_schema_creates_core_tables():
         "chunks_table_ready": True,
         "chunk_embeddings_table_ready": True,
         "tasks_table_ready": True,
+        "tasks_progress_columns_ready": True,
     }

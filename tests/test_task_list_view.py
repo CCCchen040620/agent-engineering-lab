@@ -59,6 +59,8 @@ def test_build_task_list_rows_filters_sorts_and_adds_result_summary():
             "id": 1,
             "type": "postgresql_embedding_backfill",
             "status": "succeeded",
+            "progress_percent": 100,
+            "progress_message": "任务完成",
             "result": {
                 "total_chunks": 29,
                 "updated_embeddings": 0,
@@ -70,12 +72,16 @@ def test_build_task_list_rows_filters_sorts_and_adds_result_summary():
             "id": 2,
             "type": "postgresql_embedding_backfill",
             "status": "failed",
+            "progress_percent": 100,
+            "progress_message": "任务失败",
             "result": {},
         },
         {
             "id": 3,
             "type": "postgresql_embedding_backfill",
             "status": "succeeded",
+            "progress_percent": 100,
+            "progress_message": "任务完成",
             "result": {
                 "total_chunks": 30,
                 "updated_embeddings": 1,
@@ -94,3 +100,4 @@ def test_build_task_list_rows_filters_sorts_and_adds_result_summary():
         "跳过 embeddings: 29 | "
         "模型: bge-m3:latest"
     )
+    assert rows[0]["progress_summary"] == "100% | 任务完成"

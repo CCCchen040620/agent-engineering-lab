@@ -2,6 +2,7 @@ import json
 
 from backend.services.task_queue_service import (
     TaskNotFoundError,
+    build_task_progress,
     validate_task_status_transition,
 )
 
@@ -21,6 +22,10 @@ def decode_json(value) -> dict:
 
 
 def row_to_task(row) -> dict:
+    progress = build_task_progress(row[2])
+    progress_percent = row[6] if len(row) > 6 else progress["progress_percent"]
+    progress_message = row[7] if len(row) > 7 else progress["progress_message"]
+
     return {
         "id": row[0],
         "type": row[1],
@@ -28,6 +33,8 @@ def row_to_task(row) -> dict:
         "payload": decode_json(row[3]),
         "result": decode_json(row[4]),
         "error": row[5],
+        "progress_percent": progress_percent,
+        "progress_message": progress_message,
     }
 
 
@@ -42,9 +49,23 @@ def create_tasks_table_in_postgresql(connection) -> None:
                 payload JSONB NOT NULL DEFAULT '{}'::jsonb,
                 result JSONB NOT NULL DEFAULT '{}'::jsonb,
                 error TEXT NOT NULL DEFAULT '',
+                progress_percent INTEGER NOT NULL DEFAULT 0,
+                progress_message TEXT NOT NULL DEFAULT '等待执行',
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
+            """
+        )
+        cursor.execute(
+            """
+            ALTER TABLE tasks
+            ADD COLUMN IF NOT EXISTS progress_percent INTEGER NOT NULL DEFAULT 0
+            """
+        )
+        cursor.execute(
+            """
+            ALTER TABLE tasks
+            ADD COLUMN IF NOT EXISTS progress_message TEXT NOT NULL DEFAULT '等待执行'
             """
         )
 
@@ -61,7 +82,8 @@ def insert_task_to_postgresql(
             """
             INSERT INTO tasks (type, payload)
             VALUES (%s, %s::jsonb)
-            RETURNING id, type, status, payload, result, error
+            RETURNING id, type, status, payload, result, error,
+                      progress_percent, progress_message
             """,
             (task_type, encode_json(payload)),
         )
@@ -96,6 +118,7 @@ def list_tasks_from_postgresql(
         cursor.execute(
             f"""
             SELECT id, type, status, payload, result, error
+                   , progress_percent, progress_message
             FROM tasks
             {where_sql}
             ORDER BY id {order_sql}
@@ -114,6 +137,7 @@ def find_task_from_postgresql(connection, task_id: int) -> dict | None:
         cursor.execute(
             """
             SELECT id, type, status, payload, result, error
+                   , progress_percent, progress_message
             FROM tasks
             WHERE id = %s
             """,
@@ -135,6 +159,8 @@ def update_task_status_in_postgresql(
     result: dict,
     error: str,
 ) -> dict:
+    progress = build_task_progress(status)
+
     with connection.cursor() as cursor:
         cursor.execute(
             """
@@ -142,11 +168,21 @@ def update_task_status_in_postgresql(
             SET status = %s,
                 result = %s::jsonb,
                 error = %s,
+                progress_percent = %s,
+                progress_message = %s,
                 updated_at = NOW()
             WHERE id = %s
-            RETURNING id, type, status, payload, result, error
+            RETURNING id, type, status, payload, result, error,
+                      progress_percent, progress_message
             """,
-            (status, encode_json(result), error, task_id),
+            (
+                status,
+                encode_json(result),
+                error,
+                progress["progress_percent"],
+                progress["progress_message"],
+                task_id,
+            ),
         )
 
         row = cursor.fetchone()

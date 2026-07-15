@@ -23,6 +23,8 @@ def test_create_task():
     assert task["payload"] == {"source": "postgresql"}
     assert task["result"] == {}
     assert task["error"] == ""
+    assert task["progress_percent"] == 0
+    assert task["progress_message"] == "等待执行"
 
 
 def test_list_tasks():
@@ -146,6 +148,8 @@ def test_mark_task_running():
     updated = queue.mark_task_running(task["id"])
 
     assert updated["status"] == "running"
+    assert updated["progress_percent"] == 50
+    assert updated["progress_message"] == "任务运行中"
 
 
 def test_mark_task_succeeded():
@@ -162,6 +166,8 @@ def test_mark_task_succeeded():
     assert updated["status"] == "succeeded"
     assert updated["result"] == {"updated": 10}
     assert updated["error"] == ""
+    assert updated["progress_percent"] == 100
+    assert updated["progress_message"] == "任务完成"
 
 
 def test_mark_task_failed():
@@ -176,6 +182,8 @@ def test_mark_task_failed():
     assert updated["status"] == "failed"
     assert updated["result"] == {}
     assert updated["error"] == "Ollama unavailable"
+    assert updated["progress_percent"] == 100
+    assert updated["progress_message"] == "任务失败"
 
 
 def test_succeeded_task_cannot_be_marked_running_again():

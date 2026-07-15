@@ -12,6 +12,10 @@ from frontend.task_result_summary import (
     build_task_result_summary,
 )
 from frontend.task_failure_view import build_task_failure_summary
+from frontend.task_progress_view import (
+    build_task_progress_text,
+    clamp_progress_percent,
+)
 from frontend.task_list_view import (
     TASK_STATUS_FILTER_OPTIONS,
     build_task_list_rows,
@@ -33,6 +37,20 @@ def render_task_failure_summary(task: dict) -> None:
 
     for item in failure_items:
         st.write(f"{item['label']}：{item['value']}")
+
+
+def render_task_progress(task: dict) -> None:
+    progress_text = build_task_progress_text(task)
+
+    if progress_text == "":
+        return
+
+    progress_percent = task.get("progress_percent")
+
+    if progress_percent is not None:
+        st.progress(clamp_progress_percent(int(progress_percent)))
+
+    st.caption(f"任务进度：{progress_text}")
 
 
 st.set_page_config(page_title="后台任务中心", layout="wide")
@@ -75,6 +93,8 @@ if st.button("运行 PostgreSQL embedding 回填"):
         else:
             st.info(f"任务状态：{task['status']}")
 
+        render_task_progress(task)
+
         summary_items = build_task_result_summary(task)
 
         if summary_items:
@@ -105,6 +125,8 @@ if st.button("查看任务详情"):
     try:
         task = get_task_api(BACKEND_API_BASE_URL, int(task_id_to_view))
         st.write(f"任务状态：`{task['status']}`")
+
+        render_task_progress(task)
 
         summary_items = build_task_result_summary(task)
 
