@@ -17,6 +17,13 @@ def test_task_admin_page_exposes_postgresql_document_ingestion_form():
     assert "migration=迁移数据" in source
 
 
+def test_task_admin_page_documents_task_center_boundary():
+    source = Path("frontend/admin_tasks.py").read_text(encoding="utf-8")
+
+    assert "页面定位：任务中心负责后台任务执行、状态查看、失败重试和事件时间线" in source
+    assert "需要查看或删除文档资源时，请使用文档管理页" in source
+
+
 def test_task_admin_page_separates_task_operation_sections():
     source = Path("frontend/admin_tasks.py").read_text(encoding="utf-8")
 

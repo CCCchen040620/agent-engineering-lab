@@ -36,7 +36,8 @@
 
 ## 后台任务中心
 
-任务中心用于查看后台任务状态，并手动触发 PostgreSQL embedding 回填。
+任务中心用于查看和执行后台任务，例如 PostgreSQL embedding 回填、PostgreSQL 文档入库任务、失败重试和事件时间线。
+它不作为文档资源管理入口；查看/删除文档、查看 chunks 和 embedding 状态时，优先使用文档管理页。
 
 启动前请先确认 FastAPI 后端已经运行。如果要执行 PostgreSQL embedding 回填，请同时确认：
 

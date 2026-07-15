@@ -386,6 +386,10 @@ st.set_page_config(
 
 st.title("文档管理")
 st.write("同时查看 SQLite 与 PostgreSQL / pgvector 中的文档和切分片段。")
+st.caption(
+    "页面定位：文档管理页负责文档资源查看、chunks 查看、embedding 状态查看和 PostgreSQL 文档删除；"
+    "需要执行后台任务时，请优先使用任务中心。"
+)
 
 info, info_error = get_info_api(base_url=BACKEND_API_BASE_URL)
 

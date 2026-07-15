@@ -127,6 +127,10 @@ st.set_page_config(page_title="后台任务中心", layout="wide")
 st.title("后台任务中心")
 
 st.caption("用于查看后台任务状态，并手动触发 PostgreSQL embedding 回填。")
+st.caption(
+    "页面定位：任务中心负责后台任务执行、状态查看、失败重试和事件时间线；"
+    "需要查看或删除文档资源时，请使用文档管理页。"
+)
 
 info, info_error = get_info_api(BACKEND_API_BASE_URL)
 
