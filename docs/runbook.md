@@ -1,5 +1,31 @@
 # 项目运行手册
 
+## 任务中心当前验收
+
+当前任务中心已经不只是早期的内存任务演示。以当前代码为准：
+
+- 当 `DATABASE_URL` 使用 PostgreSQL 时，任务记录会保存到 PostgreSQL。
+- 支持 PostgreSQL embedding 回填任务。
+- 支持 PostgreSQL 文档异步入库任务。
+- 任务列表默认最新任务优先。
+- 失败任务会保存结构化错误原因，并在任务中心显示处理建议。
+- 当前仍然不是生产级队列系统：异步执行仍使用 FastAPI 进程内的轻量线程，还没有独立 worker、重试策略、取消任务、任务进度百分比和分布式队列。
+
+交付前可以运行任务中心专项验收：
+
+```powershell
+.\scripts\check_task_center.ps1
+```
+
+运行前需要确认：
+
+1. Docker Desktop 已启动。
+2. PostgreSQL / pgvector 已启动：`docker compose up -d postgres`。
+3. FastAPI 已用 PostgreSQL `DATABASE_URL` 启动。
+4. Ollama 和 embedding 模型可用。
+
+该脚本会创建一个 PostgreSQL 文档异步入库任务，轮询任务状态，并校验任务结果中包含 `document_id`、`chunk_count` 和 `embedding_count`。
+
 ## 后台任务中心
 
 任务中心用于查看后台任务状态，并手动触发 PostgreSQL embedding 回填。
@@ -42,9 +68,9 @@ python -m streamlit run frontend/admin_tasks.py
 - 如果 PostgreSQL、Ollama 或 embedding 模型不可用，任务状态应为 `failed`，并在 `error` 中记录原因
 - 如果所有 chunks 已经有 embedding，结果中 `updated_embeddings` 可以为 `0`，`skipped_embeddings` 等于已有 embedding 的 chunks 数量
 
-说明：当前任务中心是学习版任务流程。任务记录保存在后端进程内存中，后端重启后会清空；异步运行使用后端进程内的轻量后台线程。
+说明：当前任务中心仍是学习版任务流程。当后端使用 PostgreSQL `DATABASE_URL` 启动时，任务记录会保存到 PostgreSQL；异步执行仍使用 FastAPI 进程内的轻量后台线程。它还不是生产级队列系统，暂不支持独立 worker、任务取消、自动重试和进度百分比。
 
-当前仓库中已经有 SQLite Task Repository 作为任务表结构学习样本，但它暂时没有接入任务 API。考虑到学习时间预算，后续不继续重复实现 SQLite -> PostgreSQL 两套任务 repository；如果要走生产化方向，优先考虑 PostgreSQL 保存任务记录和审计数据，Redis / worker 负责排队、执行、重试和进度。
+SQLite Task Repository 保留为任务表结构学习样本；当前任务 API 优先走 PostgreSQL Task Repository。后续如果继续生产化，建议让 PostgreSQL 保存任务记录和审计数据，由 Redis / worker 负责排队、执行、重试、取消和进度。
 
 本手册用于记录企业知识库 Agent 项目的常用启动和维护命令。
 

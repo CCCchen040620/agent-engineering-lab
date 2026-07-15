@@ -10,6 +10,9 @@ def test_project_stage_summary_documents_current_stage():
     assert "PostgreSQL / pgvector" in summary
     assert "GitHub Actions" in summary
     assert "不是生产级企业 Agent" in summary
+    assert "任务中心当前边界" in summary
+    assert "check_task_center.ps1" in summary
+    assert "不是生产级任务队列系统" in summary
 
 
 def test_progress_points_to_current_stage_summary():
