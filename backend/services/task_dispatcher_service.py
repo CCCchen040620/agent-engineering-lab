@@ -10,6 +10,7 @@ from backend.services.postgresql_document_indexing_service import (
 from backend.services.postgresql_schema_service import (
     initialize_postgresql_knowledge_schema,
 )
+from backend.services.task_error_service import TaskExecutionError
 
 
 class UnsupportedTaskTypeError(Exception):
@@ -42,15 +43,19 @@ def get_required_payload_string(payload: dict, field_name: str) -> str:
     value = payload.get(field_name)
 
     if not isinstance(value, str) or value.strip() == "":
-        raise ValueError(f"Missing required payload field: {field_name}")
+        raise TaskExecutionError(
+            "invalid_payload",
+            f"Missing required payload field: {field_name}",
+        )
 
     return value.strip()
 
 
 def build_postgresql_document_ingestion_result(indexing_result: dict | None) -> dict:
     if indexing_result is None:
-        raise ValueError(
-            "PostgreSQL document ingestion failed: duplicate title or empty content."
+        raise TaskExecutionError(
+            "duplicate_document",
+            "PostgreSQL document ingestion failed: duplicate title or empty content.",
         )
 
     document = indexing_result["document"]
@@ -72,15 +77,34 @@ def run_postgresql_document_ingestion(payload: dict) -> dict:
     content = get_required_payload_string(payload, "content")
     source = payload.get("source", "production")
 
-    with psycopg.connect(DATABASE_URL) as connection:
-        initialize_postgresql_knowledge_schema(connection)
-        indexing_result = create_postgresql_document_with_chunks_and_embeddings(
-            connection,
-            title=title,
-            file_type=file_type,
-            content=content,
-            source=source,
-        )
+    try:
+        with psycopg.connect(DATABASE_URL) as connection:
+            initialize_postgresql_knowledge_schema(connection)
+            indexing_result = create_postgresql_document_with_chunks_and_embeddings(
+                connection,
+                title=title,
+                file_type=file_type,
+                content=content,
+                source=source,
+            )
+    except TaskExecutionError:
+        raise
+    except psycopg.OperationalError as error:
+        raise TaskExecutionError(
+            "postgresql_connection_error",
+            str(error),
+        ) from error
+    except Exception as error:
+        error_message = str(error)
+        error_message_lower = error_message.lower()
+
+        if "embedding" in error_message_lower or "ollama" in error_message_lower:
+            raise TaskExecutionError(
+                "embedding_generation_error",
+                error_message,
+            ) from error
+
+        raise
 
     return build_postgresql_document_ingestion_result(indexing_result)
 

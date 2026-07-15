@@ -6,6 +6,7 @@ from backend.services.task_queue_service import (
     TaskNotFoundError,
     TaskRunner,
 )
+from backend.services.task_error_service import TaskExecutionError
 
 
 def test_create_task():
@@ -240,7 +241,26 @@ def test_task_runner_marks_task_failed_when_handler_raises_error():
 
     assert result["status"] == "failed"
     assert result["result"] == {}
-    assert result["error"] == "Ollama unavailable"
+    assert result["error"] == "unexpected_error: Ollama unavailable"
+
+
+def test_task_runner_preserves_structured_task_error_code():
+    queue = InMemoryTaskQueue()
+    task = queue.create_task("postgresql_document_ingestion", {})
+    runner = TaskRunner(queue)
+
+    def handler(payload):
+        raise TaskExecutionError(
+            "embedding_generation_error",
+            "Ollama embedding model unavailable",
+        )
+
+    result = runner.run_task(task["id"], handler)
+
+    assert result["status"] == "failed"
+    assert result["error"] == (
+        "embedding_generation_error: Ollama embedding model unavailable"
+    )
 
 
 def test_task_runner_passes_payload_to_handler():
@@ -287,4 +307,4 @@ def test_task_runner_marks_running_task_failed_when_handler_raises_error():
 
     assert result["status"] == "failed"
     assert result["result"] == {}
-    assert result["error"] == "Ollama unavailable"
+    assert result["error"] == "unexpected_error: Ollama unavailable"

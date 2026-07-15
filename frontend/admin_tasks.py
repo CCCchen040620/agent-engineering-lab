@@ -11,6 +11,7 @@ from frontend.api_client import (
 from frontend.task_result_summary import (
     build_task_result_summary,
 )
+from frontend.task_failure_view import build_task_failure_summary
 from frontend.task_list_view import (
     TASK_STATUS_FILTER_OPTIONS,
     build_task_list_rows,
@@ -20,6 +21,18 @@ from backend.config import BACKEND_API_BASE_URL
 
 
 POSTGRESQL_EMBEDDING_BACKFILL_TASK_TYPE = "postgresql_embedding_backfill"
+
+
+def render_task_failure_summary(task: dict) -> None:
+    failure_items = build_task_failure_summary(task)
+
+    if not failure_items:
+        return
+
+    st.subheader("失败诊断")
+
+    for item in failure_items:
+        st.write(f"{item['label']}：{item['value']}")
 
 
 st.set_page_config(page_title="后台任务中心", layout="wide")
@@ -71,6 +84,8 @@ if st.button("运行 PostgreSQL embedding 回填"):
             for column, item in zip(columns, summary_items):
                 column.metric(item["label"], item["value"])
 
+        render_task_failure_summary(task)
+
         st.json(task)
     except Exception as error:
         st.error(f"任务请求失败：{error}")
@@ -99,6 +114,8 @@ if st.button("查看任务详情"):
 
             for column, item in zip(columns, summary_items):
                 column.metric(item["label"], item["value"])
+
+        render_task_failure_summary(task)
 
         st.json(task)
     except Exception as error:

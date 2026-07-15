@@ -1,3 +1,6 @@
+from backend.services.task_error_service import format_task_error
+
+
 VALID_STATUS_TRANSITIONS = {
     "pending": ["running", "failed"],
     "running": ["succeeded", "failed"],
@@ -122,7 +125,10 @@ class TaskRunner:
             result = handler(task["payload"])
             return self.queue.mark_task_succeeded(task_id, result)
         except Exception as error:
-            return self.queue.mark_task_failed(task_id, str(error))
+            return self.queue.mark_task_failed(
+                task_id,
+                format_task_error(error),
+            )
 
     def finish_running_task(self, task_id: int, handler) -> dict:
         task = self.queue.get_task_or_raise(task_id)
@@ -131,4 +137,7 @@ class TaskRunner:
             result = handler(task["payload"])
             return self.queue.mark_task_succeeded(task_id, result)
         except Exception as error:
-            return self.queue.mark_task_failed(task_id, str(error))
+            return self.queue.mark_task_failed(
+                task_id,
+                format_task_error(error),
+            )

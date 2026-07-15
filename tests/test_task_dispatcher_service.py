@@ -6,6 +6,7 @@ from backend.services.task_dispatcher_service import (
     build_postgresql_document_ingestion_result,
     get_required_payload_string,
 )
+from backend.services.task_error_service import TaskExecutionError
 
 
 class FakePostgreSQLConnection:
@@ -94,10 +95,11 @@ def test_get_required_payload_string_returns_trimmed_value():
     assert value == "PostgreSQL 入库文档"
 
 
-def test_get_required_payload_string_raises_when_missing():
-    with pytest.raises(ValueError) as error:
+def test_get_required_payload_string_raises_invalid_payload_when_missing():
+    with pytest.raises(TaskExecutionError) as error:
         get_required_payload_string({}, "title")
 
+    assert error.value.code == "invalid_payload"
     assert "Missing required payload field: title" in str(error.value)
 
 
@@ -135,9 +137,10 @@ def test_build_postgresql_document_ingestion_result_flattens_indexing_result():
 
 
 def test_build_postgresql_document_ingestion_result_raises_when_not_created():
-    with pytest.raises(ValueError) as error:
+    with pytest.raises(TaskExecutionError) as error:
         build_postgresql_document_ingestion_result(None)
 
+    assert error.value.code == "duplicate_document"
     assert "duplicate title or empty content" in str(error.value)
 
 
@@ -284,3 +287,50 @@ def test_postgresql_document_ingestion_uses_production_source_by_default(
     )
 
     assert captured["source"] == "production"
+
+
+def test_postgresql_document_ingestion_raises_embedding_error_when_indexing_fails(
+    monkeypatch,
+):
+    from backend.services import task_dispatcher_service
+
+    monkeypatch.setattr(
+        task_dispatcher_service.psycopg,
+        "connect",
+        lambda database_url: FakePostgreSQLConnection(),
+    )
+    monkeypatch.setattr(
+        task_dispatcher_service,
+        "initialize_postgresql_knowledge_schema",
+        lambda connection: None,
+    )
+
+    def fake_create_postgresql_document_with_chunks_and_embeddings(
+        connection,
+        title: str,
+        file_type: str,
+        content: str,
+        source: str,
+    ):
+        raise RuntimeError("Ollama embedding model unavailable")
+
+    monkeypatch.setattr(
+        task_dispatcher_service,
+        "create_postgresql_document_with_chunks_and_embeddings",
+        fake_create_postgresql_document_with_chunks_and_embeddings,
+    )
+
+    dispatcher = task_dispatcher_service.build_default_task_dispatcher()
+
+    with pytest.raises(TaskExecutionError) as error:
+        dispatcher.dispatch(
+            task_type="postgresql_document_ingestion",
+            payload={
+                "title": "Embedding failure document",
+                "file_type": "md",
+                "content": "Embedding failure content.",
+            },
+        )
+
+    assert error.value.code == "embedding_generation_error"
+    assert "Ollama embedding model unavailable" in str(error.value)

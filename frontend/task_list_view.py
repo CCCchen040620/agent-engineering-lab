@@ -1,4 +1,5 @@
 from frontend.task_result_summary import summarize_task_result_as_text
+from frontend.task_failure_view import summarize_task_failure_as_text
 
 
 TASK_STATUS_FILTER_OPTIONS = [
@@ -48,6 +49,7 @@ def build_task_list_rows(
     for task in sorted_tasks:
         display_task = dict(task)
         display_task["result_summary"] = summarize_task_result_as_text(task)
+        display_task["failure_summary"] = summarize_task_failure_as_text(task)
         display_tasks.append(display_task)
 
     return display_tasks
