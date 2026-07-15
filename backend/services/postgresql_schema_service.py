@@ -51,6 +51,21 @@ def initialize_postgresql_knowledge_schema(connection) -> dict:
             """
         )
 
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS tasks (
+                id SERIAL PRIMARY KEY,
+                type TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+                result JSONB NOT NULL DEFAULT '{}'::jsonb,
+                error TEXT NOT NULL DEFAULT '',
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            """
+        )
+
     connection.commit()
 
     return {
@@ -59,4 +74,5 @@ def initialize_postgresql_knowledge_schema(connection) -> dict:
         "documents_source_column_ready": True,
         "chunks_table_ready": True,
         "chunk_embeddings_table_ready": True,
+        "tasks_table_ready": True,
     }

@@ -14,6 +14,16 @@ class InvalidTaskStatusTransitionError(Exception):
     pass
 
 
+def validate_task_status_transition(task: dict, next_status: str) -> None:
+    current_status = task["status"]
+    allowed_next_statuses = VALID_STATUS_TRANSITIONS[current_status]
+
+    if next_status not in allowed_next_statuses:
+        raise InvalidTaskStatusTransitionError(
+            f"Cannot change task {task['id']} from {current_status} to {next_status}."
+        )
+
+
 class InMemoryTaskQueue:
     def __init__(self):
         self.tasks = []
@@ -76,13 +86,7 @@ class InMemoryTaskQueue:
         return task
 
     def validate_status_transition(self, task: dict, next_status: str) -> None:
-        current_status = task["status"]
-        allowed_next_statuses = VALID_STATUS_TRANSITIONS[current_status]
-
-        if next_status not in allowed_next_statuses:
-            raise InvalidTaskStatusTransitionError(
-                f"Cannot change task {task['id']} from {current_status} to {next_status}."
-            )
+        validate_task_status_transition(task, next_status)
 
     def mark_task_running(self, task_id: int) -> dict:
         task = self.get_task_or_raise(task_id)

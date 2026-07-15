@@ -4,7 +4,9 @@ from threading import Event
 from fastapi.testclient import TestClient
 
 from backend.main import app
+from backend.routers import tasks as tasks_router
 from backend.routers.tasks import get_task_queue
+from backend.services.postgresql_task_repository import PostgresqlTaskQueue
 from backend.services.task_queue_service import InMemoryTaskQueue
 
 
@@ -76,6 +78,20 @@ def test_create_task_endpoint():
     assert data["payload"] == {"backend": "postgresql"}
     assert data["result"] == {}
     assert data["error"] == ""
+
+
+def test_build_default_task_queue_uses_memory_for_sqlite():
+    queue = tasks_router.build_default_task_queue("sqlite:///data/app.db")
+
+    assert isinstance(queue, InMemoryTaskQueue)
+
+
+def test_build_default_task_queue_uses_postgresql_for_postgresql_url():
+    queue = tasks_router.build_default_task_queue(
+        "postgresql://agent_user:agent_password@localhost:5432/agent_db"
+    )
+
+    assert isinstance(queue, PostgresqlTaskQueue)
 
 
 def test_get_task_endpoint():

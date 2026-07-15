@@ -43,6 +43,8 @@ def test_initialize_postgresql_knowledge_schema_creates_core_tables():
     assert "CREATE TABLE IF NOT EXISTS chunks" in sql_text
     assert "CREATE TABLE IF NOT EXISTS chunk_embeddings" in sql_text
     assert "vector(1024)" in sql_text
+    assert "CREATE TABLE IF NOT EXISTS tasks" in sql_text
+    assert "payload JSONB" in sql_text
     assert connection.committed is True
 
     assert result == {
@@ -51,4 +53,5 @@ def test_initialize_postgresql_knowledge_schema_creates_core_tables():
         "documents_source_column_ready": True,
         "chunks_table_ready": True,
         "chunk_embeddings_table_ready": True,
+        "tasks_table_ready": True,
     }

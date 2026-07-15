@@ -1,14 +1,16 @@
 from threading import Thread
 
+import psycopg
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
+from backend.config import DATABASE_URL
+from backend.services.database_url_service import is_postgresql_database
+from backend.services.postgresql_task_repository import PostgresqlTaskQueue
 from backend.services.task_queue_service import InMemoryTaskQueue, TaskRunner
 from backend.services.task_dispatcher_service import build_default_task_dispatcher
 
 
 router = APIRouter(prefix="/api/v1/tasks", tags=["tasks"])
-
-task_queue = InMemoryTaskQueue()
 
 
 class TaskCreateRequest(BaseModel):
@@ -16,7 +18,19 @@ class TaskCreateRequest(BaseModel):
     payload: dict = Field(default_factory=dict)
 
 
-def get_task_queue() -> InMemoryTaskQueue:
+def build_default_task_queue(database_url: str = DATABASE_URL):
+    if is_postgresql_database(database_url):
+        return PostgresqlTaskQueue(
+            connection_factory=lambda: psycopg.connect(database_url),
+        )
+
+    return InMemoryTaskQueue()
+
+
+task_queue = build_default_task_queue()
+
+
+def get_task_queue():
     return task_queue
 
 
@@ -26,7 +40,7 @@ def build_task_handler(task: dict):
     return lambda payload: dispatcher.dispatch(task["type"], payload)
 
 
-def get_task_or_404(task_id: int, queue: InMemoryTaskQueue) -> dict:
+def get_task_or_404(task_id: int, queue) -> dict:
     task = queue.get_task(task_id)
 
     if task is None:
@@ -35,14 +49,14 @@ def get_task_or_404(task_id: int, queue: InMemoryTaskQueue) -> dict:
     return task
 
 
-def run_task_by_id(task_id: int, queue: InMemoryTaskQueue) -> dict:
+def run_task_by_id(task_id: int, queue) -> dict:
     task = get_task_or_404(task_id, queue)
     runner = TaskRunner(queue=queue)
 
     return runner.run_task(task_id, build_task_handler(task))
 
 
-def finish_running_task_by_id(task_id: int, queue: InMemoryTaskQueue) -> dict:
+def finish_running_task_by_id(task_id: int, queue) -> dict:
     task = queue.get_task(task_id)
 
     if task is None:
@@ -52,7 +66,7 @@ def finish_running_task_by_id(task_id: int, queue: InMemoryTaskQueue) -> dict:
     return runner.finish_running_task(task_id, build_task_handler(task))
 
 
-def start_task_thread(task_id: int, queue: InMemoryTaskQueue) -> None:
+def start_task_thread(task_id: int, queue) -> None:
     thread = Thread(
         target=finish_running_task_by_id,
         args=(task_id, queue),
@@ -64,7 +78,7 @@ def start_task_thread(task_id: int, queue: InMemoryTaskQueue) -> None:
 @router.post("", status_code=201)
 def create_task(
     request: TaskCreateRequest,
-    queue: InMemoryTaskQueue = Depends(get_task_queue),
+    queue=Depends(get_task_queue),
 ):
     return queue.create_task(
         task_type=request.type,
@@ -77,7 +91,7 @@ def list_tasks(
     status: str | None = Query(default=None),
     order: str = Query(default="asc"),
     limit: int | None = Query(default=None, ge=1),
-    queue: InMemoryTaskQueue = Depends(get_task_queue),
+    queue=Depends(get_task_queue),
 ):
     return queue.list_tasks(status=status, order=order, limit=limit)
 
@@ -85,7 +99,7 @@ def list_tasks(
 @router.get("/{task_id}")
 def get_task(
     task_id: int,
-    queue: InMemoryTaskQueue = Depends(get_task_queue),
+    queue=Depends(get_task_queue),
 ):
     task = queue.get_task(task_id)
 
@@ -98,7 +112,7 @@ def get_task(
 @router.post("/{task_id}/run")
 def run_task(
     task_id: int,
-    queue: InMemoryTaskQueue = Depends(get_task_queue),
+    queue=Depends(get_task_queue),
 ):
     return run_task_by_id(task_id, queue)
 
@@ -106,7 +120,7 @@ def run_task(
 @router.post("/{task_id}/run-async", status_code=202)
 def run_task_async(
     task_id: int,
-    queue: InMemoryTaskQueue = Depends(get_task_queue),
+    queue=Depends(get_task_queue),
 ):
     task = get_task_or_404(task_id, queue)
     queue.mark_task_running(task_id)
@@ -117,7 +131,7 @@ def run_task_async(
 
 @router.post("/postgresql-embedding-backfill")
 def create_and_run_postgresql_embedding_backfill_task(
-    queue: InMemoryTaskQueue = Depends(get_task_queue),
+    queue=Depends(get_task_queue),
 ):
     task = queue.create_task(
         task_type="postgresql_embedding_backfill",
