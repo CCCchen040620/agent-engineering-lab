@@ -199,6 +199,19 @@ def test_mark_task_failed():
     assert updated["progress_message"] == "任务失败"
 
 
+def test_mark_task_canceled():
+    queue = InMemoryTaskQueue()
+    task = queue.create_task("embedding_backfill", {})
+
+    updated = queue.mark_task_canceled(task["id"])
+
+    assert updated["status"] == "canceled"
+    assert updated["result"] == {}
+    assert updated["error"] == ""
+    assert updated["progress_percent"] == 100
+    assert updated["progress_message"] == "任务已取消"
+
+
 def test_succeeded_task_cannot_be_marked_running_again():
     queue = InMemoryTaskQueue()
     task = queue.create_task("embedding_backfill", {})
@@ -226,6 +239,15 @@ def test_failed_task_cannot_be_marked_succeeded():
 
     with pytest.raises(InvalidTaskStatusTransitionError):
         queue.mark_task_succeeded(task["id"], {"updated": 10})
+
+
+def test_running_task_cannot_be_canceled():
+    queue = InMemoryTaskQueue()
+    task = queue.create_task("embedding_backfill", {})
+    queue.mark_task_running(task["id"])
+
+    with pytest.raises(InvalidTaskStatusTransitionError):
+        queue.mark_task_canceled(task["id"])
 
 
 def test_missing_task_raises_task_not_found_error():

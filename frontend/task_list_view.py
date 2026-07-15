@@ -9,6 +9,7 @@ TASK_STATUS_FILTER_OPTIONS = [
     "running",
     "succeeded",
     "failed",
+    "canceled",
 ]
 
 

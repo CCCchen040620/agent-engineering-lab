@@ -304,3 +304,16 @@ class PostgresqlTaskQueue:
                 result={},
                 error=error,
             )
+
+    def mark_task_canceled(self, task_id: int) -> dict:
+        task = self.get_task_or_raise(task_id)
+        validate_task_status_transition(task, "canceled")
+
+        with self.connection_factory() as connection:
+            return update_task_status_in_postgresql(
+                connection,
+                task_id=task_id,
+                status="canceled",
+                result={},
+                error="",
+            )

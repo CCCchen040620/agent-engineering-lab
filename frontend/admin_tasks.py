@@ -1,6 +1,7 @@
 import streamlit as st
 
 from frontend.api_client import (
+    cancel_task_api,
     create_task_api,
     get_info_api,
     get_task_api,
@@ -133,7 +134,7 @@ task_id_to_view = st.number_input(
     value=1,
 )
 
-view_column, retry_column = st.columns(2)
+view_column, retry_column, cancel_column = st.columns(3)
 
 with view_column:
     view_task_detail = st.button("查看任务详情")
@@ -141,12 +142,16 @@ with view_column:
 with retry_column:
     retry_failed_task = st.button("重试失败任务（异步）")
 
+with cancel_column:
+    cancel_pending_task = st.button("取消等待任务")
+
 if view_task_detail:
     try:
         task = get_task_api(BACKEND_API_BASE_URL, int(task_id_to_view))
         st.write(f"任务状态：`{task['status']}`")
 
         render_task_progress(task)
+        render_task_retry_source(task)
 
         summary_items = build_task_result_summary(task)
 
@@ -175,6 +180,16 @@ if retry_failed_task:
         st.json(retry_task)
     except Exception as error:
         st.error(f"无法重试任务：{error}")
+
+if cancel_pending_task:
+    try:
+        canceled_task = cancel_task_api(BACKEND_API_BASE_URL, int(task_id_to_view))
+        st.success(f"任务已取消，任务 ID：{canceled_task['id']}。")
+        render_task_progress(canceled_task)
+        render_task_retry_source(canceled_task)
+        st.json(canceled_task)
+    except Exception as error:
+        st.error(f"无法取消任务：{error}")
 
 st.divider()
 

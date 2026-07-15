@@ -289,6 +289,49 @@ def test_retry_task_async_endpoint_returns_404_when_task_not_found():
     assert response.status_code == 404
 
 
+def test_cancel_task_endpoint_cancels_pending_task():
+    test_queue = InMemoryTaskQueue()
+    task = test_queue.create_task(
+        task_type="echo",
+        payload={"message": "hello"},
+    )
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.post(f"/api/v1/tasks/{task['id']}/cancel")
+
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["id"] == task["id"]
+    assert data["status"] == "canceled"
+    assert data["progress_percent"] == 100
+    assert data["progress_message"] == "任务已取消"
+
+
+def test_cancel_task_endpoint_rejects_running_task():
+    test_queue = InMemoryTaskQueue()
+    task = test_queue.create_task(
+        task_type="echo",
+        payload={"message": "hello"},
+    )
+    test_queue.mark_task_running(task["id"])
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.post(f"/api/v1/tasks/{task['id']}/cancel")
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "只有等待执行的任务可以取消。"
+
+
+def test_cancel_task_endpoint_returns_404_when_task_not_found():
+    test_queue = InMemoryTaskQueue()
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.post("/api/v1/tasks/999/cancel")
+
+    assert response.status_code == 404
+
+
 def test_run_task_endpoint_marks_task_failed_when_task_type_is_unsupported():
     test_queue = InMemoryTaskQueue()
     task = test_queue.create_task(

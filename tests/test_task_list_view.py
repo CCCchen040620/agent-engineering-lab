@@ -1,9 +1,14 @@
 from frontend.task_list_view import (
+    TASK_STATUS_FILTER_OPTIONS,
     build_task_retry_source_text,
     build_task_list_rows,
     filter_tasks_by_status,
     sort_tasks_by_id,
 )
+
+
+def test_task_status_filter_options_include_canceled():
+    assert "canceled" in TASK_STATUS_FILTER_OPTIONS
 
 
 def test_filter_tasks_by_status_returns_all_tasks():

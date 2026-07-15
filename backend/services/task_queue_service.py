@@ -2,10 +2,11 @@ from backend.services.task_error_service import format_task_error
 
 
 VALID_STATUS_TRANSITIONS = {
-    "pending": ["running", "failed"],
+    "pending": ["running", "failed", "canceled"],
     "running": ["succeeded", "failed"],
     "succeeded": [],
     "failed": [],
+    "canceled": [],
 }
 
 
@@ -25,6 +26,10 @@ TASK_STATUS_PROGRESS = {
     "failed": {
         "progress_percent": 100,
         "progress_message": "任务失败",
+    },
+    "canceled": {
+        "progress_percent": 100,
+        "progress_message": "任务已取消",
     },
 }
 
@@ -150,6 +155,15 @@ class InMemoryTaskQueue:
         task["result"] = {}
         task["error"] = error
         apply_task_progress(task, "failed")
+        return task
+
+    def mark_task_canceled(self, task_id: int) -> dict:
+        task = self.get_task_or_raise(task_id)
+        self.validate_status_transition(task, "canceled")
+        task["status"] = "canceled"
+        task["result"] = {}
+        task["error"] = ""
+        apply_task_progress(task, "canceled")
         return task
 
 

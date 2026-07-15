@@ -76,6 +76,15 @@ def create_retry_task_from_failed_task(task_id: int, queue) -> dict:
     )
 
 
+def cancel_pending_task(task_id: int, queue) -> dict:
+    task = get_task_or_404(task_id, queue)
+
+    if task["status"] != "pending":
+        raise HTTPException(status_code=409, detail="只有等待执行的任务可以取消。")
+
+    return queue.mark_task_canceled(task_id)
+
+
 def finish_running_task_by_id(task_id: int, queue) -> dict:
     task = queue.get_task(task_id)
 
@@ -185,6 +194,14 @@ def retry_task_async(
     start_task_thread(retry_task["id"], queue)
 
     return running_task
+
+
+@router.post("/{task_id}/cancel")
+def cancel_task(
+    task_id: int,
+    queue=Depends(get_task_queue),
+):
+    return cancel_pending_task(task_id, queue)
 
 
 @router.post("/postgresql-embedding-backfill")

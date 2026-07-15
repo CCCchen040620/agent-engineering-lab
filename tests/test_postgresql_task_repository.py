@@ -342,6 +342,58 @@ def test_postgresql_task_queue_marks_task_running(monkeypatch):
     assert task["status"] == "running"
 
 
+def test_postgresql_task_queue_marks_task_canceled(monkeypatch):
+    connection = FakeConnection()
+    tasks = {
+        1: {
+            "id": 1,
+            "type": "echo",
+            "status": "pending",
+            "payload": {},
+            "result": {},
+            "error": "",
+            "progress_percent": 0,
+            "progress_message": "等待执行",
+            "retry_of_task_id": None,
+        }
+    }
+
+    def fake_find_task_from_postgresql(connection, task_id: int):
+        return dict(tasks[task_id])
+
+    def fake_update_task_status_in_postgresql(
+        connection,
+        task_id: int,
+        status: str,
+        result: dict,
+        error: str,
+    ):
+        tasks[task_id]["status"] = status
+        tasks[task_id]["result"] = result
+        tasks[task_id]["error"] = error
+        tasks[task_id]["progress_percent"] = 100
+        tasks[task_id]["progress_message"] = "任务已取消"
+        return dict(tasks[task_id])
+
+    monkeypatch.setattr(
+        repository,
+        "find_task_from_postgresql",
+        fake_find_task_from_postgresql,
+    )
+    monkeypatch.setattr(
+        repository,
+        "update_task_status_in_postgresql",
+        fake_update_task_status_in_postgresql,
+    )
+
+    queue = PostgresqlTaskQueue(connection_factory=lambda: connection)
+
+    task = queue.mark_task_canceled(1)
+
+    assert task["status"] == "canceled"
+    assert task["progress_message"] == "任务已取消"
+
+
 def test_postgresql_task_queue_auto_initializes_tasks_table(monkeypatch):
     connection = FakeConnection()
     calls = {

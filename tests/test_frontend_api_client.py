@@ -2,6 +2,7 @@ import requests
 
 from frontend.api_client import (
     backfill_postgresql_embeddings_api,
+    cancel_task_api,
     chat_with_agent_api,
     chat_with_llm_api,
     chat_with_langgraph_agent_api,
@@ -2003,3 +2004,40 @@ def test_retry_task_async_api(monkeypatch):
     assert captured["timeout"] == 10
     assert task["id"] == 2
     assert task["status"] == "running"
+
+
+def test_cancel_task_api(monkeypatch):
+    from frontend import api_client
+
+    captured = {}
+
+    class FakeResponse:
+        status_code = 200
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {
+                "id": 1,
+                "type": "postgresql_embedding_backfill",
+                "status": "canceled",
+                "payload": {},
+                "result": {},
+                "error": "",
+                "progress_percent": 100,
+                "progress_message": "任务已取消",
+            }
+
+    def fake_post(url, timeout=10):
+        captured["url"] = url
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr(api_client.requests, "post", fake_post)
+
+    task = cancel_task_api("http://testserver", task_id=1)
+
+    assert captured["url"] == "http://testserver/api/v1/tasks/1/cancel"
+    assert captured["timeout"] == 10
+    assert task["status"] == "canceled"
