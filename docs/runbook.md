@@ -61,6 +61,7 @@ python -m streamlit run frontend/admin_tasks.py
 - 按任务 ID 查看单个任务详情
 - 一键触发 PostgreSQL embedding 回填
 - 创建 PostgreSQL 文档入库任务：填写标题、文件类型、正文和 source 后提交
+- 页面已将 PostgreSQL embedding 回填和 PostgreSQL 文档入库分区展示；source 含义为：`production` 正式数据、`evaluation` 验收/评测数据、`migration` 迁移数据
 - 选择同步或异步运行方式
 - 查看任务结果摘要：`total_chunks`、`updated_embeddings`、`skipped_embeddings`、`model`
 - 查看任务进度：`progress_percent` 和 `progress_message`

@@ -32,6 +32,10 @@ def test_runbook_documents_task_center_current_boundaries():
     assert "retry_task_id" in runbook
     assert "创建 PostgreSQL 文档入库任务" in runbook
     assert "标题、文件类型、正文和 source" in runbook
+    assert "PostgreSQL embedding 回填和 PostgreSQL 文档入库分区展示" in runbook
+    assert "`production` 正式数据" in runbook
+    assert "`evaluation` 验收/评测数据" in runbook
+    assert "`migration` 迁移数据" in runbook
     assert "事件时间线" in runbook
     assert "运行中任务取消" in runbook
     assert "不是生产级队列系统" in runbook

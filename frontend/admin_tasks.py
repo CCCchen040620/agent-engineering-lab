@@ -16,7 +16,10 @@ from frontend.api_client import (
 from frontend.task_result_summary import (
     build_task_result_summary,
 )
-from frontend.task_failure_view import build_task_failure_summary
+from frontend.task_failure_view import (
+    build_task_failure_summary,
+    summarize_task_failure_as_text,
+)
 from frontend.task_event_view import build_task_event_timeline_rows
 from frontend.task_progress_view import (
     build_task_progress_text,
@@ -92,7 +95,12 @@ def render_task_execution_result(task: dict) -> None:
             "请刷新任务列表查看结果。"
         )
     elif task["status"] == "failed":
-        st.error(f"任务执行失败：{task['error']}")
+        failure_summary_text = summarize_task_failure_as_text(task)
+
+        if failure_summary_text != "":
+            st.error(f"任务执行失败：{failure_summary_text}")
+        else:
+            st.error(f"任务执行失败：{task['error']}")
     else:
         st.info(f"任务状态：{task['status']}")
 
@@ -127,10 +135,18 @@ if info_error is None:
 else:
     st.warning("暂时无法读取任务存储后端，请确认 FastAPI 已启动。")
 
+st.subheader("任务运行方式")
+
 run_mode = st.radio(
     "运行方式",
     ["同步运行（等待完成）", "异步运行（立即返回）"],
     horizontal=True,
+)
+
+st.subheader("PostgreSQL embedding 回填任务")
+st.caption(
+    "用于给 PostgreSQL 中缺失或需要更新的 chunks 生成 embedding。"
+    "如果所有 chunks 都已有 embedding，updated_embeddings 可以为 0。"
 )
 
 if st.button("运行 PostgreSQL embedding 回填"):
@@ -167,6 +183,10 @@ document_source = st.selectbox(
     "文档来源 source",
     ["production", "evaluation", "migration"],
     key="postgresql_task_document_source",
+)
+st.caption(
+    "source 说明：production=正式数据；"
+    "evaluation=验收/评测数据；migration=迁移数据。"
 )
 document_content = st.text_area(
     "文档内容",
