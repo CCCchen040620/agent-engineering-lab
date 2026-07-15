@@ -49,6 +49,42 @@ def test_build_task_result_summary_returns_empty_for_failed_task_without_result(
     assert build_task_result_summary(task) == []
 
 
+def test_build_task_result_summary_for_postgresql_document_ingestion():
+    task = {
+        "type": "postgresql_document_ingestion",
+        "status": "succeeded",
+        "result": {
+            "document_id": 7,
+            "title": "PostgreSQL 任务入库文档",
+            "file_type": "md",
+            "chunk_count": 2,
+            "embedding_count": 2,
+            "source": "production",
+        },
+    }
+
+    summary = build_task_result_summary(task)
+
+    assert summary == [
+        {
+            "label": "文档 ID",
+            "value": 7,
+        },
+        {
+            "label": "chunks 数量",
+            "value": 2,
+        },
+        {
+            "label": "embeddings 数量",
+            "value": 2,
+        },
+        {
+            "label": "source",
+            "value": "production",
+        },
+    ]
+
+
 def test_build_task_result_summary_returns_empty_for_unknown_task_type():
     task = {
         "type": "unknown_task",

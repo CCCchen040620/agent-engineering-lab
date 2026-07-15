@@ -13,6 +13,7 @@ from frontend.api_client import (
     get_info_api,
     get_system_status_api,
     rag_backend_supports_feature,
+    run_postgresql_document_ingestion_task_api,
     submit_feedback_api,
     upload_text_document_api,
     stream_langgraph_agent_api,
@@ -25,6 +26,7 @@ from frontend.retriever_backend_view import (
     get_retriever_backend_radio_index,
 )
 from frontend.task_storage_view import build_task_storage_caption
+from frontend.task_result_summary import build_task_result_summary
 
 
 st.set_page_config(
@@ -86,6 +88,20 @@ def save_postgresql_document_with_content(
         title=title,
         file_type=file_type,
         content=content,
+    )
+
+
+def run_postgresql_document_ingestion_task(
+    title: str,
+    file_type: str,
+    content: str,
+) -> dict:
+    return run_postgresql_document_ingestion_task_api(
+        base_url=BACKEND_API_BASE_URL,
+        title=title,
+        file_type=file_type,
+        content=content,
+        source="production",
     )
 
 
@@ -333,11 +349,20 @@ with st.sidebar:
         [SQLITE_BACKEND_LABEL, POSTGRESQL_BACKEND_LABEL],
     )
     document_storage_backend_name = backend_label_to_backend(document_storage_backend)
+    postgresql_ingestion_mode = "direct"
 
     if document_storage_backend_name == "postgresql":
         st.info(
             "PostgreSQL / pgvector 入库需要后端使用 PostgreSQL DATABASE_URL 启动，"
             "并确保 Ollama 和 bge-m3 可用。"
+        )
+
+    if document_storage_backend_name == "postgresql":
+        postgresql_ingestion_mode = st.radio(
+            "PostgreSQL 入库方式",
+            ["direct", "task"],
+            format_func=lambda mode: "直接入库" if mode == "direct" else "任务化入库",
+            horizontal=True,
         )
 
     document_title = st.text_input("文档标题")
@@ -386,6 +411,8 @@ with st.sidebar:
         elif document_title.strip() == "" or document_content.strip() == "":
             st.warning("文档标题和正文不能为空。")
         else:
+            task = None
+
             if not backend_supports(
                 info,
                 document_storage_backend_name,
@@ -394,6 +421,22 @@ with st.sidebar:
                 st.warning(
                     f"{document_storage_backend} 当前不支持粘贴正文入库。"
                 )
+            elif (
+                document_storage_backend_name == "postgresql"
+                and postgresql_ingestion_mode == "task"
+            ):
+                with st.spinner(
+                    "正在通过任务写入 PostgreSQL、切分 chunks 并生成 pgvector embeddings..."
+                ):
+                    try:
+                        task = run_postgresql_document_ingestion_task(
+                            title=document_title.strip(),
+                            file_type=document_file_type,
+                            content=document_content.strip(),
+                        )
+                        error_message = None
+                    except Exception as error:
+                        error_message = str(error)
             elif document_storage_backend_name == "postgresql":
                 with st.spinner(
                     "正在写入 PostgreSQL、切分 chunks 并生成 pgvector embeddings..."
@@ -413,6 +456,23 @@ with st.sidebar:
 
             if error_message is not None:
                 st.error(format_document_error_message(error_message))
+            elif task is not None:
+                if task["status"] == "succeeded":
+                    st.success(f"任务执行成功，任务 ID：{task['id']}")
+                elif task["status"] == "failed":
+                    st.error(f"任务执行失败：{task.get('error', '')}")
+                else:
+                    st.info(f"任务状态：{task['status']}")
+
+                summary_items = build_task_result_summary(task)
+
+                if summary_items:
+                    columns = st.columns(len(summary_items))
+
+                    for column, item in zip(columns, summary_items):
+                        column.metric(item["label"], item["value"])
+
+                st.json(task)
             else:
                 st.success(
                     f"已新增文档：{document['title']}，切分片段数：{document['chunk_count']}"
