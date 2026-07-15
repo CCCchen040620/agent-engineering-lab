@@ -285,6 +285,23 @@ $FailedTaskEvents = Assert-TaskCenterEventsInclude `
 
 Write-Host "Failed task event count: $($FailedTaskEvents.Count)"
 
+$TaskFailedEvents = @(
+    $FailedTaskEvents |
+        Where-Object { $_.event_type -eq "task_failed" }
+)
+
+$LatestFailedEvent = $TaskFailedEvents[-1]
+
+if ($null -eq $LatestFailedEvent.metadata.error) {
+    Fail-TaskCenterCheck "Failed task event does not include structured error metadata."
+}
+
+if ($LatestFailedEvent.metadata.error -notlike "duplicate_document:*") {
+    Fail-TaskCenterCheck "Failed task event error metadata is not duplicate_document."
+}
+
+Write-Host "[OK] Failed task event includes structured error: $($LatestFailedEvent.metadata.error)"
+
 try {
     $RetryTask = Invoke-RestMethod `
         -Method Post `

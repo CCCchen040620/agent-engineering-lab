@@ -257,6 +257,8 @@ def test_task_center_check_runs_async_document_ingestion_flow():
     assert "task_retry_created" in script
     assert "retry_task_id" in script
     assert "duplicate_document" in script
+    assert "metadata.error" in script
+    assert "Failed task event includes structured error" in script
     assert "Show-TaskFailureDiagnostic" in script
     assert "embedding_generation_error" in script
     assert "Task center check completed successfully." in script
