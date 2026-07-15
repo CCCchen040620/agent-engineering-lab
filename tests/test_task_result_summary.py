@@ -1,4 +1,5 @@
 from frontend.task_result_summary import (
+    build_task_result_detail_rows,
     build_task_result_summary,
     summarize_task_result_as_text,
 )
@@ -83,6 +84,84 @@ def test_build_task_result_summary_for_postgresql_document_ingestion():
             "value": "production",
         },
     ]
+
+
+def test_build_task_result_detail_rows_for_postgresql_document_ingestion():
+    task = {
+        "type": "postgresql_document_ingestion",
+        "status": "succeeded",
+        "result": {
+            "document_id": 7,
+            "title": "PostgreSQL 任务入库文档",
+            "file_type": "md",
+            "chunk_count": 2,
+            "embedding_count": 2,
+            "is_indexed": True,
+            "source": "production",
+        },
+    }
+
+    detail_rows = build_task_result_detail_rows(task)
+
+    assert detail_rows == [
+        {
+            "字段": "文档 ID",
+            "值": 7,
+        },
+        {
+            "字段": "文档标题",
+            "值": "PostgreSQL 任务入库文档",
+        },
+        {
+            "字段": "文件类型",
+            "值": "md",
+        },
+        {
+            "字段": "chunks 数量",
+            "值": 2,
+        },
+        {
+            "字段": "embeddings 数量",
+            "值": 2,
+        },
+        {
+            "字段": "是否已索引",
+            "值": "是",
+        },
+        {
+            "字段": "source",
+            "值": "production",
+        },
+    ]
+
+
+def test_build_task_result_detail_rows_shows_unindexed_document():
+    task = {
+        "type": "postgresql_document_ingestion",
+        "status": "succeeded",
+        "result": {
+            "is_indexed": False,
+        },
+    }
+
+    detail_rows = build_task_result_detail_rows(task)
+
+    assert {
+        "字段": "是否已索引",
+        "值": "否",
+    } in detail_rows
+
+
+def test_build_task_result_detail_rows_returns_empty_for_embedding_backfill():
+    task = {
+        "type": "postgresql_embedding_backfill",
+        "status": "succeeded",
+        "result": {
+            "total_chunks": 29,
+        },
+    }
+
+    assert build_task_result_detail_rows(task) == []
 
 
 def test_build_task_result_summary_returns_empty_for_unknown_task_type():

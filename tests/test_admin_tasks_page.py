@@ -47,5 +47,15 @@ def test_task_admin_page_reuses_task_execution_result_renderer():
     assert "def render_task_execution_result(task: dict)" in source
     assert source.count("render_task_execution_result(task)") >= 2
     assert "build_task_result_summary(task)" in source
+    assert "build_task_result_detail_rows(task)" in source
     assert "render_task_failure_summary(task)" in source
     assert "summarize_task_failure_as_text(task)" in source
+
+
+def test_task_admin_page_shows_task_result_details():
+    source = Path("frontend/admin_tasks.py").read_text(encoding="utf-8")
+
+    assert "def render_task_result_details(task: dict)" in source
+    assert "任务结果详情" in source
+    assert "st.table(detail_rows)" in source
+    assert source.count("render_task_result_details(task)") >= 2

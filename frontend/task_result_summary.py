@@ -52,6 +52,48 @@ def build_task_result_summary(task: dict) -> list[dict]:
     ]
 
 
+def build_task_result_detail_rows(task: dict) -> list[dict]:
+    """Build detailed task result rows for table rendering."""
+    result = task.get("result") or {}
+
+    if result == {}:
+        return []
+
+    if task.get("type") != POSTGRESQL_DOCUMENT_INGESTION_TASK_TYPE:
+        return []
+
+    return [
+        {
+            "字段": "文档 ID",
+            "值": result.get("document_id", ""),
+        },
+        {
+            "字段": "文档标题",
+            "值": result.get("title", ""),
+        },
+        {
+            "字段": "文件类型",
+            "值": result.get("file_type", ""),
+        },
+        {
+            "字段": "chunks 数量",
+            "值": result.get("chunk_count", 0),
+        },
+        {
+            "字段": "embeddings 数量",
+            "值": result.get("embedding_count", 0),
+        },
+        {
+            "字段": "是否已索引",
+            "值": "是" if result.get("is_indexed") else "否",
+        },
+        {
+            "字段": "source",
+            "值": result.get("source", ""),
+        },
+    ]
+
+
 def summarize_task_result_as_text(task: dict) -> str:
     summary_items = build_task_result_summary(task)
 

@@ -14,6 +14,7 @@ from frontend.api_client import (
     run_task_async_api,
 )
 from frontend.task_result_summary import (
+    build_task_result_detail_rows,
     build_task_result_summary,
 )
 from frontend.task_failure_view import (
@@ -52,6 +53,29 @@ def render_task_failure_summary(task: dict) -> None:
 
     for item in failure_items:
         st.write(f"{item['label']}：{item['value']}")
+
+
+def render_task_result_summary(task: dict) -> None:
+    summary_items = build_task_result_summary(task)
+
+    if not summary_items:
+        return
+
+    st.subheader("任务结果摘要")
+    columns = st.columns(len(summary_items))
+
+    for column, item in zip(columns, summary_items):
+        column.metric(item["label"], item["value"])
+
+
+def render_task_result_details(task: dict) -> None:
+    detail_rows = build_task_result_detail_rows(task)
+
+    if not detail_rows:
+        return
+
+    st.subheader("任务结果详情")
+    st.table(detail_rows)
 
 
 def render_task_progress(task: dict) -> None:
@@ -108,15 +132,8 @@ def render_task_execution_result(task: dict) -> None:
     render_task_retry_source(task)
     render_task_attempt_summary(task)
 
-    summary_items = build_task_result_summary(task)
-
-    if summary_items:
-        st.subheader("任务结果摘要")
-        columns = st.columns(len(summary_items))
-
-        for column, item in zip(columns, summary_items):
-            column.metric(item["label"], item["value"])
-
+    render_task_result_summary(task)
+    render_task_result_details(task)
     render_task_failure_summary(task)
 
     st.json(task)
@@ -261,15 +278,8 @@ if view_task_detail:
         render_task_retry_source(task)
         render_task_attempt_summary(task)
 
-        summary_items = build_task_result_summary(task)
-
-        if summary_items:
-            st.subheader("任务结果摘要")
-            columns = st.columns(len(summary_items))
-
-            for column, item in zip(columns, summary_items):
-                column.metric(item["label"], item["value"])
-
+        render_task_result_summary(task)
+        render_task_result_details(task)
         render_task_failure_summary(task)
         render_task_events(task_events)
 
