@@ -18,6 +18,13 @@ class TaskCreateRequest(BaseModel):
     payload: dict = Field(default_factory=dict)
 
 
+class PostgreSQLDocumentIngestionTaskRequest(BaseModel):
+    title: str = Field(min_length=1)
+    file_type: str = Field(min_length=1)
+    content: str = Field(min_length=1)
+    source: str = "production"
+
+
 def build_default_task_queue(database_url: str = DATABASE_URL):
     if is_postgresql_database(database_url):
         return PostgresqlTaskQueue(
@@ -136,6 +143,24 @@ def create_and_run_postgresql_embedding_backfill_task(
     task = queue.create_task(
         task_type="postgresql_embedding_backfill",
         payload={},
+    )
+
+    return run_task_by_id(task["id"], queue)
+
+
+@router.post("/postgresql-document-ingestion")
+def create_and_run_postgresql_document_ingestion_task(
+    request: PostgreSQLDocumentIngestionTaskRequest,
+    queue=Depends(get_task_queue),
+):
+    task = queue.create_task(
+        task_type="postgresql_document_ingestion",
+        payload={
+            "title": request.title,
+            "file_type": request.file_type,
+            "content": request.content,
+            "source": request.source,
+        },
     )
 
     return run_task_by_id(task["id"], queue)
