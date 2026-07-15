@@ -5,6 +5,7 @@ from frontend.api_client import (
     get_info_api,
     get_task_api,
     list_tasks_api,
+    retry_task_async_api,
     run_postgresql_embedding_backfill_task_api,
     run_task_async_api,
 )
@@ -121,7 +122,15 @@ task_id_to_view = st.number_input(
     value=1,
 )
 
-if st.button("查看任务详情"):
+view_column, retry_column = st.columns(2)
+
+with view_column:
+    view_task_detail = st.button("查看任务详情")
+
+with retry_column:
+    retry_failed_task = st.button("重试失败任务（异步）")
+
+if view_task_detail:
     try:
         task = get_task_api(BACKEND_API_BASE_URL, int(task_id_to_view))
         st.write(f"任务状态：`{task['status']}`")
@@ -142,6 +151,18 @@ if st.button("查看任务详情"):
         st.json(task)
     except Exception as error:
         st.error(f"无法读取任务详情：{error}")
+
+if retry_failed_task:
+    try:
+        retry_task = retry_task_async_api(BACKEND_API_BASE_URL, int(task_id_to_view))
+        st.success(
+            f"已创建重试任务，任务 ID：{retry_task['id']}。"
+            "请刷新任务列表查看执行结果。"
+        )
+        render_task_progress(retry_task)
+        st.json(retry_task)
+    except Exception as error:
+        st.error(f"无法重试任务：{error}")
 
 st.divider()
 

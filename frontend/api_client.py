@@ -612,6 +612,15 @@ def run_task_async_api(base_url: str, task_id: int) -> dict:
     return response.json()
 
 
+def retry_task_async_api(base_url: str, task_id: int) -> dict:
+    response = requests.post(
+        base_url + f"/api/v1/tasks/{task_id}/retry-async",
+        timeout=10,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
 def run_postgresql_embedding_backfill_task_api(base_url: str) -> dict:
     response = requests.post(
         base_url + "/api/v1/tasks/postgresql-embedding-backfill",

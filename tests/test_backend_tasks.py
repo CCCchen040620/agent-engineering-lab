@@ -207,6 +207,87 @@ def test_run_task_async_endpoint_returns_404_when_task_not_found():
     assert response.status_code == 404
 
 
+def test_retry_task_async_endpoint_creates_new_running_task_from_failed_task(
+    monkeypatch,
+):
+    from backend.services import task_dispatcher_service
+
+    isolate_postgresql_backfill_connection(monkeypatch, task_dispatcher_service)
+    handler_started = Event()
+    release_handler = Event()
+
+    def fake_backfill_missing_postgresql_chunk_embeddings(connection):
+        handler_started.set()
+        assert release_handler.wait(timeout=1)
+
+        return {
+            "total_chunks": 3,
+            "updated_embeddings": 2,
+            "skipped_embeddings": 1,
+            "model": "fake-model",
+        }
+
+    monkeypatch.setattr(
+        task_dispatcher_service,
+        "backfill_missing_postgresql_chunk_embeddings",
+        fake_backfill_missing_postgresql_chunk_embeddings,
+    )
+
+    test_queue = InMemoryTaskQueue()
+    failed_task = test_queue.create_task(
+        task_type="postgresql_embedding_backfill",
+        payload={},
+    )
+    test_queue.mark_task_failed(failed_task["id"], "Ollama unavailable")
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.post(f"/api/v1/tasks/{failed_task['id']}/retry-async")
+
+    assert response.status_code == 202
+
+    data = response.json()
+    assert data["id"] != failed_task["id"]
+    assert data["type"] == failed_task["type"]
+    assert data["payload"] == failed_task["payload"]
+    assert data["status"] == "running"
+
+    assert test_queue.get_task(failed_task["id"])["status"] == "failed"
+    assert handler_started.wait(timeout=1)
+
+    release_handler.set()
+    completed_task = wait_for_task_status(test_queue, data["id"], "succeeded")
+
+    assert completed_task["result"] == {
+        "total_chunks": 3,
+        "updated_embeddings": 2,
+        "skipped_embeddings": 1,
+        "model": "fake-model",
+    }
+
+
+def test_retry_task_async_endpoint_rejects_non_failed_task():
+    test_queue = InMemoryTaskQueue()
+    task = test_queue.create_task(
+        task_type="echo",
+        payload={"message": "hello"},
+    )
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.post(f"/api/v1/tasks/{task['id']}/retry-async")
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "只有失败任务可以重试。"
+
+
+def test_retry_task_async_endpoint_returns_404_when_task_not_found():
+    test_queue = InMemoryTaskQueue()
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.post("/api/v1/tasks/999/retry-async")
+
+    assert response.status_code == 404
+
+
 def test_run_task_endpoint_marks_task_failed_when_task_type_is_unsupported():
     test_queue = InMemoryTaskQueue()
     task = test_queue.create_task(

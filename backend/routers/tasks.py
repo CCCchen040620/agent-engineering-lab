@@ -63,6 +63,18 @@ def run_task_by_id(task_id: int, queue) -> dict:
     return runner.run_task(task_id, build_task_handler(task))
 
 
+def create_retry_task_from_failed_task(task_id: int, queue) -> dict:
+    task = get_task_or_404(task_id, queue)
+
+    if task["status"] != "failed":
+        raise HTTPException(status_code=409, detail="只有失败任务可以重试。")
+
+    return queue.create_task(
+        task_type=task["type"],
+        payload=task["payload"],
+    )
+
+
 def finish_running_task_by_id(task_id: int, queue) -> dict:
     task = queue.get_task(task_id)
 
@@ -155,11 +167,23 @@ def run_task_async(
     task_id: int,
     queue=Depends(get_task_queue),
 ):
-    task = get_task_or_404(task_id, queue)
-    queue.mark_task_running(task_id)
+    get_task_or_404(task_id, queue)
+    running_task = queue.mark_task_running(task_id)
     start_task_thread(task_id, queue)
 
-    return task
+    return running_task
+
+
+@router.post("/{task_id}/retry-async", status_code=202)
+def retry_task_async(
+    task_id: int,
+    queue=Depends(get_task_queue),
+):
+    retry_task = create_retry_task_from_failed_task(task_id, queue)
+    running_task = queue.mark_task_running(retry_task["id"])
+    start_task_thread(retry_task["id"], queue)
+
+    return running_task
 
 
 @router.post("/postgresql-embedding-backfill")
