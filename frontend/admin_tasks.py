@@ -107,6 +107,7 @@ if st.button("查看任务详情"):
 st.divider()
 
 st.subheader("任务列表")
+st.caption("默认按最新任务优先显示；异步任务提交后，点击“刷新列表”查看最新状态。")
 
 filter_column, sort_column, limit_column, refresh_column = st.columns([2, 2, 2, 1])
 

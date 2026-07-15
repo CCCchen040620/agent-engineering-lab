@@ -627,7 +627,7 @@ def test_list_tasks_endpoint():
     response = client.get("/api/v1/tasks")
 
     assert response.status_code == 200
-    assert response.json() == [first_task, second_task]
+    assert response.json() == [second_task, first_task]
 
 
 def test_list_tasks_endpoint_can_filter_by_status():
@@ -702,7 +702,7 @@ def test_list_tasks_endpoint_can_limit_results():
         task_type="postgresql_embedding_backfill",
         payload={},
     )
-    test_queue.create_task(
+    third_task = test_queue.create_task(
         task_type="rag_evaluation",
         payload={},
     )
@@ -711,7 +711,8 @@ def test_list_tasks_endpoint_can_limit_results():
     response = client.get("/api/v1/tasks?limit=2")
 
     assert response.status_code == 200
-    assert response.json() == [first_task, second_task]
+    assert response.json() == [third_task, second_task]
+    assert first_task not in response.json()
 
 
 def test_list_tasks_endpoint_can_filter_sort_and_limit():

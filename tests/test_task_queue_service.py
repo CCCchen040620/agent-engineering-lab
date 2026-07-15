@@ -38,7 +38,7 @@ def test_list_tasks():
 
     tasks = queue.list_tasks()
 
-    assert tasks == [first, second]
+    assert tasks == [second, first]
 
 
 def test_list_tasks_can_filter_by_status():
@@ -98,11 +98,12 @@ def test_list_tasks_can_limit_results():
 
     first = queue.create_task("embedding_backfill", {})
     second = queue.create_task("rag_evaluation", {})
-    queue.create_task("postgresql_embedding_backfill", {})
+    third = queue.create_task("postgresql_embedding_backfill", {})
 
     tasks = queue.list_tasks(limit=2)
 
-    assert tasks == [first, second]
+    assert tasks == [third, second]
+    assert first not in tasks
 
 
 def test_list_tasks_can_filter_sort_and_limit():

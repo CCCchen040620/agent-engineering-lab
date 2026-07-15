@@ -47,7 +47,7 @@ class InMemoryTaskQueue:
     def list_tasks(
         self,
         status: str | None = None,
-        order: str = "asc",
+        order: str = "desc",
         limit: int | None = None,
     ) -> list[dict]:
         if status in (None, ""):

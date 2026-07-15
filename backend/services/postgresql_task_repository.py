@@ -76,7 +76,7 @@ def insert_task_to_postgresql(
 def list_tasks_from_postgresql(
     connection,
     status: str | None = None,
-    order: str = "asc",
+    order: str = "desc",
     limit: int | None = None,
 ) -> list[dict]:
     order_sql = "DESC" if order == "desc" else "ASC"
@@ -187,7 +187,7 @@ class PostgresqlTaskQueue:
     def list_tasks(
         self,
         status: str | None = None,
-        order: str = "asc",
+        order: str = "desc",
         limit: int | None = None,
     ) -> list[dict]:
         self.ensure_tasks_table_ready()

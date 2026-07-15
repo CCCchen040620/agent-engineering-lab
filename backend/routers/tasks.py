@@ -107,7 +107,7 @@ def create_task(
 @router.get("")
 def list_tasks(
     status: str | None = Query(default=None),
-    order: str = Query(default="asc"),
+    order: str = Query(default="desc"),
     limit: int | None = Query(default=None, ge=1),
     queue=Depends(get_task_queue),
 ):

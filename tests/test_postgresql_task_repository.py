@@ -148,7 +148,7 @@ def test_list_tasks_from_postgresql():
     assert tasks[0]["type"] == "echo"
     assert tasks[1]["status"] == "failed"
     assert "FROM tasks" in connection.cursor_instance.sql
-    assert "ORDER BY id ASC" in connection.cursor_instance.sql
+    assert "ORDER BY id DESC" in connection.cursor_instance.sql
     assert connection.cursor_instance.params == ()
 
 
@@ -420,7 +420,7 @@ def test_postgresql_task_queue_reads_task_after_queue_is_recreated(monkeypatch):
     def fake_list_tasks_from_postgresql(
         connection,
         status=None,
-        order="asc",
+        order="desc",
         limit=None,
     ):
         tasks = list(persistent_tasks.values())
