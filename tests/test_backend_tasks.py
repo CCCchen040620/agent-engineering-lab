@@ -286,6 +286,10 @@ def test_retry_task_async_endpoint_creates_new_running_task_from_failed_task(
 
     assert test_queue.get_task(failed_task["id"])["status"] == "failed"
     assert test_queue.get_task(failed_task["id"])["retry_count"] == 1
+    assert test_queue.list_task_events(failed_task["id"])[-1]["metadata"] == {
+        "retry_count": 1,
+        "retry_task_id": data["id"],
+    }
     assert handler_started.wait(timeout=1)
 
     release_handler.set()

@@ -74,7 +74,7 @@ def create_retry_task_from_failed_task(task_id: int, queue) -> dict:
         payload=task["payload"],
         retry_of_task_id=task["id"],
     )
-    queue.increment_task_retry_count(task["id"])
+    queue.increment_task_retry_count(task["id"], retry_task_id=retry_task["id"])
 
     return retry_task
 

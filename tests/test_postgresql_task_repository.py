@@ -776,6 +776,63 @@ def test_postgresql_task_queue_reads_task_after_queue_is_recreated(monkeypatch):
     assert recreated_queue_instance is not first_queue_instance
 
 
+def test_postgresql_task_queue_records_retry_task_id_in_event(monkeypatch):
+    connection = FakeConnection()
+    captured = {}
+
+    def fake_increment_task_retry_count_in_postgresql(connection, task_id: int):
+        return {
+            "id": task_id,
+            "type": "postgresql_embedding_backfill",
+            "status": "failed",
+            "payload": {},
+            "result": {},
+            "error": "Ollama unavailable",
+            "progress_percent": 100,
+            "progress_message": "任务失败",
+            "retry_of_task_id": None,
+            "run_count": 1,
+            "retry_count": 2,
+        }
+
+    def fake_insert_task_event_to_postgresql(
+        connection,
+        task_id: int,
+        event_type: str,
+        message: str = "",
+        metadata: dict | None = None,
+    ):
+        captured["task_id"] = task_id
+        captured["event_type"] = event_type
+        captured["metadata"] = metadata
+        return {}
+
+    monkeypatch.setattr(
+        repository,
+        "increment_task_retry_count_in_postgresql",
+        fake_increment_task_retry_count_in_postgresql,
+    )
+    monkeypatch.setattr(
+        repository,
+        "insert_task_event_to_postgresql",
+        fake_insert_task_event_to_postgresql,
+    )
+
+    queue = PostgresqlTaskQueue(connection_factory=lambda: connection)
+
+    task = queue.increment_task_retry_count(1, retry_task_id=9)
+
+    assert task["retry_count"] == 2
+    assert captured == {
+        "task_id": 1,
+        "event_type": "task_retry_created",
+        "metadata": {
+            "retry_count": 2,
+            "retry_task_id": 9,
+        },
+    }
+
+
 def test_postgresql_task_queue_rejects_invalid_status_transition(monkeypatch):
     connection = FakeConnection()
 

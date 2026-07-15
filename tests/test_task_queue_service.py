@@ -192,12 +192,15 @@ def test_increment_task_retry_count():
     queue = InMemoryTaskQueue()
     task = queue.create_task("embedding_backfill", {})
 
-    updated = queue.increment_task_retry_count(task["id"])
+    updated = queue.increment_task_retry_count(task["id"], retry_task_id=9)
 
     assert updated["retry_count"] == 1
-    assert queue.list_task_events(task["id"])[-1]["event_type"] == (
-        "task_retry_created"
-    )
+    event = queue.list_task_events(task["id"])[-1]
+    assert event["event_type"] == "task_retry_created"
+    assert event["metadata"] == {
+        "retry_count": 1,
+        "retry_task_id": 9,
+    }
 
 
 def test_mark_task_failed():

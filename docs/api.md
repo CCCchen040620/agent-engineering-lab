@@ -1176,6 +1176,8 @@ GET /api/v1/tasks?status=failed&order=desc&limit=20
 - `task_canceled`
 - `task_retry_created`
 
+事件中的 `metadata` 会携带补充信息，例如失败事件的 `error`、运行事件的 `run_count`、重试事件的 `retry_task_id`。
+
 如果任务不存在，返回 `404`。
 
 ### POST /api/v1/tasks

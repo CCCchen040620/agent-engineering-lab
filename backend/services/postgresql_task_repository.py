@@ -501,17 +501,26 @@ class PostgresqlTaskQueue:
 
             return updated_task
 
-    def increment_task_retry_count(self, task_id: int) -> dict:
+    def increment_task_retry_count(
+        self,
+        task_id: int,
+        retry_task_id: int | None = None,
+    ) -> dict:
         self.ensure_tasks_table_ready()
 
         with self.connection_factory() as connection:
             updated_task = increment_task_retry_count_in_postgresql(connection, task_id)
+            metadata = {"retry_count": updated_task["retry_count"]}
+
+            if retry_task_id is not None:
+                metadata["retry_task_id"] = retry_task_id
+
             insert_task_event_to_postgresql(
                 connection,
                 task_id=task_id,
                 event_type="task_retry_created",
                 message="Retry task created.",
-                metadata={"retry_count": updated_task["retry_count"]},
+                metadata=metadata,
             )
 
             return updated_task

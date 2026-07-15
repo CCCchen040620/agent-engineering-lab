@@ -242,14 +242,23 @@ class InMemoryTaskQueue:
         )
         return task
 
-    def increment_task_retry_count(self, task_id: int) -> dict:
+    def increment_task_retry_count(
+        self,
+        task_id: int,
+        retry_task_id: int | None = None,
+    ) -> dict:
         task = self.get_task_or_raise(task_id)
         task["retry_count"] = task["retry_count"] + 1
+        metadata = {"retry_count": task["retry_count"]}
+
+        if retry_task_id is not None:
+            metadata["retry_task_id"] = retry_task_id
+
         self.record_task_event(
             task_id=task_id,
             event_type="task_retry_created",
             message="Retry task created.",
-            metadata={"retry_count": task["retry_count"]},
+            metadata=metadata,
         )
         return task
 

@@ -15,6 +15,7 @@ from frontend.task_result_summary import (
     build_task_result_summary,
 )
 from frontend.task_failure_view import build_task_failure_summary
+from frontend.task_event_view import build_task_event_timeline_rows
 from frontend.task_progress_view import (
     build_task_progress_text,
     clamp_progress_percent,
@@ -77,7 +78,7 @@ def render_task_events(events: list[dict]) -> None:
         return
 
     st.subheader("任务事件")
-    st.dataframe(events, use_container_width=True)
+    st.dataframe(build_task_event_timeline_rows(events), use_container_width=True)
 
 
 st.set_page_config(page_title="后台任务中心", layout="wide")
