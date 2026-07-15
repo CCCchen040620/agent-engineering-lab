@@ -7,6 +7,7 @@
 - 当 `DATABASE_URL` 使用 PostgreSQL 时，任务记录会保存到 PostgreSQL。
 - 支持 PostgreSQL embedding 回填任务。
 - 支持 PostgreSQL 文档异步入库任务。
+- 任务中心页面可以直接填写标题、文件类型、正文和 source，创建 PostgreSQL 文档入库任务。
 - 任务列表默认最新任务优先。
 - 失败任务会保存结构化错误原因，并在任务中心显示处理建议。
 - 任务会显示轻量进度：`pending/running/succeeded/failed/canceled`。
@@ -59,6 +60,7 @@ python -m streamlit run frontend/admin_tasks.py
 - 限制任务列表最多显示数量
 - 按任务 ID 查看单个任务详情
 - 一键触发 PostgreSQL embedding 回填
+- 创建 PostgreSQL 文档入库任务：填写标题、文件类型、正文和 source 后提交
 - 选择同步或异步运行方式
 - 查看任务结果摘要：`total_chunks`、`updated_embeddings`、`skipped_embeddings`、`model`
 - 查看任务进度：`progress_percent` 和 `progress_message`

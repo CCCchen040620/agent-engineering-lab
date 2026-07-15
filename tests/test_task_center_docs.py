@@ -30,6 +30,8 @@ def test_runbook_documents_task_center_current_boundaries():
     assert "run_count" in runbook
     assert "retry_count" in runbook
     assert "retry_task_id" in runbook
+    assert "创建 PostgreSQL 文档入库任务" in runbook
+    assert "标题、文件类型、正文和 source" in runbook
     assert "事件时间线" in runbook
     assert "运行中任务取消" in runbook
     assert "不是生产级队列系统" in runbook

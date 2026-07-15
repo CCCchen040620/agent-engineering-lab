@@ -9,6 +9,8 @@ from frontend.api_client import (
     list_tasks_api,
     retry_task_async_api,
     run_postgresql_embedding_backfill_task_api,
+    run_postgresql_document_ingestion_task_api,
+    run_postgresql_document_ingestion_task_async_api,
     run_task_async_api,
 )
 from frontend.task_result_summary import (
@@ -81,6 +83,37 @@ def render_task_events(events: list[dict]) -> None:
     st.dataframe(build_task_event_timeline_rows(events), use_container_width=True)
 
 
+def render_task_execution_result(task: dict) -> None:
+    if task["status"] == "succeeded":
+        st.success("任务执行成功。")
+    elif task["status"] == "running":
+        st.info(
+            f"任务已开始，任务 ID：{task['id']}。"
+            "请刷新任务列表查看结果。"
+        )
+    elif task["status"] == "failed":
+        st.error(f"任务执行失败：{task['error']}")
+    else:
+        st.info(f"任务状态：{task['status']}")
+
+    render_task_progress(task)
+    render_task_retry_source(task)
+    render_task_attempt_summary(task)
+
+    summary_items = build_task_result_summary(task)
+
+    if summary_items:
+        st.subheader("任务结果摘要")
+        columns = st.columns(len(summary_items))
+
+        for column, item in zip(columns, summary_items):
+            column.metric(item["label"], item["value"])
+
+    render_task_failure_summary(task)
+
+    st.json(task)
+
+
 st.set_page_config(page_title="后台任务中心", layout="wide")
 
 st.title("后台任务中心")
@@ -112,33 +145,62 @@ if st.button("运行 PostgreSQL embedding 回填"):
             )
             task = run_task_async_api(BACKEND_API_BASE_URL, created_task["id"])
 
-        if task["status"] == "succeeded":
-            st.success("任务执行成功。")
-        elif task["status"] == "running":
-            st.info(f"任务已开始，任务 ID：{task['id']}。请刷新任务列表查看结果。")
-        elif task["status"] == "failed":
-            st.error(f"任务执行失败：{task['error']}")
-        else:
-            st.info(f"任务状态：{task['status']}")
-
-        render_task_progress(task)
-        render_task_retry_source(task)
-        render_task_attempt_summary(task)
-
-        summary_items = build_task_result_summary(task)
-
-        if summary_items:
-            st.subheader("任务结果摘要")
-            columns = st.columns(len(summary_items))
-
-            for column, item in zip(columns, summary_items):
-                column.metric(item["label"], item["value"])
-
-        render_task_failure_summary(task)
-
-        st.json(task)
+        render_task_execution_result(task)
     except Exception as error:
         st.error(f"任务请求失败：{error}")
+
+st.divider()
+
+st.subheader("创建 PostgreSQL 文档入库任务")
+st.caption(
+    "用于把一段文档正文作为后台任务写入 PostgreSQL/pgvector。"
+    "同步模式会等待入库完成；异步模式会立即返回任务 ID。"
+)
+
+document_title = st.text_input("文档标题", key="postgresql_task_document_title")
+document_file_type = st.selectbox(
+    "文件类型",
+    ["md", "txt"],
+    key="postgresql_task_document_file_type",
+)
+document_source = st.selectbox(
+    "文档来源 source",
+    ["production", "evaluation", "migration"],
+    key="postgresql_task_document_source",
+)
+document_content = st.text_area(
+    "文档内容",
+    height=160,
+    key="postgresql_task_document_content",
+)
+
+if st.button("创建 PostgreSQL 文档入库任务"):
+    if document_title.strip() == "":
+        st.warning("请先填写文档标题。")
+    elif document_content.strip() == "":
+        st.warning("请先填写文档内容。")
+    else:
+        try:
+            if run_mode == "同步运行（等待完成）":
+                task = run_postgresql_document_ingestion_task_api(
+                    BACKEND_API_BASE_URL,
+                    title=document_title,
+                    file_type=document_file_type,
+                    content=document_content,
+                    source=document_source,
+                )
+            else:
+                task = run_postgresql_document_ingestion_task_async_api(
+                    BACKEND_API_BASE_URL,
+                    title=document_title,
+                    file_type=document_file_type,
+                    content=document_content,
+                    source=document_source,
+                )
+
+            render_task_execution_result(task)
+        except Exception as error:
+            st.error(f"文档入库任务请求失败：{error}")
 
 st.divider()
 
