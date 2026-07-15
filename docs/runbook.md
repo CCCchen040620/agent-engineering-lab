@@ -9,7 +9,10 @@
 - 支持 PostgreSQL 文档异步入库任务。
 - 任务列表默认最新任务优先。
 - 失败任务会保存结构化错误原因，并在任务中心显示处理建议。
-- 当前仍然不是生产级队列系统：异步执行仍使用 FastAPI 进程内的轻量线程，还没有独立 worker、重试策略、取消任务、任务进度百分比和分布式队列。
+- 任务会显示轻量进度：`pending/running/succeeded/failed/canceled`。
+- 失败任务支持异步重试，并记录 `retry_of_task_id`，方便追溯来源。
+- 等待执行的 `pending` 任务支持取消。
+- 当前仍然不是生产级队列系统：异步执行仍使用 FastAPI 进程内的轻量线程，还没有独立 worker、自动重试策略、运行中任务取消、并发控制和分布式队列。
 
 交付前可以运行任务中心专项验收：
 
@@ -54,6 +57,9 @@ python -m streamlit run frontend/admin_tasks.py
 - 一键触发 PostgreSQL embedding 回填
 - 选择同步或异步运行方式
 - 查看任务结果摘要：`total_chunks`、`updated_embeddings`、`skipped_embeddings`、`model`
+- 查看任务进度：`progress_percent` 和 `progress_message`
+- 重试失败任务：基于旧任务的 `type` 和 `payload` 创建新任务，并记录 `retry_of_task_id`
+- 取消等待任务：只允许取消尚未开始执行的 `pending` 任务
 
 运行方式说明：
 
@@ -67,8 +73,11 @@ python -m streamlit run frontend/admin_tasks.py
 - 异步运行成功启动时，页面会先显示任务已开始；刷新任务列表后应能看到最终状态
 - 如果 PostgreSQL、Ollama 或 embedding 模型不可用，任务状态应为 `failed`，并在 `error` 中记录原因
 - 如果所有 chunks 已经有 embedding，结果中 `updated_embeddings` 可以为 `0`，`skipped_embeddings` 等于已有 embedding 的 chunks 数量
+- 如果任务失败，可以输入失败任务 ID，点击“重试失败任务（异步）”，新任务应显示重试来源
+- 如果任务仍是 `pending`，可以输入任务 ID，点击“取消等待任务”，状态应变为 `canceled`
+- 如果任务已经 `running`，当前版本不会强行中断线程，取消接口会拒绝该请求
 
-说明：当前任务中心仍是学习版任务流程。当后端使用 PostgreSQL `DATABASE_URL` 启动时，任务记录会保存到 PostgreSQL；异步执行仍使用 FastAPI 进程内的轻量后台线程。它还不是生产级队列系统，暂不支持独立 worker、任务取消、自动重试和进度百分比。
+说明：当前任务中心仍是学习版任务流程。当后端使用 PostgreSQL `DATABASE_URL` 启动时，任务记录会保存到 PostgreSQL；异步执行仍使用 FastAPI 进程内的轻量后台线程。它已经支持轻量进度、失败任务重试和 pending 任务取消，但还不是生产级队列系统，暂不支持独立 worker、自动重试策略、运行中任务取消、并发控制和分布式队列。
 
 SQLite Task Repository 保留为任务表结构学习样本；当前任务 API 优先走 PostgreSQL Task Repository。后续如果继续生产化，建议让 PostgreSQL 保存任务记录和审计数据，由 Redis / worker 负责排队、执行、重试、取消和进度。
 

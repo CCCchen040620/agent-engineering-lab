@@ -1106,6 +1106,170 @@ GET /api/v1/conversations/1/messages
 - `conversation_id` 用来建立 conversation 和 messages 的一对多关系。
 - 如果 conversation 不存在，返回 `404`。
 
+## 后台任务接口
+
+后台任务接口用于查看任务状态，并触发 PostgreSQL embedding 回填、PostgreSQL 文档入库等后台任务。
+
+当前任务状态包括：
+
+```text
+pending    等待执行
+running    正在执行
+succeeded  执行成功
+failed     执行失败
+canceled   已取消
+```
+
+任务对象中的关键字段：
+
+- `id`：任务 ID。
+- `type`：任务类型，例如 `postgresql_embedding_backfill`、`postgresql_document_ingestion`。
+- `status`：任务状态。
+- `payload`：任务输入参数。
+- `result`：任务成功后的结果摘要。
+- `error`：任务失败时的错误信息。
+- `progress_percent`：轻量进度百分比。
+- `progress_message`：轻量进度说明。
+- `retry_of_task_id`：如果该任务来自失败任务重试，这里记录原任务 ID；普通任务为 `null`。
+
+说明：
+
+- 当前异步执行仍使用 FastAPI 进程内轻量线程。
+- 当前只支持取消 `pending` 任务，不会强行中断 `running` 任务。
+- 重试失败任务时，不会覆盖旧失败任务，而是创建一条新任务，并记录 `retry_of_task_id`。
+- 这还不是生产级队列系统，后续生产化可以接入独立 worker、Redis / Celery / RQ / Dramatiq 等组件。
+
+### GET /api/v1/tasks
+
+查看任务列表。
+
+支持查询参数：
+
+- `status`：按任务状态筛选，例如 `failed`、`running`、`canceled`。
+- `order`：排序方式，支持 `desc` 和 `asc`。
+- `limit`：最多返回多少条任务。
+
+请求示例：
+
+```text
+GET /api/v1/tasks?status=failed&order=desc&limit=20
+```
+
+### GET /api/v1/tasks/{task_id}
+
+查看单个任务详情。
+
+如果任务不存在，返回 `404`。
+
+### POST /api/v1/tasks
+
+创建一个通用任务。
+
+请求示例：
+
+```json
+{
+  "type": "postgresql_embedding_backfill",
+  "payload": {}
+}
+```
+
+成功返回状态码：
+
+```text
+201 Created
+```
+
+### POST /api/v1/tasks/{task_id}/run
+
+同步执行指定任务。
+
+说明：
+
+- 该接口会等待任务执行完成后再返回。
+- 适合本地小规模验收。
+- 如果任务执行失败，任务状态会变成 `failed`，错误原因写入 `error`。
+
+### POST /api/v1/tasks/{task_id}/run-async
+
+异步执行指定任务。
+
+说明：
+
+- 该接口会把任务状态更新为 `running` 后立即返回。
+- 后续可以通过 `GET /api/v1/tasks/{task_id}` 或 `GET /api/v1/tasks` 查看最终结果。
+
+### POST /api/v1/tasks/{task_id}/retry-async
+
+异步重试失败任务。
+
+限制：
+
+- 只有 `failed` 任务可以重试。
+- 非失败任务会返回 `409 Conflict`。
+- 重试会创建一条新任务，不会覆盖旧任务。
+- 新任务会记录 `retry_of_task_id`。
+
+### POST /api/v1/tasks/{task_id}/cancel
+
+取消等待执行的任务。
+
+限制：
+
+- 只有 `pending` 任务可以取消。
+- `running`、`succeeded`、`failed`、`canceled` 任务不能取消，会返回 `409 Conflict`。
+- 当前版本不会强行中断已经运行中的线程。
+
+### POST /api/v1/tasks/postgresql-embedding-backfill
+
+创建并同步运行 PostgreSQL embedding 回填任务。
+
+成功时 `result` 示例：
+
+```json
+{
+  "total_chunks": 29,
+  "updated_embeddings": 0,
+  "skipped_embeddings": 29,
+  "model": "bge-m3:latest"
+}
+```
+
+### POST /api/v1/tasks/postgresql-document-ingestion
+
+创建并同步运行 PostgreSQL 文档入库任务。
+
+请求示例：
+
+```json
+{
+  "title": "PostgreSQL 任务入库文档",
+  "file_type": "md",
+  "content": "员工参加外部培训需要提前提交申请。",
+  "source": "production"
+}
+```
+
+成功时 `result` 示例：
+
+```json
+{
+  "document_id": 10,
+  "title": "PostgreSQL 任务入库文档",
+  "file_type": "md",
+  "chunk_count": 2,
+  "is_indexed": true,
+  "source": "production",
+  "embedding_count": 2
+}
+```
+
+### POST /api/v1/tasks/postgresql-document-ingestion/run-async
+
+创建并异步运行 PostgreSQL 文档入库任务。
+
+该接口适合前端任务中心提交较慢的文档入库任务。提交后可以刷新任务列表查看状态变化。
+
 ## 反馈接口
 
 ### POST /api/v1/feedback
