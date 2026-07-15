@@ -265,6 +265,71 @@ def test_run_task_endpoint_can_run_postgresql_embedding_backfill(monkeypatch):
     }
 
 
+def test_run_task_endpoint_can_run_postgresql_document_ingestion(monkeypatch):
+    from backend.services import task_dispatcher_service
+
+    isolate_postgresql_backfill_connection(monkeypatch, task_dispatcher_service)
+
+    def fake_create_postgresql_document_with_chunks_and_embeddings(
+        connection,
+        title: str,
+        file_type: str,
+        content: str,
+        source: str,
+    ):
+        return {
+            "document": {
+                "id": 9,
+                "title": title,
+                "file_type": file_type,
+                "chunk_count": 2,
+                "is_indexed": True,
+                "source": source,
+            },
+            "chunks": [
+                {"id": 1},
+                {"id": 2},
+            ],
+            "embeddings": [
+                {"id": 1},
+                {"id": 2},
+            ],
+        }
+
+    monkeypatch.setattr(
+        task_dispatcher_service,
+        "create_postgresql_document_with_chunks_and_embeddings",
+        fake_create_postgresql_document_with_chunks_and_embeddings,
+    )
+
+    test_queue = InMemoryTaskQueue()
+    task = test_queue.create_task(
+        task_type="postgresql_document_ingestion",
+        payload={
+            "title": "PostgreSQL 任务入库文档",
+            "file_type": "md",
+            "content": "员工参加外部培训需要提前提交申请。",
+        },
+    )
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.post(f"/api/v1/tasks/{task['id']}/run")
+
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["status"] == "succeeded"
+    assert data["result"] == {
+        "document_id": 9,
+        "title": "PostgreSQL 任务入库文档",
+        "file_type": "md",
+        "chunk_count": 2,
+        "is_indexed": True,
+        "source": "production",
+        "embedding_count": 2,
+    }
+
+
 def test_create_and_run_postgresql_embedding_backfill_task(monkeypatch):
     from backend.services import task_dispatcher_service
 

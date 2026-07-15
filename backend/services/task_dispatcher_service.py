@@ -4,6 +4,9 @@ from backend.config import DATABASE_URL
 from backend.services.postgresql_embedding_backfill_service import (
     backfill_missing_postgresql_chunk_embeddings,
 )
+from backend.services.postgresql_document_indexing_service import (
+    create_postgresql_document_with_chunks_and_embeddings,
+)
 from backend.services.postgresql_schema_service import (
     initialize_postgresql_knowledge_schema,
 )
@@ -35,11 +38,62 @@ def run_postgresql_embedding_backfill(payload: dict) -> dict:
         return backfill_missing_postgresql_chunk_embeddings(connection)
 
 
+def get_required_payload_string(payload: dict, field_name: str) -> str:
+    value = payload.get(field_name)
+
+    if not isinstance(value, str) or value.strip() == "":
+        raise ValueError(f"Missing required payload field: {field_name}")
+
+    return value.strip()
+
+
+def build_postgresql_document_ingestion_result(indexing_result: dict | None) -> dict:
+    if indexing_result is None:
+        raise ValueError(
+            "PostgreSQL document ingestion failed: duplicate title or empty content."
+        )
+
+    document = indexing_result["document"]
+
+    return {
+        "document_id": document["id"],
+        "title": document["title"],
+        "file_type": document["file_type"],
+        "chunk_count": document["chunk_count"],
+        "is_indexed": document["is_indexed"],
+        "source": document.get("source", "production"),
+        "embedding_count": len(indexing_result["embeddings"]),
+    }
+
+
+def run_postgresql_document_ingestion(payload: dict) -> dict:
+    title = get_required_payload_string(payload, "title")
+    file_type = get_required_payload_string(payload, "file_type")
+    content = get_required_payload_string(payload, "content")
+    source = payload.get("source", "production")
+
+    with psycopg.connect(DATABASE_URL) as connection:
+        initialize_postgresql_knowledge_schema(connection)
+        indexing_result = create_postgresql_document_with_chunks_and_embeddings(
+            connection,
+            title=title,
+            file_type=file_type,
+            content=content,
+            source=source,
+        )
+
+    return build_postgresql_document_ingestion_result(indexing_result)
+
+
 def build_default_task_dispatcher() -> TaskDispatcher:
     dispatcher = TaskDispatcher()
     dispatcher.register("echo", lambda payload: payload)
     dispatcher.register(
         "postgresql_embedding_backfill",
         run_postgresql_embedding_backfill,
+    )
+    dispatcher.register(
+        "postgresql_document_ingestion",
+        run_postgresql_document_ingestion,
     )
     return dispatcher

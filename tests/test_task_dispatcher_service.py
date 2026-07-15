@@ -3,6 +3,8 @@ import pytest
 from backend.services.task_dispatcher_service import (
     UnsupportedTaskTypeError,
     TaskDispatcher,
+    build_postgresql_document_ingestion_result,
+    get_required_payload_string,
 )
 
 
@@ -81,3 +83,204 @@ def test_build_default_task_dispatcher_supports_postgresql_embedding_backfill(mo
         "skipped_embeddings": 1,
         "model": "fake-model",
     }
+
+
+def test_get_required_payload_string_returns_trimmed_value():
+    value = get_required_payload_string(
+        {"title": "  PostgreSQL 入库文档  "},
+        "title",
+    )
+
+    assert value == "PostgreSQL 入库文档"
+
+
+def test_get_required_payload_string_raises_when_missing():
+    with pytest.raises(ValueError) as error:
+        get_required_payload_string({}, "title")
+
+    assert "Missing required payload field: title" in str(error.value)
+
+
+def test_build_postgresql_document_ingestion_result_flattens_indexing_result():
+    result = build_postgresql_document_ingestion_result(
+        {
+            "document": {
+                "id": 7,
+                "title": "PostgreSQL 入库任务文档",
+                "file_type": "md",
+                "chunk_count": 2,
+                "is_indexed": True,
+                "source": "production",
+            },
+            "chunks": [
+                {"id": 1},
+                {"id": 2},
+            ],
+            "embeddings": [
+                {"id": 1},
+                {"id": 2},
+            ],
+        }
+    )
+
+    assert result == {
+        "document_id": 7,
+        "title": "PostgreSQL 入库任务文档",
+        "file_type": "md",
+        "chunk_count": 2,
+        "is_indexed": True,
+        "source": "production",
+        "embedding_count": 2,
+    }
+
+
+def test_build_postgresql_document_ingestion_result_raises_when_not_created():
+    with pytest.raises(ValueError) as error:
+        build_postgresql_document_ingestion_result(None)
+
+    assert "duplicate title or empty content" in str(error.value)
+
+
+def test_build_default_task_dispatcher_supports_postgresql_document_ingestion(
+    monkeypatch,
+):
+    from backend.services import task_dispatcher_service
+
+    captured = {}
+
+    monkeypatch.setattr(
+        task_dispatcher_service.psycopg,
+        "connect",
+        lambda database_url: FakePostgreSQLConnection(),
+    )
+    monkeypatch.setattr(
+        task_dispatcher_service,
+        "initialize_postgresql_knowledge_schema",
+        lambda connection: captured.update({"schema_initialized": True}),
+    )
+
+    def fake_create_postgresql_document_with_chunks_and_embeddings(
+        connection,
+        title: str,
+        file_type: str,
+        content: str,
+        source: str,
+    ):
+        captured["title"] = title
+        captured["file_type"] = file_type
+        captured["content"] = content
+        captured["source"] = source
+
+        return {
+            "document": {
+                "id": 7,
+                "title": title,
+                "file_type": file_type,
+                "chunk_count": 2,
+                "is_indexed": True,
+                "source": source,
+            },
+            "chunks": [
+                {"id": 1},
+                {"id": 2},
+            ],
+            "embeddings": [
+                {"id": 1},
+                {"id": 2},
+            ],
+        }
+
+    monkeypatch.setattr(
+        task_dispatcher_service,
+        "create_postgresql_document_with_chunks_and_embeddings",
+        fake_create_postgresql_document_with_chunks_and_embeddings,
+    )
+
+    dispatcher = task_dispatcher_service.build_default_task_dispatcher()
+
+    result = dispatcher.dispatch(
+        task_type="postgresql_document_ingestion",
+        payload={
+            "title": " PostgreSQL 入库任务文档 ",
+            "file_type": "md",
+            "content": " 员工参加外部培训需要提前提交申请。 ",
+            "source": "production",
+        },
+    )
+
+    assert captured == {
+        "schema_initialized": True,
+        "title": "PostgreSQL 入库任务文档",
+        "file_type": "md",
+        "content": "员工参加外部培训需要提前提交申请。",
+        "source": "production",
+    }
+    assert result == {
+        "document_id": 7,
+        "title": "PostgreSQL 入库任务文档",
+        "file_type": "md",
+        "chunk_count": 2,
+        "is_indexed": True,
+        "source": "production",
+        "embedding_count": 2,
+    }
+
+
+def test_postgresql_document_ingestion_uses_production_source_by_default(
+    monkeypatch,
+):
+    from backend.services import task_dispatcher_service
+
+    captured = {}
+
+    monkeypatch.setattr(
+        task_dispatcher_service.psycopg,
+        "connect",
+        lambda database_url: FakePostgreSQLConnection(),
+    )
+    monkeypatch.setattr(
+        task_dispatcher_service,
+        "initialize_postgresql_knowledge_schema",
+        lambda connection: None,
+    )
+
+    def fake_create_postgresql_document_with_chunks_and_embeddings(
+        connection,
+        title: str,
+        file_type: str,
+        content: str,
+        source: str,
+    ):
+        captured["source"] = source
+
+        return {
+            "document": {
+                "id": 8,
+                "title": title,
+                "file_type": file_type,
+                "chunk_count": 1,
+                "is_indexed": True,
+                "source": source,
+            },
+            "chunks": [{"id": 1}],
+            "embeddings": [{"id": 1}],
+        }
+
+    monkeypatch.setattr(
+        task_dispatcher_service,
+        "create_postgresql_document_with_chunks_and_embeddings",
+        fake_create_postgresql_document_with_chunks_and_embeddings,
+    )
+
+    dispatcher = task_dispatcher_service.build_default_task_dispatcher()
+
+    dispatcher.dispatch(
+        task_type="postgresql_document_ingestion",
+        payload={
+            "title": "默认来源文档",
+            "file_type": "md",
+            "content": "默认来源测试。",
+        },
+    )
+
+    assert captured["source"] == "production"
