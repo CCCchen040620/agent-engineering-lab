@@ -95,6 +95,7 @@ def test_row_to_task():
         "error": "",
         "progress_percent": 0,
         "progress_message": "等待执行",
+        "retry_of_task_id": None,
     }
 
 
@@ -139,6 +140,7 @@ def test_insert_task_to_postgresql():
     assert connection.cursor_instance.params == (
         "postgresql_embedding_backfill",
         '{"source": "postgresql"}',
+        None,
     )
     assert "INSERT INTO tasks" in connection.cursor_instance.sql
     assert "RETURNING id, type, status, payload, result, error" in (
@@ -146,6 +148,36 @@ def test_insert_task_to_postgresql():
     )
     assert "progress_percent, progress_message" in connection.cursor_instance.sql
     assert connection.committed is True
+
+
+def test_insert_retry_task_to_postgresql():
+    connection = FakeConnection()
+    connection.cursor_instance.row = (
+        2,
+        "postgresql_embedding_backfill",
+        "pending",
+        {},
+        {},
+        "",
+        0,
+        "等待执行",
+        1,
+    )
+
+    task = insert_task_to_postgresql(
+        connection,
+        task_type="postgresql_embedding_backfill",
+        payload={},
+        retry_of_task_id=1,
+    )
+
+    assert task["id"] == 2
+    assert task["retry_of_task_id"] == 1
+    assert connection.cursor_instance.params == (
+        "postgresql_embedding_backfill",
+        "{}",
+        1,
+    )
 
 
 def test_list_tasks_from_postgresql():
@@ -320,7 +352,12 @@ def test_postgresql_task_queue_auto_initializes_tasks_table(monkeypatch):
     def fake_create_tasks_table_in_postgresql(connection):
         calls["create_table"] += 1
 
-    def fake_insert_task_to_postgresql(connection, task_type: str, payload: dict):
+    def fake_insert_task_to_postgresql(
+        connection,
+        task_type: str,
+        payload: dict,
+        retry_of_task_id: int | None = None,
+    ):
         calls["insert"] += 1
 
         return {
@@ -332,6 +369,7 @@ def test_postgresql_task_queue_auto_initializes_tasks_table(monkeypatch):
             "error": "",
             "progress_percent": 0,
             "progress_message": "等待执行",
+            "retry_of_task_id": retry_of_task_id,
         }
 
     monkeypatch.setattr(
@@ -369,7 +407,12 @@ def test_postgresql_task_queue_can_disable_auto_initialize(monkeypatch):
     def fake_create_tasks_table_in_postgresql(connection):
         calls["create_table"] += 1
 
-    def fake_insert_task_to_postgresql(connection, task_type: str, payload: dict):
+    def fake_insert_task_to_postgresql(
+        connection,
+        task_type: str,
+        payload: dict,
+        retry_of_task_id: int | None = None,
+    ):
         calls["insert"] += 1
 
         return {
@@ -381,6 +424,7 @@ def test_postgresql_task_queue_can_disable_auto_initialize(monkeypatch):
             "error": "",
             "progress_percent": 0,
             "progress_message": "等待执行",
+            "retry_of_task_id": retry_of_task_id,
         }
 
     monkeypatch.setattr(
@@ -417,7 +461,12 @@ def test_postgresql_task_queue_reads_task_after_queue_is_recreated(monkeypatch):
     def fake_create_tasks_table_in_postgresql(connection):
         pass
 
-    def fake_insert_task_to_postgresql(connection, task_type: str, payload: dict):
+    def fake_insert_task_to_postgresql(
+        connection,
+        task_type: str,
+        payload: dict,
+        retry_of_task_id: int | None = None,
+    ):
         task_id = next_id["value"]
         next_id["value"] += 1
         task = {
@@ -429,6 +478,7 @@ def test_postgresql_task_queue_reads_task_after_queue_is_recreated(monkeypatch):
             "error": "",
             "progress_percent": 0,
             "progress_message": "等待执行",
+            "retry_of_task_id": retry_of_task_id,
         }
         persistent_tasks[task_id] = task
 
@@ -541,6 +591,7 @@ def test_postgresql_task_queue_reads_task_after_queue_is_recreated(monkeypatch):
         "error": "",
         "progress_percent": 100,
         "progress_message": "任务完成",
+        "retry_of_task_id": None,
     }
     assert listed_tasks == [found_task]
     assert recreated_queue_instance is not first_queue_instance

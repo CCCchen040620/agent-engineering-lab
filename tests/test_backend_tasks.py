@@ -250,6 +250,7 @@ def test_retry_task_async_endpoint_creates_new_running_task_from_failed_task(
     assert data["type"] == failed_task["type"]
     assert data["payload"] == failed_task["payload"]
     assert data["status"] == "running"
+    assert data["retry_of_task_id"] == failed_task["id"]
 
     assert test_queue.get_task(failed_task["id"])["status"] == "failed"
     assert handler_started.wait(timeout=1)

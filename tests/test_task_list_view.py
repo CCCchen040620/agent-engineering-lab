@@ -1,4 +1,5 @@
 from frontend.task_list_view import (
+    build_task_retry_source_text,
     build_task_list_rows,
     filter_tasks_by_status,
     sort_tasks_by_id,
@@ -53,6 +54,11 @@ def test_sort_tasks_by_id_can_put_oldest_first():
     assert [task["id"] for task in sorted_tasks] == [1, 2, 3]
 
 
+def test_build_task_retry_source_text():
+    assert build_task_retry_source_text({"retry_of_task_id": 7}) == "重试自任务 #7"
+    assert build_task_retry_source_text({"retry_of_task_id": None}) == ""
+
+
 def test_build_task_list_rows_filters_sorts_and_adds_result_summary():
     tasks = [
         {
@@ -61,6 +67,7 @@ def test_build_task_list_rows_filters_sorts_and_adds_result_summary():
             "status": "succeeded",
             "progress_percent": 100,
             "progress_message": "任务完成",
+            "retry_of_task_id": None,
             "result": {
                 "total_chunks": 29,
                 "updated_embeddings": 0,
@@ -74,6 +81,7 @@ def test_build_task_list_rows_filters_sorts_and_adds_result_summary():
             "status": "failed",
             "progress_percent": 100,
             "progress_message": "任务失败",
+            "retry_of_task_id": None,
             "result": {},
         },
         {
@@ -82,6 +90,7 @@ def test_build_task_list_rows_filters_sorts_and_adds_result_summary():
             "status": "succeeded",
             "progress_percent": 100,
             "progress_message": "任务完成",
+            "retry_of_task_id": 2,
             "result": {
                 "total_chunks": 30,
                 "updated_embeddings": 1,
@@ -101,3 +110,4 @@ def test_build_task_list_rows_filters_sorts_and_adds_result_summary():
         "模型: bge-m3:latest"
     )
     assert rows[0]["progress_summary"] == "100% | 任务完成"
+    assert rows[0]["retry_source_summary"] == "重试自任务 #2"

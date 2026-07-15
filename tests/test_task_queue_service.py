@@ -25,6 +25,19 @@ def test_create_task():
     assert task["error"] == ""
     assert task["progress_percent"] == 0
     assert task["progress_message"] == "等待执行"
+    assert task["retry_of_task_id"] is None
+
+
+def test_create_retry_task_records_source_task_id():
+    queue = InMemoryTaskQueue()
+
+    task = queue.create_task(
+        task_type="embedding_backfill",
+        payload={"source": "postgresql"},
+        retry_of_task_id=7,
+    )
+
+    assert task["retry_of_task_id"] == 7
 
 
 def test_list_tasks():

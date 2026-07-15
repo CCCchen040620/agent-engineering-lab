@@ -19,6 +19,7 @@ from frontend.task_progress_view import (
 )
 from frontend.task_list_view import (
     TASK_STATUS_FILTER_OPTIONS,
+    build_task_retry_source_text,
     build_task_list_rows,
 )
 from frontend.task_storage_view import build_task_storage_caption
@@ -52,6 +53,15 @@ def render_task_progress(task: dict) -> None:
         st.progress(clamp_progress_percent(int(progress_percent)))
 
     st.caption(f"任务进度：{progress_text}")
+
+
+def render_task_retry_source(task: dict) -> None:
+    retry_source_text = build_task_retry_source_text(task)
+
+    if retry_source_text == "":
+        return
+
+    st.caption(f"重试来源：{retry_source_text}")
 
 
 st.set_page_config(page_title="后台任务中心", layout="wide")
@@ -95,6 +105,7 @@ if st.button("运行 PostgreSQL embedding 回填"):
             st.info(f"任务状态：{task['status']}")
 
         render_task_progress(task)
+        render_task_retry_source(task)
 
         summary_items = build_task_result_summary(task)
 
@@ -160,6 +171,7 @@ if retry_failed_task:
             "请刷新任务列表查看执行结果。"
         )
         render_task_progress(retry_task)
+        render_task_retry_source(retry_task)
         st.json(retry_task)
     except Exception as error:
         st.error(f"无法重试任务：{error}")

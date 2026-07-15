@@ -61,7 +61,12 @@ class InMemoryTaskQueue:
         self.tasks = []
         self.next_id = 1
 
-    def create_task(self, task_type: str, payload: dict) -> dict:
+    def create_task(
+        self,
+        task_type: str,
+        payload: dict,
+        retry_of_task_id: int | None = None,
+    ) -> dict:
         task = {
             "id": self.next_id,
             "type": task_type,
@@ -69,6 +74,7 @@ class InMemoryTaskQueue:
             "payload": payload,
             "result": {},
             "error": "",
+            "retry_of_task_id": retry_of_task_id,
         }
         apply_task_progress(task, "pending")
 

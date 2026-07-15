@@ -36,6 +36,15 @@ def sort_tasks_by_id(
     )
 
 
+def build_task_retry_source_text(task: dict) -> str:
+    retry_of_task_id = task.get("retry_of_task_id")
+
+    if retry_of_task_id is None:
+        return ""
+
+    return f"重试自任务 #{retry_of_task_id}"
+
+
 def build_task_list_rows(
     tasks: list[dict],
     status_filter: str = "全部",
@@ -49,6 +58,7 @@ def build_task_list_rows(
 
     for task in sorted_tasks:
         display_task = dict(task)
+        display_task["retry_source_summary"] = build_task_retry_source_text(task)
         display_task["progress_summary"] = build_task_progress_text(task)
         display_task["result_summary"] = summarize_task_result_as_text(task)
         display_task["failure_summary"] = summarize_task_failure_as_text(task)

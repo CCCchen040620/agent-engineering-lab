@@ -25,6 +25,7 @@ def row_to_task(row) -> dict:
     progress = build_task_progress(row[2])
     progress_percent = row[6] if len(row) > 6 else progress["progress_percent"]
     progress_message = row[7] if len(row) > 7 else progress["progress_message"]
+    retry_of_task_id = row[8] if len(row) > 8 else None
 
     return {
         "id": row[0],
@@ -35,6 +36,7 @@ def row_to_task(row) -> dict:
         "error": row[5],
         "progress_percent": progress_percent,
         "progress_message": progress_message,
+        "retry_of_task_id": retry_of_task_id,
     }
 
 
@@ -51,6 +53,7 @@ def create_tasks_table_in_postgresql(connection) -> None:
                 error TEXT NOT NULL DEFAULT '',
                 progress_percent INTEGER NOT NULL DEFAULT 0,
                 progress_message TEXT NOT NULL DEFAULT '等待执行',
+                retry_of_task_id INTEGER,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
@@ -68,6 +71,12 @@ def create_tasks_table_in_postgresql(connection) -> None:
             ADD COLUMN IF NOT EXISTS progress_message TEXT NOT NULL DEFAULT '等待执行'
             """
         )
+        cursor.execute(
+            """
+            ALTER TABLE tasks
+            ADD COLUMN IF NOT EXISTS retry_of_task_id INTEGER
+            """
+        )
 
     connection.commit()
 
@@ -76,16 +85,17 @@ def insert_task_to_postgresql(
     connection,
     task_type: str,
     payload: dict,
+    retry_of_task_id: int | None = None,
 ) -> dict:
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            INSERT INTO tasks (type, payload)
-            VALUES (%s, %s::jsonb)
+            INSERT INTO tasks (type, payload, retry_of_task_id)
+            VALUES (%s, %s::jsonb, %s)
             RETURNING id, type, status, payload, result, error,
-                      progress_percent, progress_message
+                      progress_percent, progress_message, retry_of_task_id
             """,
-            (task_type, encode_json(payload)),
+            (task_type, encode_json(payload), retry_of_task_id),
         )
 
         row = cursor.fetchone()
@@ -118,7 +128,7 @@ def list_tasks_from_postgresql(
         cursor.execute(
             f"""
             SELECT id, type, status, payload, result, error
-                   , progress_percent, progress_message
+                   , progress_percent, progress_message, retry_of_task_id
             FROM tasks
             {where_sql}
             ORDER BY id {order_sql}
@@ -137,7 +147,7 @@ def find_task_from_postgresql(connection, task_id: int) -> dict | None:
         cursor.execute(
             """
             SELECT id, type, status, payload, result, error
-                   , progress_percent, progress_message
+                   , progress_percent, progress_message, retry_of_task_id
             FROM tasks
             WHERE id = %s
             """,
@@ -173,7 +183,7 @@ def update_task_status_in_postgresql(
                 updated_at = NOW()
             WHERE id = %s
             RETURNING id, type, status, payload, result, error,
-                      progress_percent, progress_message
+                      progress_percent, progress_message, retry_of_task_id
             """,
             (
                 status,
@@ -210,7 +220,12 @@ class PostgresqlTaskQueue:
 
         self.tasks_table_ready = True
 
-    def create_task(self, task_type: str, payload: dict) -> dict:
+    def create_task(
+        self,
+        task_type: str,
+        payload: dict,
+        retry_of_task_id: int | None = None,
+    ) -> dict:
         self.ensure_tasks_table_ready()
 
         with self.connection_factory() as connection:
@@ -218,6 +233,7 @@ class PostgresqlTaskQueue:
                 connection,
                 task_type=task_type,
                 payload=payload,
+                retry_of_task_id=retry_of_task_id,
             )
 
     def list_tasks(

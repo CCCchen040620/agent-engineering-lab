@@ -72,6 +72,7 @@ def create_retry_task_from_failed_task(task_id: int, queue) -> dict:
     return queue.create_task(
         task_type=task["type"],
         payload=task["payload"],
+        retry_of_task_id=task["id"],
     )
 
 
