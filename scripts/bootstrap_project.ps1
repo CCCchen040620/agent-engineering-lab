@@ -7,6 +7,11 @@ param(
 
 $ProjectRoot = Resolve-Path "$PSScriptRoot\.."
 Set-Location $ProjectRoot
+$PythonExecutable = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
+
+if (-not (Test-Path $PythonExecutable)) {
+    $PythonExecutable = "python"
+}
 
 function Invoke-ProjectStep {
     param(
@@ -26,6 +31,7 @@ function Invoke-ProjectStep {
 }
 
 Write-Host "Bootstrapping Enterprise Knowledge Base Agent project..."
+Write-Host "Python executable: $PythonExecutable"
 
 if ($SkipEnvironmentCheck) {
     Write-Host ""
@@ -38,7 +44,7 @@ else {
 }
 
 Invoke-ProjectStep "Step 2/5: Migrating SQLite schema..." {
-    python -m week10.migrate_sqlite_schema
+    & $PythonExecutable -m week10.migrate_sqlite_schema
 }
 
 if ($SkipEmbeddings) {
@@ -47,7 +53,7 @@ if ($SkipEmbeddings) {
 }
 else {
     Invoke-ProjectStep "Step 3/5: Backfilling chunk embeddings..." {
-        python -m week08.backfill_chunk_embeddings
+        & $PythonExecutable -m week08.backfill_chunk_embeddings
     }
 }
 
@@ -57,7 +63,7 @@ if ($SkipSummaries) {
 }
 else {
     Invoke-ProjectStep "Step 4/5: Backfilling conversation summaries..." {
-        python -m week10.backfill_conversation_summaries
+        & $PythonExecutable -m week10.backfill_conversation_summaries
     }
 }
 
@@ -67,7 +73,7 @@ if ($SkipTests) {
 }
 else {
     Invoke-ProjectStep "Step 5/5: Running tests..." {
-        pytest
+        & $PythonExecutable -m pytest
     }
 }
 

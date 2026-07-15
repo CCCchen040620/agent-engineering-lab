@@ -48,6 +48,27 @@ def test_bootstrap_project_runs_environment_check_first():
     assert "Step 2/5: Migrating SQLite schema" in script
     assert "Step 5/5: Running tests" in script
     assert "SkipEnvironmentCheck" in script
+    assert "PythonExecutable" in script
+    assert ".venv\\Scripts\\python.exe" in script
+    assert "& $PythonExecutable -m week10.migrate_sqlite_schema" in script
+    assert "& $PythonExecutable -m pytest" in script
+
+
+def test_check_project_uses_project_python():
+    script = Path("scripts/check_project.ps1").read_text(encoding="utf-8")
+
+    assert "PythonExecutable" in script
+    assert ".venv\\Scripts\\python.exe" in script
+    assert "& $PythonExecutable -m week10.migrate_sqlite_schema" in script
+    assert "& $PythonExecutable -m pytest" in script
+
+
+def test_migrate_sqlite_uses_project_python():
+    script = Path("scripts/migrate_sqlite.ps1").read_text(encoding="utf-8")
+
+    assert "PythonExecutable" in script
+    assert ".venv\\Scripts\\python.exe" in script
+    assert "& $PythonExecutable -m week10.migrate_sqlite_schema" in script
 
 
 def test_docker_compose_check_validates_services_and_health_endpoints():
