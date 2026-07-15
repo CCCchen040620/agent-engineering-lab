@@ -17,6 +17,12 @@ def test_info_endpoint():
     assert data["version"] == "0.1.0"
     assert data["database_backend"] == "sqlite"
     assert data["default_rag_retriever_backend"] == "sqlite"
+    assert data["task_storage"] == {
+        "backend": "memory",
+        "is_persistent": False,
+        "label": "内存任务队列",
+        "description": "任务记录只保存在当前后端进程中，后端重启后会丢失。",
+    }
     assert "legacy_file_chat_with_citations" in data["features"]
     assert "legacy_file_refusal_for_unknown_questions" in data["features"]
     assert "legacy_json_list_documents" in data["features"]
@@ -46,6 +52,7 @@ def test_info_endpoint():
     assert "postgresql_status_diagnostics" in data["features"]
     assert "basic_in_memory_rate_limiting" in data["features"]
     assert "rag_backend_capability_matrix" in data["features"]
+    assert "task_storage_backend_diagnostics" in data["features"]
     assert data["rag_backends"][0]["backend"] == "sqlite"
     assert data["rag_backends"][1]["backend"] == "postgresql"
     assert "conversation_chat" in data["rag_backends"][0]["supported_features"]

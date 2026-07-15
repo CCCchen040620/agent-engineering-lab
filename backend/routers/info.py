@@ -5,6 +5,7 @@ from backend.services.database_url_service import is_postgresql_database
 from backend.services.rag_backend_capability_service import (
     list_rag_backend_capabilities,
 )
+from backend.services.task_storage_backend_service import build_task_storage_info
 
 
 router = APIRouter(prefix="/api/v1")
@@ -19,6 +20,7 @@ def get_info():
         "version": "0.1.0",
         "database_backend": database_backend,
         "default_rag_retriever_backend": RAG_RETRIEVER_BACKEND,
+        "task_storage": build_task_storage_info(DATABASE_URL),
         "features": [
             "health_check",
             "legacy_file_chat_with_citations",
@@ -53,6 +55,7 @@ def get_info():
             "postgresql_status_diagnostics",
             "basic_in_memory_rate_limiting",
             "rag_backend_capability_matrix",
+            "task_storage_backend_diagnostics",
         ],
         "rag_backends": list_rag_backend_capabilities(),
     }

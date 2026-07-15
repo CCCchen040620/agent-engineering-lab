@@ -24,6 +24,7 @@ from frontend.retriever_backend_view import (
     get_retriever_backend_override,
     get_retriever_backend_radio_index,
 )
+from frontend.task_storage_view import build_task_storage_caption
 
 
 st.set_page_config(
@@ -145,7 +146,7 @@ def render_status_line(label: str, is_ok: bool) -> None:
         st.error(f"{label}：异常")
 
 
-def render_system_status() -> None:
+def render_system_status(info: dict | None = None) -> None:
     status, error_message = get_system_status_api(
         base_url=BACKEND_API_BASE_URL,
     )
@@ -166,6 +167,7 @@ def render_system_status() -> None:
             database_label = "当前数据库：SQLite"
 
         render_status_line(database_label, database_status["status"] == "ok")
+        st.caption(build_task_storage_caption(info))
 
         postgresql_status = status.get("postgresql", {})
 
@@ -193,9 +195,8 @@ def render_system_status() -> None:
 
 
 with st.sidebar:
-    render_system_status()
-
     info, info_error = get_info_api(base_url=BACKEND_API_BASE_URL)
+    render_system_status(info)
 
     if info_error is not None:
         st.caption("暂时无法读取后端能力矩阵，前端将使用默认交互规则。")

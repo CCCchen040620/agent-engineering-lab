@@ -2,6 +2,7 @@ import streamlit as st
 
 from frontend.api_client import (
     create_task_api,
+    get_info_api,
     get_task_api,
     list_tasks_api,
     run_postgresql_embedding_backfill_task_api,
@@ -14,6 +15,7 @@ from frontend.task_list_view import (
     TASK_STATUS_FILTER_OPTIONS,
     build_task_list_rows,
 )
+from frontend.task_storage_view import build_task_storage_caption
 from backend.config import BACKEND_API_BASE_URL
 
 
@@ -25,6 +27,13 @@ st.set_page_config(page_title="后台任务中心", layout="wide")
 st.title("后台任务中心")
 
 st.caption("用于查看后台任务状态，并手动触发 PostgreSQL embedding 回填。")
+
+info, info_error = get_info_api(BACKEND_API_BASE_URL)
+
+if info_error is None:
+    st.info(build_task_storage_caption(info))
+else:
+    st.warning("暂时无法读取任务存储后端，请确认 FastAPI 已启动。")
 
 run_mode = st.radio(
     "运行方式",
