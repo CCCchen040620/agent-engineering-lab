@@ -291,6 +291,101 @@ def test_postgresql_task_queue_marks_task_running(monkeypatch):
     assert task["status"] == "running"
 
 
+def test_postgresql_task_queue_auto_initializes_tasks_table(monkeypatch):
+    connection = FakeConnection()
+    calls = {
+        "create_table": 0,
+        "insert": 0,
+    }
+
+    def fake_create_tasks_table_in_postgresql(connection):
+        calls["create_table"] += 1
+
+    def fake_insert_task_to_postgresql(connection, task_type: str, payload: dict):
+        calls["insert"] += 1
+
+        return {
+            "id": calls["insert"],
+            "type": task_type,
+            "status": "pending",
+            "payload": payload,
+            "result": {},
+            "error": "",
+        }
+
+    monkeypatch.setattr(
+        repository,
+        "create_tasks_table_in_postgresql",
+        fake_create_tasks_table_in_postgresql,
+    )
+    monkeypatch.setattr(
+        repository,
+        "insert_task_to_postgresql",
+        fake_insert_task_to_postgresql,
+    )
+
+    queue = PostgresqlTaskQueue(connection_factory=lambda: connection)
+
+    first_task = queue.create_task("echo", {"message": "first"})
+    second_task = queue.create_task("echo", {"message": "second"})
+
+    assert first_task["id"] == 1
+    assert second_task["id"] == 2
+    assert calls == {
+        "create_table": 1,
+        "insert": 2,
+    }
+    assert queue.tasks_table_ready is True
+
+
+def test_postgresql_task_queue_can_disable_auto_initialize(monkeypatch):
+    connection = FakeConnection()
+    calls = {
+        "create_table": 0,
+        "insert": 0,
+    }
+
+    def fake_create_tasks_table_in_postgresql(connection):
+        calls["create_table"] += 1
+
+    def fake_insert_task_to_postgresql(connection, task_type: str, payload: dict):
+        calls["insert"] += 1
+
+        return {
+            "id": 1,
+            "type": task_type,
+            "status": "pending",
+            "payload": payload,
+            "result": {},
+            "error": "",
+        }
+
+    monkeypatch.setattr(
+        repository,
+        "create_tasks_table_in_postgresql",
+        fake_create_tasks_table_in_postgresql,
+    )
+    monkeypatch.setattr(
+        repository,
+        "insert_task_to_postgresql",
+        fake_insert_task_to_postgresql,
+    )
+
+    queue = PostgresqlTaskQueue(
+        connection_factory=lambda: connection,
+        auto_initialize=False,
+    )
+
+    task = queue.create_task("echo", {"message": "hello"})
+
+    assert task["payload"] == {"message": "hello"}
+    assert calls == {
+        "create_table": 0,
+        "insert": 1,
+    }
+    assert queue.tasks_table_ready is False
+
+
 def test_postgresql_task_queue_rejects_invalid_status_transition(monkeypatch):
     connection = FakeConnection()
 

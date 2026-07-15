@@ -160,10 +160,23 @@ def update_task_status_in_postgresql(
 
 
 class PostgresqlTaskQueue:
-    def __init__(self, connection_factory):
+    def __init__(self, connection_factory, auto_initialize: bool = True):
         self.connection_factory = connection_factory
+        self.auto_initialize = auto_initialize
+        self.tasks_table_ready = False
+
+    def ensure_tasks_table_ready(self) -> None:
+        if not self.auto_initialize or self.tasks_table_ready:
+            return
+
+        with self.connection_factory() as connection:
+            create_tasks_table_in_postgresql(connection)
+
+        self.tasks_table_ready = True
 
     def create_task(self, task_type: str, payload: dict) -> dict:
+        self.ensure_tasks_table_ready()
+
         with self.connection_factory() as connection:
             return insert_task_to_postgresql(
                 connection,
@@ -177,6 +190,8 @@ class PostgresqlTaskQueue:
         order: str = "asc",
         limit: int | None = None,
     ) -> list[dict]:
+        self.ensure_tasks_table_ready()
+
         with self.connection_factory() as connection:
             return list_tasks_from_postgresql(
                 connection,
@@ -186,6 +201,8 @@ class PostgresqlTaskQueue:
             )
 
     def get_task(self, task_id: int) -> dict | None:
+        self.ensure_tasks_table_ready()
+
         with self.connection_factory() as connection:
             return find_task_from_postgresql(connection, task_id)
 
