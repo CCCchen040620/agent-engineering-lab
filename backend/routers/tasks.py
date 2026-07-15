@@ -82,6 +82,17 @@ def start_task_thread(task_id: int, queue) -> None:
     thread.start()
 
 
+def build_postgresql_document_ingestion_payload(
+    request: PostgreSQLDocumentIngestionTaskRequest,
+) -> dict:
+    return {
+        "title": request.title,
+        "file_type": request.file_type,
+        "content": request.content,
+        "source": request.source,
+    }
+
+
 @router.post("", status_code=201)
 def create_task(
     request: TaskCreateRequest,
@@ -124,6 +135,21 @@ def run_task(
     return run_task_by_id(task_id, queue)
 
 
+@router.post("/postgresql-document-ingestion/run-async", status_code=202)
+def create_and_run_postgresql_document_ingestion_task_async(
+    request: PostgreSQLDocumentIngestionTaskRequest,
+    queue=Depends(get_task_queue),
+):
+    task = queue.create_task(
+        task_type="postgresql_document_ingestion",
+        payload=build_postgresql_document_ingestion_payload(request),
+    )
+    running_task = queue.mark_task_running(task["id"])
+    start_task_thread(task["id"], queue)
+
+    return running_task
+
+
 @router.post("/{task_id}/run-async", status_code=202)
 def run_task_async(
     task_id: int,
@@ -155,12 +181,7 @@ def create_and_run_postgresql_document_ingestion_task(
 ):
     task = queue.create_task(
         task_type="postgresql_document_ingestion",
-        payload={
-            "title": request.title,
-            "file_type": request.file_type,
-            "content": request.content,
-            "source": request.source,
-        },
+        payload=build_postgresql_document_ingestion_payload(request),
     )
 
     return run_task_by_id(task["id"], queue)

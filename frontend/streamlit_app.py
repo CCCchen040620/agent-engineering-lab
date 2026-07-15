@@ -13,7 +13,7 @@ from frontend.api_client import (
     get_info_api,
     get_system_status_api,
     rag_backend_supports_feature,
-    run_postgresql_document_ingestion_task_api,
+    run_postgresql_document_ingestion_task_async_api,
     submit_feedback_api,
     upload_text_document_api,
     stream_langgraph_agent_api,
@@ -96,7 +96,7 @@ def run_postgresql_document_ingestion_task(
     file_type: str,
     content: str,
 ) -> dict:
-    return run_postgresql_document_ingestion_task_api(
+    return run_postgresql_document_ingestion_task_async_api(
         base_url=BACKEND_API_BASE_URL,
         title=title,
         file_type=file_type,
@@ -426,7 +426,7 @@ with st.sidebar:
                 and postgresql_ingestion_mode == "task"
             ):
                 with st.spinner(
-                    "正在通过任务写入 PostgreSQL、切分 chunks 并生成 pgvector embeddings..."
+                    "正在提交 PostgreSQL 文档入库任务..."
                 ):
                     try:
                         task = run_postgresql_document_ingestion_task(
@@ -461,6 +461,10 @@ with st.sidebar:
                     st.success(f"任务执行成功，任务 ID：{task['id']}")
                 elif task["status"] == "failed":
                     st.error(f"任务执行失败：{task.get('error', '')}")
+                elif task["status"] == "running":
+                    st.success(
+                        f"任务已提交，任务 ID：{task['id']}。请到任务中心查看执行进度。"
+                    )
                 else:
                     st.info(f"任务状态：{task['status']}")
 

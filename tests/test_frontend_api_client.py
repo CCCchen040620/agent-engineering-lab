@@ -19,6 +19,7 @@ from frontend.api_client import (
     list_postgresql_document_embedding_status_api,
     rag_backend_supports_feature,
     run_postgresql_document_ingestion_task_api,
+    run_postgresql_document_ingestion_task_async_api,
     submit_feedback_api,
     upload_text_document_api,
     parse_sse_event_line,
@@ -1837,6 +1838,55 @@ def test_run_postgresql_document_ingestion_task_api_can_pass_source(monkeypatch)
 
     assert captured["json"]["source"] == "evaluation"
     assert task["payload"]["source"] == "evaluation"
+
+
+def test_run_postgresql_document_ingestion_task_async_api(monkeypatch):
+    captured = {}
+
+    class FakeResponse:
+        status_code = 202
+
+        def raise_for_status(self):
+            captured["raise_for_status_called"] = True
+
+        def json(self):
+            return {
+                "id": 7,
+                "type": "postgresql_document_ingestion",
+                "status": "running",
+                "payload": captured["json"],
+                "result": {},
+                "error": "",
+            }
+
+    def fake_post(url, json, timeout):
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    task = run_postgresql_document_ingestion_task_async_api(
+        base_url="http://testserver",
+        title="PostgreSQL 异步任务入库文档",
+        file_type="md",
+        content="员工参加外部培训需要提前提交申请。",
+    )
+
+    assert captured["url"] == (
+        "http://testserver/api/v1/tasks/postgresql-document-ingestion/run-async"
+    )
+    assert captured["json"] == {
+        "title": "PostgreSQL 异步任务入库文档",
+        "file_type": "md",
+        "content": "员工参加外部培训需要提前提交申请。",
+        "source": "production",
+    }
+    assert captured["timeout"] == 10
+    assert captured["raise_for_status_called"] is True
+    assert task["type"] == "postgresql_document_ingestion"
+    assert task["status"] == "running"
 
 
 def test_create_task_api(monkeypatch):

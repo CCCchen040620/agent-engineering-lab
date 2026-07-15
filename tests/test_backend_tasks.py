@@ -469,6 +469,90 @@ def test_create_and_run_postgresql_document_ingestion_task(monkeypatch):
     }
 
 
+def test_create_and_run_postgresql_document_ingestion_task_async(monkeypatch):
+    from backend.services import task_dispatcher_service
+
+    isolate_postgresql_backfill_connection(monkeypatch, task_dispatcher_service)
+    handler_started = Event()
+    release_handler = Event()
+
+    def fake_create_postgresql_document_with_chunks_and_embeddings(
+        connection,
+        title: str,
+        file_type: str,
+        content: str,
+        source: str,
+    ):
+        handler_started.set()
+        assert release_handler.wait(timeout=1)
+
+        return {
+            "document": {
+                "id": 11,
+                "title": title,
+                "file_type": file_type,
+                "chunk_count": 2,
+                "is_indexed": True,
+                "source": source,
+            },
+            "chunks": [
+                {"id": 1},
+                {"id": 2},
+            ],
+            "embeddings": [
+                {"id": 1},
+                {"id": 2},
+            ],
+        }
+
+    monkeypatch.setattr(
+        task_dispatcher_service,
+        "create_postgresql_document_with_chunks_and_embeddings",
+        fake_create_postgresql_document_with_chunks_and_embeddings,
+    )
+
+    test_queue = InMemoryTaskQueue()
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.post(
+        "/api/v1/tasks/postgresql-document-ingestion/run-async",
+        json={
+            "title": "PostgreSQL 异步任务入库文档",
+            "file_type": "md",
+            "content": "员工参加外部培训需要提前提交申请。",
+            "source": "production",
+        },
+    )
+
+    assert response.status_code == 202
+
+    data = response.json()
+    assert data["type"] == "postgresql_document_ingestion"
+    assert data["status"] == "running"
+    assert data["payload"] == {
+        "title": "PostgreSQL 异步任务入库文档",
+        "file_type": "md",
+        "content": "员工参加外部培训需要提前提交申请。",
+        "source": "production",
+    }
+
+    assert handler_started.wait(timeout=1)
+    assert test_queue.get_task(data["id"])["status"] == "running"
+
+    release_handler.set()
+    completed_task = wait_for_task_status(test_queue, data["id"], "succeeded")
+
+    assert completed_task["result"] == {
+        "document_id": 11,
+        "title": "PostgreSQL 异步任务入库文档",
+        "file_type": "md",
+        "chunk_count": 2,
+        "is_indexed": True,
+        "source": "production",
+        "embedding_count": 2,
+    }
+
+
 def test_create_and_run_postgresql_document_ingestion_task_marks_failed_when_not_created(
     monkeypatch,
 ):

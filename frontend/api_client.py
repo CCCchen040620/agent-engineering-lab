@@ -640,3 +640,24 @@ def run_postgresql_document_ingestion_task_api(
     )
     response.raise_for_status()
     return response.json()
+
+
+def run_postgresql_document_ingestion_task_async_api(
+    base_url: str,
+    title: str,
+    file_type: str,
+    content: str,
+    source: str = "production",
+) -> dict:
+    response = requests.post(
+        base_url + "/api/v1/tasks/postgresql-document-ingestion/run-async",
+        json={
+            "title": title,
+            "file_type": file_type,
+            "content": content,
+            "source": source,
+        },
+        timeout=10,
+    )
+    response.raise_for_status()
+    return response.json()
