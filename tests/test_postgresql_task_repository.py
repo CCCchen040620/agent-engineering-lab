@@ -386,6 +386,130 @@ def test_postgresql_task_queue_can_disable_auto_initialize(monkeypatch):
     assert queue.tasks_table_ready is False
 
 
+def test_postgresql_task_queue_reads_task_after_queue_is_recreated(monkeypatch):
+    connection = FakeConnection()
+    persistent_tasks = {}
+    next_id = {"value": 1}
+
+    def fake_create_tasks_table_in_postgresql(connection):
+        pass
+
+    def fake_insert_task_to_postgresql(connection, task_type: str, payload: dict):
+        task_id = next_id["value"]
+        next_id["value"] += 1
+        task = {
+            "id": task_id,
+            "type": task_type,
+            "status": "pending",
+            "payload": payload,
+            "result": {},
+            "error": "",
+        }
+        persistent_tasks[task_id] = task
+
+        return dict(task)
+
+    def fake_find_task_from_postgresql(connection, task_id: int):
+        task = persistent_tasks.get(task_id)
+
+        if task is None:
+            return None
+
+        return dict(task)
+
+    def fake_list_tasks_from_postgresql(
+        connection,
+        status=None,
+        order="asc",
+        limit=None,
+    ):
+        tasks = list(persistent_tasks.values())
+
+        if status not in (None, ""):
+            tasks = [
+                task
+                for task in tasks
+                if task["status"] == status
+            ]
+
+        tasks = sorted(
+            tasks,
+            key=lambda task: task["id"],
+            reverse=order == "desc",
+        )
+
+        if limit is not None:
+            tasks = tasks[:limit]
+
+        return [dict(task) for task in tasks]
+
+    def fake_update_task_status_in_postgresql(
+        connection,
+        task_id: int,
+        status: str,
+        result: dict,
+        error: str,
+    ):
+        persistent_tasks[task_id]["status"] = status
+        persistent_tasks[task_id]["result"] = result
+        persistent_tasks[task_id]["error"] = error
+
+        return dict(persistent_tasks[task_id])
+
+    monkeypatch.setattr(
+        repository,
+        "create_tasks_table_in_postgresql",
+        fake_create_tasks_table_in_postgresql,
+    )
+    monkeypatch.setattr(
+        repository,
+        "insert_task_to_postgresql",
+        fake_insert_task_to_postgresql,
+    )
+    monkeypatch.setattr(
+        repository,
+        "find_task_from_postgresql",
+        fake_find_task_from_postgresql,
+    )
+    monkeypatch.setattr(
+        repository,
+        "list_tasks_from_postgresql",
+        fake_list_tasks_from_postgresql,
+    )
+    monkeypatch.setattr(
+        repository,
+        "update_task_status_in_postgresql",
+        fake_update_task_status_in_postgresql,
+    )
+
+    first_queue_instance = PostgresqlTaskQueue(connection_factory=lambda: connection)
+    created_task = first_queue_instance.create_task(
+        "echo",
+        {"message": "persist me"},
+    )
+    first_queue_instance.mark_task_running(created_task["id"])
+    first_queue_instance.mark_task_succeeded(
+        created_task["id"],
+        {"message": "persist me"},
+    )
+
+    recreated_queue_instance = PostgresqlTaskQueue(connection_factory=lambda: connection)
+
+    found_task = recreated_queue_instance.get_task(created_task["id"])
+    listed_tasks = recreated_queue_instance.list_tasks()
+
+    assert found_task == {
+        "id": created_task["id"],
+        "type": "echo",
+        "status": "succeeded",
+        "payload": {"message": "persist me"},
+        "result": {"message": "persist me"},
+        "error": "",
+    }
+    assert listed_tasks == [found_task]
+    assert recreated_queue_instance is not first_queue_instance
+
+
 def test_postgresql_task_queue_rejects_invalid_status_transition(monkeypatch):
     connection = FakeConnection()
 
