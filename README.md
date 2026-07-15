@@ -242,6 +242,7 @@ tests/          自动化测试
 - [运行手册](docs/runbook.md)
 - [API 文档](docs/api.md)
 - [配置说明](docs/configuration.md)
+- [项目阶段总结](docs/project-stage-summary.md)
 - [前端说明](docs/frontend.md)
 - [PostgreSQL 阶段说明](docs/postgresql-stage-review.md)
 - [LangGraph Agent 阶段复盘](docs/langgraph-agent-stage-review.md)
