@@ -242,12 +242,21 @@ def test_task_center_check_runs_async_document_ingestion_flow():
     assert "week10.init_postgresql_schema" in script
     assert "/health" in script
     assert "/api/v1/tasks/postgresql-document-ingestion/run-async" in script
-    assert "/api/v1/tasks/$($Task.id)" in script
+    assert "/api/v1/tasks/$TaskId" in script
     assert "TimeoutSeconds" in script
     assert "PollIntervalSeconds" in script
     assert "document_id" in script
     assert "chunk_count" in script
     assert "embedding_count" in script
+    assert "/api/v1/tasks/$TaskId/events" in script
+    assert "/api/v1/tasks/$($FailedTask.id)/retry-async" in script
+    assert "task_created" in script
+    assert "task_started" in script
+    assert "task_succeeded" in script
+    assert "task_failed" in script
+    assert "task_retry_created" in script
+    assert "retry_task_id" in script
+    assert "duplicate_document" in script
     assert "Show-TaskFailureDiagnostic" in script
     assert "embedding_generation_error" in script
     assert "Task center check completed successfully." in script

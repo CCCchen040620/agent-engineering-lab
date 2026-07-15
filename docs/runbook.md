@@ -31,6 +31,7 @@
 4. Ollama 和 embedding 模型可用。
 
 该脚本会创建一个 PostgreSQL 文档异步入库任务，轮询任务状态，并校验任务结果中包含 `document_id`、`chunk_count` 和 `embedding_count`。
+同时它会读取任务事件时间线，确认成功任务包含 `task_created`、`task_started`、`task_succeeded`；还会用重复标题制造一个受控失败任务，触发异步重试，并确认旧任务事件中记录了新任务的 `retry_task_id`。
 
 ## 后台任务中心
 
