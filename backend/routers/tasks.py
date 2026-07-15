@@ -2,11 +2,15 @@ from threading import Thread
 
 import psycopg
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from backend.config import DATABASE_URL
 from backend.services.database_url_service import is_postgresql_database
 from backend.services.postgresql_task_repository import PostgresqlTaskQueue
-from backend.services.task_queue_service import InMemoryTaskQueue, TaskRunner
+from backend.services.task_queue_service import (
+    InMemoryTaskQueue,
+    InvalidTaskStatusTransitionError,
+    TaskRunner,
+)
 from backend.services.task_dispatcher_service import build_default_task_dispatcher
 
 
@@ -17,12 +21,32 @@ class TaskCreateRequest(BaseModel):
     type: str = Field(min_length=1)
     payload: dict = Field(default_factory=dict)
 
+    @field_validator("type")
+    @classmethod
+    def validate_type_is_not_blank(cls, value: str) -> str:
+        stripped_value = value.strip()
+
+        if stripped_value == "":
+            raise ValueError("Task type cannot be blank.")
+
+        return stripped_value
+
 
 class PostgreSQLDocumentIngestionTaskRequest(BaseModel):
     title: str = Field(min_length=1)
     file_type: str = Field(min_length=1)
     content: str = Field(min_length=1)
     source: str = "production"
+
+    @field_validator("title", "file_type", "content")
+    @classmethod
+    def validate_required_text_is_not_blank(cls, value: str) -> str:
+        stripped_value = value.strip()
+
+        if stripped_value == "":
+            raise ValueError("Required text field cannot be blank.")
+
+        return stripped_value
 
 
 def build_default_task_queue(database_url: str = DATABASE_URL):
@@ -60,7 +84,17 @@ def run_task_by_id(task_id: int, queue) -> dict:
     task = get_task_or_404(task_id, queue)
     runner = TaskRunner(queue=queue)
 
-    return runner.run_task(task_id, build_task_handler(task))
+    try:
+        return runner.run_task(task_id, build_task_handler(task))
+    except InvalidTaskStatusTransitionError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+
+
+def mark_task_running_or_409(task_id: int, queue) -> dict:
+    try:
+        return queue.mark_task_running(task_id)
+    except InvalidTaskStatusTransitionError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
 
 
 def create_retry_task_from_failed_task(task_id: int, queue) -> dict:
@@ -179,7 +213,7 @@ def create_and_run_postgresql_document_ingestion_task_async(
         task_type="postgresql_document_ingestion",
         payload=build_postgresql_document_ingestion_payload(request),
     )
-    running_task = queue.mark_task_running(task["id"])
+    running_task = mark_task_running_or_409(task["id"], queue)
     start_task_thread(task["id"], queue)
 
     return running_task
@@ -191,7 +225,7 @@ def run_task_async(
     queue=Depends(get_task_queue),
 ):
     get_task_or_404(task_id, queue)
-    running_task = queue.mark_task_running(task_id)
+    running_task = mark_task_running_or_409(task_id, queue)
     start_task_thread(task_id, queue)
 
     return running_task
@@ -203,7 +237,7 @@ def retry_task_async(
     queue=Depends(get_task_queue),
 ):
     retry_task = create_retry_task_from_failed_task(task_id, queue)
-    running_task = queue.mark_task_running(retry_task["id"])
+    running_task = mark_task_running_or_409(retry_task["id"], queue)
     start_task_thread(retry_task["id"], queue)
 
     return running_task

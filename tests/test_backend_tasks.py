@@ -82,6 +82,22 @@ def test_create_task_endpoint():
     assert data["retry_count"] == 0
 
 
+def test_create_task_endpoint_rejects_blank_type():
+    test_queue = InMemoryTaskQueue()
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.post(
+        "/api/v1/tasks",
+        json={
+            "type": "   ",
+            "payload": {},
+        },
+    )
+
+    assert response.status_code == 422
+    assert test_queue.list_tasks() == []
+
+
 def test_build_default_task_queue_uses_memory_for_sqlite():
     queue = tasks_router.build_default_task_queue("sqlite:///data/app.db")
 
@@ -166,6 +182,37 @@ def test_run_task_endpoint_marks_task_succeeded():
     assert data["run_count"] == 1
 
 
+def test_run_task_endpoint_rejects_already_running_task():
+    test_queue = InMemoryTaskQueue()
+    task = test_queue.create_task(
+        task_type="echo",
+        payload={"message": "hello"},
+    )
+    test_queue.mark_task_running(task["id"])
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.post(f"/api/v1/tasks/{task['id']}/run")
+
+    assert response.status_code == 409
+    assert "Cannot change task" in response.json()["detail"]
+
+
+def test_run_task_endpoint_rejects_already_completed_task():
+    test_queue = InMemoryTaskQueue()
+    task = test_queue.create_task(
+        task_type="echo",
+        payload={"message": "hello"},
+    )
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    first_response = client.post(f"/api/v1/tasks/{task['id']}/run")
+    second_response = client.post(f"/api/v1/tasks/{task['id']}/run")
+
+    assert first_response.status_code == 200
+    assert second_response.status_code == 409
+    assert "Cannot change task" in second_response.json()["detail"]
+
+
 def test_run_task_endpoint_returns_404_when_task_not_found():
     test_queue = InMemoryTaskQueue()
     app.dependency_overrides[get_task_queue] = lambda: test_queue
@@ -235,6 +282,36 @@ def test_run_task_async_endpoint_returns_404_when_task_not_found():
     response = client.post("/api/v1/tasks/999/run-async")
 
     assert response.status_code == 404
+
+
+def test_run_task_async_endpoint_rejects_failed_task():
+    test_queue = InMemoryTaskQueue()
+    task = test_queue.create_task(
+        task_type="echo",
+        payload={"message": "hello"},
+    )
+    test_queue.mark_task_failed(task["id"], "Task failed")
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.post(f"/api/v1/tasks/{task['id']}/run-async")
+
+    assert response.status_code == 409
+    assert "Cannot change task" in response.json()["detail"]
+
+
+def test_run_task_async_endpoint_rejects_canceled_task():
+    test_queue = InMemoryTaskQueue()
+    task = test_queue.create_task(
+        task_type="echo",
+        payload={"message": "hello"},
+    )
+    test_queue.mark_task_canceled(task["id"])
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.post(f"/api/v1/tasks/{task['id']}/run-async")
+
+    assert response.status_code == 409
+    assert "Cannot change task" in response.json()["detail"]
 
 
 def test_retry_task_async_endpoint_creates_new_running_task_from_failed_task(
@@ -772,6 +849,40 @@ def test_create_and_run_postgresql_document_ingestion_task_rejects_invalid_paylo
     )
 
     assert response.status_code == 422
+
+
+def test_create_and_run_postgresql_document_ingestion_task_rejects_blank_text():
+    test_queue = InMemoryTaskQueue()
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.post(
+        "/api/v1/tasks/postgresql-document-ingestion",
+        json={
+            "title": "   ",
+            "file_type": "md",
+            "content": "PostgreSQL document content.",
+        },
+    )
+
+    assert response.status_code == 422
+    assert test_queue.list_tasks() == []
+
+
+def test_create_and_run_postgresql_document_ingestion_task_async_rejects_blank_text():
+    test_queue = InMemoryTaskQueue()
+    app.dependency_overrides[get_task_queue] = lambda: test_queue
+
+    response = client.post(
+        "/api/v1/tasks/postgresql-document-ingestion/run-async",
+        json={
+            "title": "PostgreSQL async document",
+            "file_type": "md",
+            "content": "   ",
+        },
+    )
+
+    assert response.status_code == 422
+    assert test_queue.list_tasks() == []
 
 
 def test_list_tasks_endpoint():

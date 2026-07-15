@@ -55,6 +55,34 @@ def get_message_from_detail(detail: Any) -> str:
     return "请求处理失败。"
 
 
+def make_json_safe(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {
+            key: make_json_safe(item)
+            for key, item in value.items()
+        }
+
+    if isinstance(value, list):
+        return [
+            make_json_safe(item)
+            for item in value
+        ]
+
+    if isinstance(value, tuple):
+        return [
+            make_json_safe(item)
+            for item in value
+        ]
+
+    try:
+        import json
+
+        json.dumps(value)
+        return value
+    except TypeError:
+        return str(value)
+
+
 async def http_exception_handler(
     request: Request,
     exc: StarletteHTTPException,
@@ -82,7 +110,7 @@ async def validation_exception_handler(
         status_code=422,
         content=build_error_response(
             status_code=422,
-            detail=exc.errors(),
+            detail=make_json_safe(exc.errors()),
             message="请求参数校验失败。",
             code="validation_error",
         ),
