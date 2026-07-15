@@ -1,5 +1,6 @@
 from frontend.task_list_view import (
     TASK_STATUS_FILTER_OPTIONS,
+    build_task_attempt_summary_text,
     build_task_retry_source_text,
     build_task_list_rows,
     filter_tasks_by_status,
@@ -64,6 +65,15 @@ def test_build_task_retry_source_text():
     assert build_task_retry_source_text({"retry_of_task_id": None}) == ""
 
 
+def test_build_task_attempt_summary_text():
+    task = {
+        "run_count": 2,
+        "retry_count": 1,
+    }
+
+    assert build_task_attempt_summary_text(task) == "运行次数: 2 | 派生重试次数: 1"
+
+
 def test_build_task_list_rows_filters_sorts_and_adds_result_summary():
     tasks = [
         {
@@ -116,3 +126,4 @@ def test_build_task_list_rows_filters_sorts_and_adds_result_summary():
     )
     assert rows[0]["progress_summary"] == "100% | 任务完成"
     assert rows[0]["retry_source_summary"] == "重试自任务 #2"
+    assert rows[0]["attempt_summary"] == "运行次数: 0 | 派生重试次数: 0"

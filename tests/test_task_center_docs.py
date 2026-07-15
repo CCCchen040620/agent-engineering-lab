@@ -10,6 +10,8 @@ def test_api_docs_document_task_center_endpoints():
     assert "POST /api/v1/tasks/{task_id}/cancel" in api_docs
     assert "progress_percent" in api_docs
     assert "retry_of_task_id" in api_docs
+    assert "run_count" in api_docs
+    assert "retry_count" in api_docs
     assert "只有 `pending` 任务可以取消" in api_docs
     assert "不会强行中断已经运行中的线程" in api_docs
 
@@ -22,6 +24,8 @@ def test_runbook_documents_task_center_current_boundaries():
     assert "等待执行的 `pending` 任务支持取消" in runbook
     assert "progress_percent" in runbook
     assert "retry_of_task_id" in runbook
+    assert "run_count" in runbook
+    assert "retry_count" in runbook
     assert "运行中任务取消" in runbook
     assert "不是生产级队列系统" in runbook
 
@@ -32,5 +36,7 @@ def test_project_stage_summary_documents_task_center_capabilities():
     assert "任务中心当前边界" in summary
     assert "progress_percent" in summary
     assert "retry_of_task_id" in summary
+    assert "run_count" in summary
+    assert "retry_count" in summary
     assert "`pending` 任务可以取消" in summary
     assert "运行中任务取消" in summary

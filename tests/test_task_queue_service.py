@@ -26,6 +26,8 @@ def test_create_task():
     assert task["progress_percent"] == 0
     assert task["progress_message"] == "等待执行"
     assert task["retry_of_task_id"] is None
+    assert task["run_count"] == 0
+    assert task["retry_count"] == 0
 
 
 def test_create_retry_task_records_source_task_id():
@@ -161,6 +163,7 @@ def test_mark_task_running():
     updated = queue.mark_task_running(task["id"])
 
     assert updated["status"] == "running"
+    assert updated["run_count"] == 1
     assert updated["progress_percent"] == 50
     assert updated["progress_message"] == "任务运行中"
 
@@ -181,6 +184,15 @@ def test_mark_task_succeeded():
     assert updated["error"] == ""
     assert updated["progress_percent"] == 100
     assert updated["progress_message"] == "任务完成"
+
+
+def test_increment_task_retry_count():
+    queue = InMemoryTaskQueue()
+    task = queue.create_task("embedding_backfill", {})
+
+    updated = queue.increment_task_retry_count(task["id"])
+
+    assert updated["retry_count"] == 1
 
 
 def test_mark_task_failed():

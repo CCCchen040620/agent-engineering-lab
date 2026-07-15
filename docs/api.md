@@ -1131,12 +1131,14 @@ canceled   已取消
 - `progress_percent`：轻量进度百分比。
 - `progress_message`：轻量进度说明。
 - `retry_of_task_id`：如果该任务来自失败任务重试，这里记录原任务 ID；普通任务为 `null`。
+- `run_count`：该任务进入运行状态的次数。
+- `retry_count`：该任务作为失败源任务被派生重试的次数。
 
 说明：
 
 - 当前异步执行仍使用 FastAPI 进程内轻量线程。
 - 当前只支持取消 `pending` 任务，不会强行中断 `running` 任务。
-- 重试失败任务时，不会覆盖旧失败任务，而是创建一条新任务，并记录 `retry_of_task_id`。
+- 重试失败任务时，不会覆盖旧失败任务，而是创建一条新任务，并记录 `retry_of_task_id`；旧任务的 `retry_count` 会增加。
 - 这还不是生产级队列系统，后续生产化可以接入独立 worker、Redis / Celery / RQ / Dramatiq 等组件。
 
 ### GET /api/v1/tasks
@@ -1209,6 +1211,7 @@ GET /api/v1/tasks?status=failed&order=desc&limit=20
 - 非失败任务会返回 `409 Conflict`。
 - 重试会创建一条新任务，不会覆盖旧任务。
 - 新任务会记录 `retry_of_task_id`。
+- 被重试的旧任务会记录 `retry_count`。
 
 ### POST /api/v1/tasks/{task_id}/cancel
 

@@ -20,6 +20,7 @@ from frontend.task_progress_view import (
 )
 from frontend.task_list_view import (
     TASK_STATUS_FILTER_OPTIONS,
+    build_task_attempt_summary_text,
     build_task_retry_source_text,
     build_task_list_rows,
 )
@@ -28,6 +29,10 @@ from backend.config import BACKEND_API_BASE_URL
 
 
 POSTGRESQL_EMBEDDING_BACKFILL_TASK_TYPE = "postgresql_embedding_backfill"
+
+
+def render_task_attempt_summary(task: dict) -> None:
+    st.caption(f"运行统计：{build_task_attempt_summary_text(task)}")
 
 
 def render_task_failure_summary(task: dict) -> None:
@@ -107,6 +112,7 @@ if st.button("运行 PostgreSQL embedding 回填"):
 
         render_task_progress(task)
         render_task_retry_source(task)
+        render_task_attempt_summary(task)
 
         summary_items = build_task_result_summary(task)
 
@@ -152,6 +158,7 @@ if view_task_detail:
 
         render_task_progress(task)
         render_task_retry_source(task)
+        render_task_attempt_summary(task)
 
         summary_items = build_task_result_summary(task)
 
@@ -177,6 +184,7 @@ if retry_failed_task:
         )
         render_task_progress(retry_task)
         render_task_retry_source(retry_task)
+        render_task_attempt_summary(retry_task)
         st.json(retry_task)
     except Exception as error:
         st.error(f"无法重试任务：{error}")
@@ -187,6 +195,7 @@ if cancel_pending_task:
         st.success(f"任务已取消，任务 ID：{canceled_task['id']}。")
         render_task_progress(canceled_task)
         render_task_retry_source(canceled_task)
+        render_task_attempt_summary(canceled_task)
         st.json(canceled_task)
     except Exception as error:
         st.error(f"无法取消任务：{error}")

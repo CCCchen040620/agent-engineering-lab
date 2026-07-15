@@ -63,6 +63,8 @@ def initialize_postgresql_knowledge_schema(connection) -> dict:
                 progress_percent INTEGER NOT NULL DEFAULT 0,
                 progress_message TEXT NOT NULL DEFAULT '等待执行',
                 retry_of_task_id INTEGER,
+                run_count INTEGER NOT NULL DEFAULT 0,
+                retry_count INTEGER NOT NULL DEFAULT 0,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
@@ -89,6 +91,18 @@ def initialize_postgresql_knowledge_schema(connection) -> dict:
             ADD COLUMN IF NOT EXISTS retry_of_task_id INTEGER
             """
         )
+        cursor.execute(
+            """
+            ALTER TABLE tasks
+            ADD COLUMN IF NOT EXISTS run_count INTEGER NOT NULL DEFAULT 0
+            """
+        )
+        cursor.execute(
+            """
+            ALTER TABLE tasks
+            ADD COLUMN IF NOT EXISTS retry_count INTEGER NOT NULL DEFAULT 0
+            """
+        )
 
     connection.commit()
 
@@ -101,4 +115,6 @@ def initialize_postgresql_knowledge_schema(connection) -> dict:
         "tasks_table_ready": True,
         "tasks_progress_columns_ready": True,
         "tasks_retry_source_column_ready": True,
+        "tasks_run_count_column_ready": True,
+        "tasks_retry_count_column_ready": True,
     }

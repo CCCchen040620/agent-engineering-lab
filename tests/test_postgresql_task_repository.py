@@ -7,6 +7,7 @@ from backend.services.postgresql_task_repository import (
     decode_json,
     encode_json,
     find_task_from_postgresql,
+    increment_task_retry_count_in_postgresql,
     insert_task_to_postgresql,
     list_tasks_from_postgresql,
     row_to_task,
@@ -96,6 +97,8 @@ def test_row_to_task():
         "progress_percent": 0,
         "progress_message": "等待执行",
         "retry_of_task_id": None,
+        "run_count": 0,
+        "retry_count": 0,
     }
 
 
@@ -111,8 +114,12 @@ def test_create_tasks_table_in_postgresql():
     assert "result JSONB" in sql_text
     assert "progress_percent INTEGER" in sql_text
     assert "progress_message TEXT" in sql_text
+    assert "run_count INTEGER" in sql_text
+    assert "retry_count INTEGER" in sql_text
     assert "ADD COLUMN IF NOT EXISTS progress_percent" in sql_text
     assert "ADD COLUMN IF NOT EXISTS progress_message" in sql_text
+    assert "ADD COLUMN IF NOT EXISTS run_count" in sql_text
+    assert "ADD COLUMN IF NOT EXISTS retry_count" in sql_text
     assert connection.committed is True
 
 
@@ -273,6 +280,8 @@ def test_update_task_status_in_postgresql():
         "",
         100,
         "任务完成",
+        None,
+        None,
         1,
     )
     assert "UPDATE tasks" in connection.cursor_instance.sql
@@ -292,6 +301,30 @@ def test_update_task_status_in_postgresql_raises_when_missing():
             result={},
             error="",
         )
+
+
+def test_increment_task_retry_count_in_postgresql():
+    connection = FakeConnection()
+    connection.cursor_instance.row = (
+        1,
+        "postgresql_embedding_backfill",
+        "failed",
+        {},
+        {},
+        "Ollama unavailable",
+        100,
+        "任务失败",
+        None,
+        1,
+        2,
+    )
+
+    task = increment_task_retry_count_in_postgresql(connection, task_id=1)
+
+    assert task["retry_count"] == 2
+    assert connection.cursor_instance.params == (1,)
+    assert "retry_count = retry_count + 1" in connection.cursor_instance.sql
+    assert connection.committed is True
 
 
 def test_postgresql_task_queue_marks_task_running(monkeypatch):
@@ -318,6 +351,8 @@ def test_postgresql_task_queue_marks_task_running(monkeypatch):
         status: str,
         result: dict,
         error: str,
+        run_count: int | None = None,
+        retry_count: int | None = None,
     ):
         tasks[task_id]["status"] = status
         tasks[task_id]["result"] = result
@@ -367,6 +402,8 @@ def test_postgresql_task_queue_marks_task_canceled(monkeypatch):
         status: str,
         result: dict,
         error: str,
+        run_count: int | None = None,
+        retry_count: int | None = None,
     ):
         tasks[task_id]["status"] = status
         tasks[task_id]["result"] = result
@@ -576,6 +613,8 @@ def test_postgresql_task_queue_reads_task_after_queue_is_recreated(monkeypatch):
         status: str,
         result: dict,
         error: str,
+        run_count: int | None = None,
+        retry_count: int | None = None,
     ):
         persistent_tasks[task_id]["status"] = status
         persistent_tasks[task_id]["result"] = result

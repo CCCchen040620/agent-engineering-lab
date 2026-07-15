@@ -11,6 +11,7 @@
 - 失败任务具备结构化错误原因和处理建议。
 - 任务具备轻量进度字段：`progress_percent` 和 `progress_message`。
 - 失败任务可以异步重试，并通过 `retry_of_task_id` 保留来源链路。
+- 任务可以记录 `run_count` 和 `retry_count`，用于观察运行和重试统计。
 - `pending` 任务可以取消，`running` 任务暂不强行中断。
 - 已提供 `.\scripts\check_task_center.ps1` 作为任务中心专项验收脚本。
 

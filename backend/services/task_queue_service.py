@@ -80,6 +80,8 @@ class InMemoryTaskQueue:
             "result": {},
             "error": "",
             "retry_of_task_id": retry_of_task_id,
+            "run_count": 0,
+            "retry_count": 0,
         }
         apply_task_progress(task, "pending")
 
@@ -136,6 +138,7 @@ class InMemoryTaskQueue:
         task = self.get_task_or_raise(task_id)
         self.validate_status_transition(task, "running")
         task["status"] = "running"
+        task["run_count"] = task["run_count"] + 1
         apply_task_progress(task, "running")
         return task
 
@@ -164,6 +167,11 @@ class InMemoryTaskQueue:
         task["result"] = {}
         task["error"] = ""
         apply_task_progress(task, "canceled")
+        return task
+
+    def increment_task_retry_count(self, task_id: int) -> dict:
+        task = self.get_task_or_raise(task_id)
+        task["retry_count"] = task["retry_count"] + 1
         return task
 
 

@@ -69,11 +69,14 @@ def create_retry_task_from_failed_task(task_id: int, queue) -> dict:
     if task["status"] != "failed":
         raise HTTPException(status_code=409, detail="只有失败任务可以重试。")
 
-    return queue.create_task(
+    retry_task = queue.create_task(
         task_type=task["type"],
         payload=task["payload"],
         retry_of_task_id=task["id"],
     )
+    queue.increment_task_retry_count(task["id"])
+
+    return retry_task
 
 
 def cancel_pending_task(task_id: int, queue) -> dict:

@@ -78,6 +78,8 @@ def test_create_task_endpoint():
     assert data["payload"] == {"backend": "postgresql"}
     assert data["result"] == {}
     assert data["error"] == ""
+    assert data["run_count"] == 0
+    assert data["retry_count"] == 0
 
 
 def test_build_default_task_queue_uses_memory_for_sqlite():
@@ -134,6 +136,7 @@ def test_run_task_endpoint_marks_task_succeeded():
     assert data["status"] == "succeeded"
     assert data["result"] == {"message": "hello"}
     assert data["error"] == ""
+    assert data["run_count"] == 1
 
 
 def test_run_task_endpoint_returns_404_when_task_not_found():
@@ -251,8 +254,11 @@ def test_retry_task_async_endpoint_creates_new_running_task_from_failed_task(
     assert data["payload"] == failed_task["payload"]
     assert data["status"] == "running"
     assert data["retry_of_task_id"] == failed_task["id"]
+    assert data["run_count"] == 1
+    assert data["retry_count"] == 0
 
     assert test_queue.get_task(failed_task["id"])["status"] == "failed"
+    assert test_queue.get_task(failed_task["id"])["retry_count"] == 1
     assert handler_started.wait(timeout=1)
 
     release_handler.set()
