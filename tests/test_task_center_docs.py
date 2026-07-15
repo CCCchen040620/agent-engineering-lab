@@ -30,6 +30,8 @@ def test_runbook_documents_task_center_current_boundaries():
     assert "run_count" in runbook
     assert "retry_count" in runbook
     assert "retry_task_id" in runbook
+    assert "task_failed" in runbook
+    assert "metadata.error" in runbook
     assert "任务中心用于查看和执行后台任务" in runbook
     assert "不作为文档资源管理入口" in runbook
     assert "查看/删除文档、查看 chunks 和 embedding 状态" in runbook

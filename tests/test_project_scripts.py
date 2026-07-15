@@ -231,6 +231,14 @@ def test_project_check_list_groups_commands_by_runtime_dependency():
     assert "requires PostgreSQL, Ollama, embeddings, and local generation models" in script
     assert ".\\scripts\\check_postgresql_agent.ps1" in script
     assert ".\\scripts\\check_task_center.ps1" in script
+    assert (
+        "Validates: async document ingestion task, failure diagnostics, retry event trace."
+        in script
+    )
+    assert (
+        "Requires: PostgreSQL, FastAPI started with PostgreSQL DATABASE_URL, Ollama embedding model."
+        in script
+    )
     assert "-RunBatchDocumentIngestionCheck" in script
     assert ".\\scripts\\check_rag_evaluation.ps1" in script
 
