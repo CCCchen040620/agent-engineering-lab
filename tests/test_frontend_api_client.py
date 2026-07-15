@@ -18,6 +18,7 @@ from frontend.api_client import (
     list_postgresql_document_source_summary_api,
     list_postgresql_document_embedding_status_api,
     rag_backend_supports_feature,
+    run_postgresql_document_ingestion_task_api,
     submit_feedback_api,
     upload_text_document_api,
     parse_sse_event_line,
@@ -1736,6 +1737,106 @@ def test_run_postgresql_embedding_backfill_task_api(monkeypatch):
 
     assert task["type"] == "postgresql_embedding_backfill"
     assert task["status"] == "succeeded"
+
+
+def test_run_postgresql_document_ingestion_task_api(monkeypatch):
+    captured = {}
+
+    class FakeResponse:
+        status_code = 200
+
+        def raise_for_status(self):
+            captured["raise_for_status_called"] = True
+
+        def json(self):
+            return {
+                "id": 1,
+                "type": "postgresql_document_ingestion",
+                "status": "succeeded",
+                "payload": {
+                    "title": "PostgreSQL 前端任务入库文档",
+                    "file_type": "md",
+                    "content": "员工参加外部培训需要提前提交申请。",
+                    "source": "production",
+                },
+                "result": {
+                    "document_id": 10,
+                    "title": "PostgreSQL 前端任务入库文档",
+                    "file_type": "md",
+                    "chunk_count": 2,
+                    "is_indexed": True,
+                    "source": "production",
+                    "embedding_count": 2,
+                },
+                "error": "",
+            }
+
+    def fake_post(url, json, timeout):
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    task = run_postgresql_document_ingestion_task_api(
+        base_url="http://testserver",
+        title="PostgreSQL 前端任务入库文档",
+        file_type="md",
+        content="员工参加外部培训需要提前提交申请。",
+    )
+
+    assert captured["url"] == (
+        "http://testserver/api/v1/tasks/postgresql-document-ingestion"
+    )
+    assert captured["json"] == {
+        "title": "PostgreSQL 前端任务入库文档",
+        "file_type": "md",
+        "content": "员工参加外部培训需要提前提交申请。",
+        "source": "production",
+    }
+    assert captured["timeout"] == 300
+    assert captured["raise_for_status_called"] is True
+    assert task["type"] == "postgresql_document_ingestion"
+    assert task["status"] == "succeeded"
+    assert task["result"]["embedding_count"] == 2
+
+
+def test_run_postgresql_document_ingestion_task_api_can_pass_source(monkeypatch):
+    captured = {}
+
+    class FakeResponse:
+        status_code = 200
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {
+                "id": 1,
+                "type": "postgresql_document_ingestion",
+                "status": "succeeded",
+                "payload": captured["json"],
+                "result": {},
+                "error": "",
+            }
+
+    def fake_post(url, json, timeout):
+        captured["json"] = json
+        return FakeResponse()
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    task = run_postgresql_document_ingestion_task_api(
+        base_url="http://testserver",
+        title="评测文档",
+        file_type="md",
+        content="评测正文。",
+        source="evaluation",
+    )
+
+    assert captured["json"]["source"] == "evaluation"
+    assert task["payload"]["source"] == "evaluation"
 
 
 def test_create_task_api(monkeypatch):
