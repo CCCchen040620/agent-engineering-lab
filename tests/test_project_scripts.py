@@ -15,6 +15,7 @@ def test_required_project_scripts_exist():
         "scripts/check_postgres.ps1",
         "scripts/check_postgresql_agent.ps1",
         "scripts/check_rag_evaluation.ps1",
+        "scripts/check_task_center.ps1",
     ]
 
     for script_path in required_scripts:
@@ -229,8 +230,27 @@ def test_project_check_list_groups_commands_by_runtime_dependency():
     assert "Pre-delivery full checks" in script
     assert "requires PostgreSQL, Ollama, embeddings, and local generation models" in script
     assert ".\\scripts\\check_postgresql_agent.ps1" in script
+    assert ".\\scripts\\check_task_center.ps1" in script
     assert "-RunBatchDocumentIngestionCheck" in script
     assert ".\\scripts\\check_rag_evaluation.ps1" in script
+
+
+def test_task_center_check_runs_async_document_ingestion_flow():
+    script = Path("scripts/check_task_center.ps1").read_text(encoding="utf-8")
+
+    assert "check_postgres.ps1" in script
+    assert "week10.init_postgresql_schema" in script
+    assert "/health" in script
+    assert "/api/v1/tasks/postgresql-document-ingestion/run-async" in script
+    assert "/api/v1/tasks/$($Task.id)" in script
+    assert "TimeoutSeconds" in script
+    assert "PollIntervalSeconds" in script
+    assert "document_id" in script
+    assert "chunk_count" in script
+    assert "embedding_count" in script
+    assert "Show-TaskFailureDiagnostic" in script
+    assert "embedding_generation_error" in script
+    assert "Task center check completed successfully." in script
 
 
 def test_runbook_points_to_project_check_list():
