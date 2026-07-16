@@ -22,7 +22,7 @@
 - LangGraph 会话保存问答
 - PostgreSQL 文档入库、检索、迁移和清理能力
 - RAG / Agent 评测脚本
-- 任务中心：支持 PostgreSQL embedding 回填任务
+- 任务中心：支持 PostgreSQL 文档入库任务、embedding 回填任务、失败诊断、事件时间线和失败任务重试
 - Docker Compose 构建和 PostgreSQL 服务
 - GitHub Actions：pytest、轻量 RAG evaluation、Docker build
 
@@ -180,6 +180,14 @@ $env:DATABASE_URL="postgresql://agent_user:agent_password@localhost:5432/agent_d
 .\scripts\check_postgresql_agent.ps1 -RunBatchDocumentIngestionCheck
 ```
 
+运行任务中心专项验收：
+
+```powershell
+.\scripts\check_task_center.ps1
+```
+
+该脚本会验证 PostgreSQL 文档异步入库、任务结果详情、失败诊断、`task_failed` 事件中的 `metadata.error`，以及失败任务重试链路。
+
 说明：PostgreSQL 模式依赖 Docker PostgreSQL、pgvector、Ollama 和 embedding 模型。它适合做企业级检索后端实验，但当前项目仍保留 SQLite 负责部分轻量状态。
 
 ## 评测与报告
@@ -286,4 +294,4 @@ docker compose up -d postgres
 .\scripts\check_docker_build.ps1
 ```
 
-如果需要完整本地业务验收，再运行 PostgreSQL Agent 检查和完整 RAG evaluation。
+如果需要完整本地业务验收，再运行任务中心专项验收、PostgreSQL Agent 检查和完整 RAG evaluation。
