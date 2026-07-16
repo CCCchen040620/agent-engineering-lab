@@ -37,5 +37,6 @@ def test_readme_links_to_detailed_docs():
     assert "docs/runbook.md" in readme
     assert "docs/api.md" in readme
     assert "docs/configuration.md" in readme
+    assert "docs/final-delivery-review.md" in readme
     assert "docs/project-stage-summary.md" in readme
     assert "docs/postgresql-stage-review.md" in readme
