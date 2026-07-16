@@ -1,6 +1,6 @@
 # 学习进度
 
-最后更新：2026-07-15
+最后更新：2026-07-16
 
 ## 当前阶段
 
@@ -22,6 +22,7 @@
 - 文档入库与 embedding 回填
 - 统一评测脚本
 - 后台任务中心
+- 任务中心专项验收脚本
 - Docker build
 - GitHub Actions
 - README / runbook / API 文档
@@ -34,8 +35,11 @@
 check_project.ps1 通过
 check_rag_evaluation_ci.ps1 通过
 check_docker_build.ps1 通过
+check_task_center.ps1 通过
 GitHub Actions 绿色
 ```
+
+任务中心阶段已经完成本地验收并推送到 GitHub，GitHub Actions 绿色通过。当前任务中心已经支持 PostgreSQL 持久化任务记录、文档入库任务、embedding 回填任务、失败诊断、事件时间线、失败任务重试和专项验收脚本。
 
 ## 已掌握能力
 
@@ -52,6 +56,7 @@ GitHub Actions 绿色
 - 能用脚本做本地验收。
 - 能用 GitHub Actions 做持续集成。
 - 能用 Docker Compose 做构建和服务验证。
+- 能设计 PostgreSQL 持久化任务记录、任务事件时间线、失败诊断和重试链路。
 - 能区分学习版 Demo、工程化项目和生产级系统之间的差距。
 
 ## 当前仍未生产化的能力
@@ -75,11 +80,11 @@ GitHub Actions 绿色
 
 优先推进方向：
 
-1. 任务记录持久化到 PostgreSQL。
-2. 文档入库和 embedding 回填任务 worker 化。
-3. 扩展 RAG evaluation cases。
-4. 引入权限、审计和多用户边界。
-5. 明确 SQLite 与 PostgreSQL 的最终职责划分。
+1. 将文档入库和 embedding 回填任务从 FastAPI 进程内线程升级为独立 worker / 真实队列。
+2. 扩展 RAG evaluation cases，继续提升评测体系的通用性。
+3. 引入权限、审计和多用户边界。
+4. 明确 SQLite 与 PostgreSQL 的最终职责划分。
+5. 做大规模文档解析、性能压测和生产级监控告警。
 
 更多阶段总结见：
 

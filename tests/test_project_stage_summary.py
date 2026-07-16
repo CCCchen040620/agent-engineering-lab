@@ -27,8 +27,23 @@ def test_project_stage_summary_documents_current_stage():
 def test_progress_points_to_current_stage_summary():
     progress = Path("PROGRESS.md").read_text(encoding="utf-8")
 
-    assert "最后更新：2026-07-15" in progress
+    assert "最后更新：2026-07-16" in progress
     assert "阶段 6：Agent 工程化与交付前收口" in progress
     assert "check_project.ps1 通过" in progress
+    assert "check_task_center.ps1 通过" in progress
     assert "GitHub Actions 绿色" in progress
     assert "docs/project-stage-summary.md" in progress
+
+
+def test_progress_records_task_center_stage_completion():
+    progress = Path("PROGRESS.md").read_text(encoding="utf-8")
+
+    assert "任务中心专项验收脚本" in progress
+    assert "任务中心阶段已经完成本地验收并推送到 GitHub" in progress
+    assert "PostgreSQL 持久化任务记录" in progress
+    assert "文档入库任务" in progress
+    assert "embedding 回填任务" in progress
+    assert "失败诊断" in progress
+    assert "事件时间线" in progress
+    assert "失败任务重试" in progress
+    assert "独立 worker / 真实队列" in progress
